@@ -8,6 +8,9 @@ import { LectureInfo } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import BonusTable from "@/components/BonusTable";
 import ExamsPage from "@/components/ExamsPage";
+import StudentStatus from "@/components/StudentStatus";
+import SettingsPage from "@/components/SettingsPage";
+import CourseManager from "@/components/CourseManager";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -22,30 +25,39 @@ import {
   CalendarIcon,
   Star,
   ClipboardList,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type CourseTab = "bonus" | "exams";
+type CourseTab = "bonus" | "exams" | "status";
+type MainView = "courses" | "settings";
 
 export default function Index() {
   const {
     courses,
     addCourse,
+    updateCourse,
     addStudentsToCourse,
     updateStudent,
     updateLectureBonus,
     deleteCourse,
     deleteStudent,
     addLecture,
+    deleteAllData,
+    exportAllData,
+    importAllData,
   } = useCourses();
 
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [showNewCourse, setShowNewCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
+  const [newSection, setNewSection] = useState("");
   const [semesterStart, setSemesterStart] = useState<Date | undefined>();
   const [semesterEnd, setSemesterEnd] = useState<Date | undefined>();
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
+  const [mainView, setMainView] = useState<MainView>("courses");
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
 
@@ -61,61 +73,100 @@ export default function Index() {
       : [];
 
   const handleCreateCourse = () => {
-    if (!newCourseName.trim()) {
-      toast.error("أدخل اسم المادة");
-      return;
-    }
-    if (!semesterStart || !semesterEnd) {
-      toast.error("حدد تاريخ بداية ونهاية الفصل");
-      return;
-    }
-    if (selectedDays.length === 0) {
-      toast.error("اختر أيام المحاضرات");
-      return;
-    }
-    if (previewLectures.length === 0) {
-      toast.error("لا توجد محاضرات في الفترة المحددة");
-      return;
-    }
+    if (!newCourseName.trim()) { toast.error("أدخل اسم المادة"); return; }
+    if (!semesterStart || !semesterEnd) { toast.error("حدد تاريخ بداية ونهاية الفصل"); return; }
+    if (selectedDays.length === 0) { toast.error("اختر أيام المحاضرات"); return; }
+    if (previewLectures.length === 0) { toast.error("لا توجد محاضرات في الفترة المحددة"); return; }
 
     const lectures: LectureInfo[] = previewLectures.map((l) => ({
       date: l.date.toISOString(),
       label: l.label,
     }));
 
-    const id = addCourse(newCourseName.trim(), lectures);
+    const id = addCourse(newCourseName.trim(), lectures, newSection.trim());
     setActiveCourseId(id);
-    setShowNewCourse(false);
-    setNewCourseName("");
-    setSemesterStart(undefined);
-    setSemesterEnd(undefined);
-    setSelectedDays([]);
+    resetModal();
     toast.success(`تم إنشاء المادة بـ ${lectures.length} محاضرة`);
   };
 
   const resetModal = () => {
     setShowNewCourse(false);
     setNewCourseName("");
+    setNewSection("");
     setSemesterStart(undefined);
     setSemesterEnd(undefined);
     setSelectedDays([]);
   };
+
+  // Settings / Course management view
+  if (!activeCourse && mainView === "settings") {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
+            <button
+              onClick={() => setMainView("courses")}
+              className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+            >
+              <ChevronLeft size={20} className="rotate-180" />
+            </button>
+            <h1 className="font-display text-xl font-bold text-foreground">
+              الإعدادات وإدارة المقررات
+            </h1>
+          </div>
+        </header>
+
+        <SettingsPage
+          courses={courses}
+          onExportAll={exportAllData}
+          onImportAll={importAllData}
+          onDeleteAll={() => { deleteAllData(); setMainView("courses"); }}
+        />
+
+        {/* Course Manager */}
+        <div className="mx-auto max-w-3xl px-4 pb-8">
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <div className="mb-5 flex items-center gap-2">
+              <BookOpen className="text-primary" size={20} />
+              <h2 className="font-display text-lg font-bold">إدارة المقررات</h2>
+            </div>
+            <CourseManager
+              courses={courses}
+              onDeleteCourse={deleteCourse}
+              onUpdateCourse={updateCourse}
+              onAddStudents={addStudentsToCourse}
+              onSelectCourse={(id) => { setActiveCourseId(id); setMainView("courses"); }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Course list view
   if (!activeCourse) {
     return (
       <div className="min-h-screen bg-background">
         <header className="border-b border-border bg-card/80 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-md">
-              <GraduationCap className="text-primary-foreground" size={22} />
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-md">
+                <GraduationCap className="text-primary-foreground" size={22} />
+              </div>
+              <div>
+                <h1 className="font-display text-xl font-bold text-foreground">
+                  متابعة درجات الطلبة
+                </h1>
+                <p className="text-xs text-muted-foreground">إدارة الدرجات والكشوفات</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-display text-xl font-bold text-foreground">
-                متابعة درجات الطلبة
-              </h1>
-              <p className="text-xs text-muted-foreground">إدارة الدرجات والكشوفات</p>
-            </div>
+            <button
+              onClick={() => setMainView("settings")}
+              className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+              title="الإعدادات"
+            >
+              <Settings size={20} className="text-muted-foreground" />
+            </button>
           </div>
         </header>
 
@@ -150,90 +201,61 @@ export default function Index() {
                 >
                   <h3 className="mb-5 font-display text-lg font-bold">إنشاء مادة جديدة</h3>
                   <div className="space-y-5">
-                    {/* Course Name */}
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
-                        اسم المادة
-                      </label>
-                      <input
-                        value={newCourseName}
-                        onChange={(e) => setNewCourseName(e.target.value)}
-                        placeholder="مثال: البرمجة المتقدمة"
-                        className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        autoFocus
-                      />
-                    </div>
-
-                    {/* Date Pickers */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
-                          بداية الفصل
-                        </label>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">اسم المادة</label>
+                        <input
+                          value={newCourseName}
+                          onChange={(e) => setNewCourseName(e.target.value)}
+                          placeholder="مثال: البرمجة المتقدمة"
+                          className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">الشعبة (اختياري)</label>
+                        <input
+                          value={newSection}
+                          onChange={(e) => setNewSection(e.target.value)}
+                          placeholder="مثال: الساعة 11"
+                          className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">بداية الفصل</label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <button
-                              className={cn(
-                                "flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted",
-                                !semesterStart && "text-muted-foreground"
-                              )}
-                            >
+                            <button className={cn("flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted", !semesterStart && "text-muted-foreground")}>
                               <CalendarIcon size={14} />
-                              {semesterStart
-                                ? format(semesterStart, "yyyy/MM/dd")
-                                : "اختر التاريخ"}
+                              {semesterStart ? format(semesterStart, "yyyy/MM/dd") : "اختر التاريخ"}
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={semesterStart}
-                              onSelect={setSemesterStart}
-                              initialFocus
-                              className="pointer-events-auto p-3"
-                            />
+                            <Calendar mode="single" selected={semesterStart} onSelect={setSemesterStart} initialFocus className="pointer-events-auto p-3" />
                           </PopoverContent>
                         </Popover>
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
-                          نهاية الفصل
-                        </label>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">نهاية الفصل</label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <button
-                              className={cn(
-                                "flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted",
-                                !semesterEnd && "text-muted-foreground"
-                              )}
-                            >
+                            <button className={cn("flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted", !semesterEnd && "text-muted-foreground")}>
                               <CalendarIcon size={14} />
-                              {semesterEnd
-                                ? format(semesterEnd, "yyyy/MM/dd")
-                                : "اختر التاريخ"}
+                              {semesterEnd ? format(semesterEnd, "yyyy/MM/dd") : "اختر التاريخ"}
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={semesterEnd}
-                              onSelect={setSemesterEnd}
-                              disabled={(date) =>
-                                semesterStart ? date < semesterStart : false
-                              }
-                              initialFocus
-                              className="pointer-events-auto p-3"
-                            />
+                            <Calendar mode="single" selected={semesterEnd} onSelect={setSemesterEnd} disabled={(date) => semesterStart ? date < semesterStart : false} initialFocus className="pointer-events-auto p-3" />
                           </PopoverContent>
                         </Popover>
                       </div>
                     </div>
 
-                    {/* Day Selector */}
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-muted-foreground">
-                        أيام المحاضرات
-                      </label>
+                      <label className="mb-2 block text-sm font-medium text-muted-foreground">أيام المحاضرات</label>
                       <div className="flex flex-wrap gap-2">
                         {WEEKDAYS.map((day) => (
                           <button
@@ -252,7 +274,6 @@ export default function Index() {
                       </div>
                     </div>
 
-                    {/* Preview */}
                     {previewLectures.length > 0 && (
                       <div className="rounded-lg border border-border bg-muted/50 p-3">
                         <p className="mb-2 text-sm font-semibold text-foreground">
@@ -260,10 +281,7 @@ export default function Index() {
                         </p>
                         <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
                           {previewLectures.slice(0, 20).map((l, i) => (
-                            <span
-                              key={i}
-                              className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
-                            >
+                            <span key={i} className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
                               {l.label}
                             </span>
                           ))}
@@ -276,18 +294,11 @@ export default function Index() {
                       </div>
                     )}
 
-                    {/* Actions */}
                     <div className="flex gap-3 pt-1">
-                      <button
-                        onClick={handleCreateCourse}
-                        className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110"
-                      >
+                      <button onClick={handleCreateCourse} className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110">
                         إنشاء ({previewLectures.length} محاضرة)
                       </button>
-                      <button
-                        onClick={resetModal}
-                        className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-                      >
+                      <button onClick={resetModal} className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted">
                         إلغاء
                       </button>
                     </div>
@@ -332,6 +343,9 @@ export default function Index() {
                     </button>
                   </div>
                   <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
+                  {course.section && (
+                    <p className="text-xs text-muted-foreground">الشعبة: {course.section}</p>
+                  )}
                   <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
                     <span>{course.students.length} طالب</span>
                     <span>{course.lectureCount} محاضرة</span>
@@ -359,6 +373,7 @@ export default function Index() {
           <div className="flex-1">
             <h1 className="font-display text-lg font-bold">{activeCourse.name}</h1>
             <p className="text-xs text-muted-foreground">
+              {activeCourse.section && `${activeCourse.section} • `}
               {activeCourse.students.length} طالب • {activeCourse.lectureCount} محاضرة
             </p>
           </div>
@@ -382,42 +397,37 @@ export default function Index() {
               disabled={activeCourse.students.length === 0}
             >
               <Download size={14} />
-              تصدير
+              تصدير Excel
             </button>
           </div>
         </div>
 
         {/* Sub-tabs */}
         <div className="mx-auto flex max-w-7xl gap-1 px-4 pb-2">
-          <button
-            onClick={() => setCourseTab("bonus")}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-              courseTab === "bonus"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <Star size={14} />
-            بونص المحاضرات
-          </button>
-          <button
-            onClick={() => setCourseTab("exams")}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-              courseTab === "exams"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <ClipboardList size={14} />
-            الاختبارات والمشاركة
-          </button>
+          {[
+            { key: "bonus" as const, label: "بونص المحاضرات", icon: Star },
+            { key: "exams" as const, label: "الاختبارات", icon: ClipboardList },
+            { key: "status" as const, label: "وضع الطلبة", icon: BarChart3 },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setCourseTab(tab.key)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+                courseTab === tab.key
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+            </button>
+          ))}
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6">
-        {courseTab === "bonus" ? (
+        {courseTab === "bonus" && (
           <BonusTable
             students={activeCourse.students}
             lectures={activeCourse.lectures}
@@ -425,7 +435,8 @@ export default function Index() {
             onUpdateBonus={(sid, li, v) => updateLectureBonus(activeCourse.id, sid, li, v)}
             onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
           />
-        ) : (
+        )}
+        {courseTab === "exams" && (
           <ExamsPage
             students={activeCourse.students}
             courseId={activeCourse.id}
@@ -434,6 +445,12 @@ export default function Index() {
             maxFinal={activeCourse.maxFinal}
             maxParticipation={activeCourse.maxParticipation}
             onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
+          />
+        )}
+        {courseTab === "status" && (
+          <StudentStatus
+            students={activeCourse.students}
+            course={activeCourse}
           />
         )}
       </main>

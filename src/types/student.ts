@@ -9,13 +9,14 @@ export interface Student {
 }
 
 export interface LectureInfo {
-  date: string; // ISO string
+  date: string;
   label: string;
 }
 
 export interface Course {
   id: string;
   name: string;
+  section: string;
   students: Student[];
   lectureCount: number;
   lectures: LectureInfo[];

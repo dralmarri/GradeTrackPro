@@ -28,10 +28,11 @@ export function useCourses() {
     });
   }, []);
 
-  const addCourse = useCallback((name: string, lectures: LectureInfo[]) => {
+  const addCourse = useCallback((name: string, lectures: LectureInfo[], section?: string) => {
     const course: Course = {
       id: crypto.randomUUID(),
       name,
+      section: section || "",
       students: [],
       lectureCount: lectures.length,
       lectures,
@@ -43,6 +44,12 @@ export function useCourses() {
     };
     updateCourses((prev) => [...prev, course]);
     return course.id;
+  }, [updateCourses]);
+
+  const updateCourse = useCallback((courseId: string, updates: Partial<Omit<Course, "id" | "students">>) => {
+    updateCourses((prev) =>
+      prev.map((c) => (c.id === courseId ? { ...c, ...updates } : c))
+    );
   }, [updateCourses]);
 
   const addStudentsToCourse = useCallback((courseId: string, names: string[]) => {
@@ -119,14 +126,52 @@ export function useCourses() {
     );
   }, [updateCourses]);
 
+  const deleteAllData = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setCourses([]);
+  }, []);
+
+  const exportAllData = useCallback(() => {
+    const data = JSON.stringify(courses, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "student-grades-backup.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [courses]);
+
+  const importAllData = useCallback((file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target?.result as string) as Course[];
+          saveCourses(data);
+          setCourses(data);
+          resolve();
+        } catch {
+          reject(new Error("فشل في قراءة ملف النسخة الاحتياطية"));
+        }
+      };
+      reader.onerror = () => reject(new Error("فشل في قراءة الملف"));
+      reader.readAsText(file);
+    });
+  }, []);
+
   return {
     courses,
     addCourse,
+    updateCourse,
     addStudentsToCourse,
     updateStudent,
     updateLectureBonus,
     deleteCourse,
     deleteStudent,
     addLecture,
+    deleteAllData,
+    exportAllData,
+    importAllData,
   };
 }
