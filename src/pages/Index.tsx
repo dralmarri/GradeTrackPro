@@ -316,9 +316,27 @@ export default function Index() {
                       </div>
                     )}
 
+                    {/* Import Students */}
+                    <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-display text-sm font-semibold text-foreground">استيراد كشف الطلبة</h4>
+                          <p className="text-[11px] text-muted-foreground">
+                            {pendingStudentNames.length > 0
+                              ? `✓ تم تحميل ${pendingStudentNames.length} طالب`
+                              : "اختياري - يمكنك إضافتهم لاحقاً"}
+                          </p>
+                        </div>
+                        <ExcelImport onImport={(names) => {
+                          setPendingStudentNames(names);
+                          toast.success(`تم تحميل ${names.length} طالب`);
+                        }} />
+                      </div>
+                    </div>
+
                     <div className="flex gap-3 pt-1">
                       <button onClick={handleCreateCourse} className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110">
-                        إنشاء ({previewLectures.length} محاضرة)
+                        إنشاء ({previewLectures.length} محاضرة{pendingStudentNames.length > 0 ? ` • ${pendingStudentNames.length} طالب` : ""})
                       </button>
                       <button onClick={resetModal} className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted">
                         إلغاء
