@@ -92,9 +92,12 @@ export default function Index() {
       semesterStart: semesterStart.toISOString(),
       semesterEnd: semesterEnd.toISOString(),
     });
+    if (pendingStudentNames.length > 0) {
+      addStudentsToCourse(id, pendingStudentNames);
+    }
     setActiveCourseId(id);
     resetModal();
-    toast.success(`تم إنشاء المادة بـ ${lectures.length} محاضرة`);
+    toast.success(`تم إنشاء المادة بـ ${lectures.length} محاضرة${pendingStudentNames.length > 0 ? ` و ${pendingStudentNames.length} طالب` : ""}`);
   };
 
   const resetModal = () => {
@@ -105,6 +108,7 @@ export default function Index() {
     setSemesterEnd(undefined);
     setSelectedDays([]);
     setLectureTime("");
+    setPendingStudentNames([]);
   };
 
   // Settings / Course management view
