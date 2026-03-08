@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { Student } from "@/types/student";
-import { getTotal } from "@/lib/excel";
 import { Upload, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
