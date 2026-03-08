@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Course } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
+import { format } from "date-fns";
 import {
   BookOpen,
   Trash2,
@@ -9,8 +10,14 @@ import {
   Users,
   Check,
   X,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+
+const DAYS_AR: Record<number, string> = {
+  0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء",
+  4: "الخميس", 5: "الجمعة", 6: "السبت",
+};
 
 interface CourseManagerProps {
   courses: Course[];
