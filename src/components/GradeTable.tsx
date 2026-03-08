@@ -1,10 +1,11 @@
-import { Student } from "@/types/student";
+import { Student, LectureInfo } from "@/types/student";
 import { getTotal } from "@/lib/excel";
 import { Trash2 } from "lucide-react";
 
 interface GradeTableProps {
   students: Student[];
   lectureCount: number;
+  lectures: LectureInfo[];
   maxBonus: number;
   maxExam1: number;
   maxExam2: number;
