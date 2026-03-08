@@ -102,13 +102,14 @@ export function useCourses() {
     );
   }, [updateCourses]);
 
-  const addLecture = useCallback((courseId: string) => {
+  const addLecture = useCallback((courseId: string, label?: string) => {
     updateCourses((prev) =>
       prev.map((c) => {
         if (c.id !== courseId) return c;
         return {
           ...c,
           lectureCount: c.lectureCount + 1,
+          lectures: [...c.lectures, { date: new Date().toISOString(), label: label || `محاضرة ${c.lectureCount + 1}` }],
           students: c.students.map((s) => ({
             ...s,
             lectureBonus: [...s.lectureBonus, 0],
