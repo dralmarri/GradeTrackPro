@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { Student } from "@/types/student";
-import { getTotal } from "@/lib/excel";
 import { Upload, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -130,18 +129,11 @@ export default function ExamsPage({
                   (من {currentTab.max})
                 </span>
               </th>
-              <th className="px-3 py-3 text-center font-display text-xs font-medium text-muted-foreground w-20">
-                بونص
-              </th>
-              <th className="px-3 py-3 text-center font-display text-xs font-bold text-primary w-24">
-                المجموع الكلي
-              </th>
             </tr>
+
           </thead>
           <tbody>
             {students.map((student, idx) => {
-              const total = getTotal(student);
-              const bonusTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
 
               return (
                 <tr
@@ -162,12 +154,6 @@ export default function ExamsPage({
                       }}
                       className="w-20 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
-                  </td>
-                  <td className="px-3 py-2.5 text-center text-sm text-muted-foreground">
-                    {bonusTotal}
-                  </td>
-                  <td className="px-3 py-2.5 text-center font-display font-bold text-primary">
-                    {total}
                   </td>
                 </tr>
               );
