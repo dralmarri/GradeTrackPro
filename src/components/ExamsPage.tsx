@@ -135,8 +135,6 @@ export default function ExamsPage({
           </thead>
           <tbody>
             {students.map((student, idx) => {
-              const total = getTotal(student);
-              const bonusTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
 
               return (
                 <tr
