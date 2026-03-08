@@ -103,6 +103,7 @@ export default function Index() {
     setSemesterStart(undefined);
     setSemesterEnd(undefined);
     setSelectedDays([]);
+    setLectureTime("");
   };
 
   // Settings / Course management view
