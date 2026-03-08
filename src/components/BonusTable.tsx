@@ -20,7 +20,9 @@ export default function BonusTable({
   onUpdateBonus,
   onDeleteStudent,
 }: BonusTableProps) {
-  if (students.length === 0) {
+  const safeStudents = students || [];
+  const safeLectures = lectures || [];
+  if (safeStudents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
         <p className="font-display text-lg">لا يوجد طلبة بعد</p>
@@ -31,14 +33,14 @@ export default function BonusTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-      <table className="w-full text-sm" style={{ minWidth: `${200 + lectures.length * 70 + 120}px` }}>
+      <table className="w-full text-sm" style={{ minWidth: `${200 + safeLectures.length * 70 + 120}px` }}>
         <thead>
           <tr className="border-b border-border bg-secondary/50">
             <th className="sticky right-0 z-10 bg-secondary/50 px-3 py-3 text-right font-display font-semibold">#</th>
             <th className="sticky right-10 z-10 min-w-[140px] bg-secondary/50 px-3 py-3 text-right font-display font-semibold">
               اسم الطالب
             </th>
-            {lectures.map((lecture, i) => (
+            {safeLectures.map((lecture, i) => (
               <th
                 key={i}
                 className="px-1 py-2 text-center font-display text-[10px] font-medium text-muted-foreground"
@@ -62,7 +64,7 @@ export default function BonusTable({
           </tr>
         </thead>
         <tbody>
-          {students.map((student, idx) => {
+          {safeStudents.map((student, idx) => {
             const bonusTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
             return (
               <tr
