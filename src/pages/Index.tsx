@@ -395,7 +395,7 @@ export default function Index() {
               className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
               disabled={activeCourse.students.length === 0}
             >
-              <Download size={14} />
+              <Upload size={14} />
               تصدير Excel
             </button>
           </div>
