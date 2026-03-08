@@ -156,12 +156,6 @@ export default function ExamsPage({
                       className="w-20 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </td>
-                  <td className="px-3 py-2.5 text-center text-sm text-muted-foreground">
-                    {bonusTotal}
-                  </td>
-                  <td className="px-3 py-2.5 text-center font-display font-bold text-primary">
-                    {total}
-                  </td>
                 </tr>
               );
             })}
