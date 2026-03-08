@@ -28,6 +28,7 @@ export default function SettingsPage({
 }: SettingsPageProps) {
   const importRef = useRef<HTMLInputElement>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const navigate = useNavigate();
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
