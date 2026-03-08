@@ -13,7 +13,7 @@ export function parseExcelFile(file: File): Promise<string[]> {
         
         const names: string[] = [];
         for (let i = 0; i < jsonData.length; i++) {
-          const row = jsonData[i] as unknown[];
+          const row = jsonData[i] as unknown as unknown[];
           if (row && row.length > 0) {
             const name = String(row[0]).trim();
             if (name && name !== "الاسم" && name !== "اسم الطالب" && name !== "Name" && name !== "undefined") {
