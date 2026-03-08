@@ -102,9 +102,9 @@ export default function BonusTable({
                   <td className="px-3 py-1.5 text-center">
                     <input
                       type="number"
-                      min={0}
+                      min={-maxBonus}
                       max={maxBonus}
-                      value={currentBonus || ""}
+                      value={currentBonus === 0 ? "" : currentBonus}
                       onChange={(e) => {
                         const v = clamp(Number(e.target.value), maxBonus);
                         onUpdateBonus(student.id, selectedLecture, v);
