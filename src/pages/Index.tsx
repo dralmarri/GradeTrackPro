@@ -84,7 +84,12 @@ export default function Index() {
       label: l.label,
     }));
 
-    const id = addCourse(newCourseName.trim(), lectures, newSection.trim());
+    const id = addCourse(newCourseName.trim(), lectures, newSection.trim(), {
+      lectureDays: selectedDays,
+      lectureTime: "",
+      semesterStart: semesterStart.toISOString(),
+      semesterEnd: semesterEnd.toISOString(),
+    });
     setActiveCourseId(id);
     resetModal();
     toast.success(`تم إنشاء المادة بـ ${lectures.length} محاضرة`);
