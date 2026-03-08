@@ -48,22 +48,23 @@ export default function BonusTable({
 
   return (
     <div className="space-y-4">
-      {/* Lecture selector */}
-      <div className="flex flex-wrap gap-2">
-        {safeLectures.map((lecture, i) => (
-          <button
-            key={i}
-            onClick={() => setSelectedLecture(i)}
-            className={cn(
-              "rounded-lg px-3 py-2 text-xs font-medium transition-all",
-              selectedLecture === i
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            )}
-          >
-            {lecture.label}
-          </button>
-        ))}
+      {/* Lecture dropdown */}
+      <div className="flex items-center gap-3">
+        <label className="font-display text-sm font-semibold text-foreground">المحاضرة:</label>
+        <select
+          value={selectedLecture}
+          onChange={(e) => setSelectedLecture(Number(e.target.value))}
+          className="rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+        >
+          {safeLectures.map((lecture, i) => (
+            <option key={i} value={i}>
+              {lecture.label}
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-muted-foreground">
+          ({selectedLecture + 1} من {safeLectures.length})
+        </span>
       </div>
 
       {/* Table for selected lecture */}
