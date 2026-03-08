@@ -40,7 +40,7 @@ export default function BonusTable({
             <th className="sticky right-10 z-10 min-w-[140px] bg-secondary/50 px-3 py-3 text-right font-display font-semibold">
               اسم الطالب
             </th>
-            {lectures.map((lecture, i) => (
+            {safeLectures.map((lecture, i) => (
               <th
                 key={i}
                 className="px-1 py-2 text-center font-display text-[10px] font-medium text-muted-foreground"
