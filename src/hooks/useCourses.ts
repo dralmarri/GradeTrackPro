@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Course, Student } from "@/types/student";
+import { Course, Student, LectureInfo } from "@/types/student";
 import { createStudent } from "@/lib/excel";
 
 const STORAGE_KEY = "student-grades-courses";
@@ -28,12 +28,13 @@ export function useCourses() {
     });
   }, []);
 
-  const addCourse = useCallback((name: string, lectureCount: number) => {
+  const addCourse = useCallback((name: string, lectures: LectureInfo[]) => {
     const course: Course = {
       id: crypto.randomUUID(),
       name,
       students: [],
-      lectureCount,
+      lectureCount: lectures.length,
+      lectures,
       maxBonus: 3,
       maxExam1: 20,
       maxExam2: 20,
@@ -101,13 +102,14 @@ export function useCourses() {
     );
   }, [updateCourses]);
 
-  const addLecture = useCallback((courseId: string) => {
+  const addLecture = useCallback((courseId: string, label?: string) => {
     updateCourses((prev) =>
       prev.map((c) => {
         if (c.id !== courseId) return c;
         return {
           ...c,
           lectureCount: c.lectureCount + 1,
+          lectures: [...c.lectures, { date: new Date().toISOString(), label: label || `محاضرة ${c.lectureCount + 1}` }],
           students: c.students.map((s) => ({
             ...s,
             lectureBonus: [...s.lectureBonus, 0],

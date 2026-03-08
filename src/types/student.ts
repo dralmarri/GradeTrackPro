@@ -8,11 +8,17 @@ export interface Student {
   participation: number;
 }
 
+export interface LectureInfo {
+  date: string; // ISO string
+  label: string;
+}
+
 export interface Course {
   id: string;
   name: string;
   students: Student[];
   lectureCount: number;
+  lectures: LectureInfo[];
   maxBonus: number;
   maxExam1: number;
   maxExam2: number;

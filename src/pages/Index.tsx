@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
+import { ar } from "date-fns/locale";
 import { useCourses } from "@/hooks/useCourses";
 import { exportToExcel } from "@/lib/excel";
+import { generateLectureDates, WEEKDAYS } from "@/lib/lectures";
+import { LectureInfo } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import GradeTable from "@/components/GradeTable";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   BookOpen,
   Plus,
@@ -12,6 +19,7 @@ import {
   ChevronLeft,
   PlusCircle,
   GraduationCap,
+  CalendarIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,28 +38,68 @@ export default function Index() {
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [showNewCourse, setShowNewCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
-  const [newLectureCount, setNewLectureCount] = useState(10);
+  const [semesterStart, setSemesterStart] = useState<Date | undefined>();
+  const [semesterEnd, setSemesterEnd] = useState<Date | undefined>();
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
+
+  const toggleDay = (day: number) => {
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  const previewLectures =
+    semesterStart && semesterEnd && selectedDays.length > 0
+      ? generateLectureDates(semesterStart, semesterEnd, selectedDays)
+      : [];
 
   const handleCreateCourse = () => {
     if (!newCourseName.trim()) {
       toast.error("أدخل اسم المادة");
       return;
     }
-    const id = addCourse(newCourseName.trim(), newLectureCount);
+    if (!semesterStart || !semesterEnd) {
+      toast.error("حدد تاريخ بداية ونهاية الفصل");
+      return;
+    }
+    if (selectedDays.length === 0) {
+      toast.error("اختر أيام المحاضرات");
+      return;
+    }
+    if (previewLectures.length === 0) {
+      toast.error("لا توجد محاضرات في الفترة المحددة");
+      return;
+    }
+
+    const lectures: LectureInfo[] = previewLectures.map((l) => ({
+      date: l.date.toISOString(),
+      label: l.label,
+    }));
+
+    const id = addCourse(newCourseName.trim(), lectures);
     setActiveCourseId(id);
     setShowNewCourse(false);
     setNewCourseName("");
-    setNewLectureCount(10);
-    toast.success("تم إنشاء المادة بنجاح");
+    setSemesterStart(undefined);
+    setSemesterEnd(undefined);
+    setSelectedDays([]);
+    toast.success(`تم إنشاء المادة بـ ${lectures.length} محاضرة`);
+  };
+
+  const resetModal = () => {
+    setShowNewCourse(false);
+    setNewCourseName("");
+    setSemesterStart(undefined);
+    setSemesterEnd(undefined);
+    setSelectedDays([]);
   };
 
   // Course list view
   if (!activeCourse) {
     return (
       <div className="min-h-screen bg-background">
-        {/* Header */}
         <header className="border-b border-border bg-card/80 backdrop-blur-sm">
           <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-md">
@@ -85,20 +133,21 @@ export default function Index() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm"
-                onClick={() => setShowNewCourse(false)}
+                className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-foreground/30 p-4 backdrop-blur-sm"
+                onClick={resetModal}
               >
                 <motion.div
                   initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="mx-4 w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl"
+                  className="my-8 w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl"
                 >
-                  <h3 className="mb-4 font-display text-lg font-bold">إنشاء مادة جديدة</h3>
-                  <div className="space-y-4">
+                  <h3 className="mb-5 font-display text-lg font-bold">إنشاء مادة جديدة</h3>
+                  <div className="space-y-5">
+                    {/* Course Name */}
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-muted-foreground">
+                      <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
                         اسم المادة
                       </label>
                       <input
@@ -107,31 +156,131 @@ export default function Index() {
                         placeholder="مثال: البرمجة المتقدمة"
                         className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                         autoFocus
-                        onKeyDown={(e) => e.key === "Enter" && handleCreateCourse()}
                       />
                     </div>
+
+                    {/* Date Pickers */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
+                          بداية الفصل
+                        </label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted",
+                                !semesterStart && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon size={14} />
+                              {semesterStart
+                                ? format(semesterStart, "yyyy/MM/dd")
+                                : "اختر التاريخ"}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={semesterStart}
+                              onSelect={setSemesterStart}
+                              initialFocus
+                              className="pointer-events-auto p-3"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
+                          نهاية الفصل
+                        </label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted",
+                                !semesterEnd && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon size={14} />
+                              {semesterEnd
+                                ? format(semesterEnd, "yyyy/MM/dd")
+                                : "اختر التاريخ"}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={semesterEnd}
+                              onSelect={setSemesterEnd}
+                              disabled={(date) =>
+                                semesterStart ? date < semesterStart : false
+                              }
+                              initialFocus
+                              className="pointer-events-auto p-3"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+
+                    {/* Day Selector */}
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-muted-foreground">
-                        عدد المحاضرات
+                      <label className="mb-2 block text-sm font-medium text-muted-foreground">
+                        أيام المحاضرات
                       </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={50}
-                        value={newLectureCount}
-                        onChange={(e) => setNewLectureCount(Number(e.target.value))}
-                        className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-                      />
+                      <div className="flex flex-wrap gap-2">
+                        {WEEKDAYS.map((day) => (
+                          <button
+                            key={day.value}
+                            onClick={() => toggleDay(day.value)}
+                            className={cn(
+                              "rounded-lg border px-3 py-2 text-sm font-medium transition-all",
+                              selectedDays.includes(day.value)
+                                ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                                : "border-border bg-background text-foreground hover:bg-muted"
+                            )}
+                          >
+                            {day.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex gap-3 pt-2">
+
+                    {/* Preview */}
+                    {previewLectures.length > 0 && (
+                      <div className="rounded-lg border border-border bg-muted/50 p-3">
+                        <p className="mb-2 text-sm font-semibold text-foreground">
+                          عدد المحاضرات: {previewLectures.length} محاضرة
+                        </p>
+                        <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                          {previewLectures.slice(0, 20).map((l, i) => (
+                            <span
+                              key={i}
+                              className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+                            >
+                              {l.label}
+                            </span>
+                          ))}
+                          {previewLectures.length > 20 && (
+                            <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                              +{previewLectures.length - 20} أخرى
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-3 pt-1">
                       <button
                         onClick={handleCreateCourse}
                         className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110"
                       >
-                        إنشاء
+                        إنشاء ({previewLectures.length} محاضرة)
                       </button>
                       <button
-                        onClick={() => setShowNewCourse(false)}
+                        onClick={resetModal}
                         className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
                       >
                         إلغاء
@@ -236,6 +385,7 @@ export default function Index() {
         <GradeTable
           students={activeCourse.students}
           lectureCount={activeCourse.lectureCount}
+          lectures={activeCourse.lectures}
           maxBonus={activeCourse.maxBonus}
           maxExam1={activeCourse.maxExam1}
           maxExam2={activeCourse.maxExam2}
