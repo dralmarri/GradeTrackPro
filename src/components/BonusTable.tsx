@@ -112,19 +112,26 @@ export default function BonusTable({
                   المجموع: {bonusTotal}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={currentBonus}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    const v = clamp(currentBonus - 1, maxBonus);
                     onUpdateBonus(student.id, selectedLecture, v);
                   }}
-                  className="w-16 rounded-lg border border-border bg-background px-1 py-2 text-center text-sm font-bold outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10 text-destructive font-bold text-lg transition-colors active:bg-destructive/20"
                 >
-                  {Array.from({ length: maxBonus * 2 + 1 }, (_, i) => i - maxBonus).map((v) => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
-                </select>
+                  −
+                </button>
+                <span className="w-8 text-center text-sm font-bold text-foreground">{currentBonus}</span>
+                <button
+                  onClick={() => {
+                    const v = clamp(currentBonus + 1, maxBonus);
+                    onUpdateBonus(student.id, selectedLecture, v);
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-lg transition-colors active:bg-primary/20"
+                >
+                  +
+                </button>
                 <button
                   onClick={() => onDeleteStudent(student.id)}
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
