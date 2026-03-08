@@ -87,7 +87,7 @@ export default function Index() {
 
     const id = addCourse(newCourseName.trim(), lectures, newSection.trim(), {
       lectureDays: selectedDays,
-      lectureTime: "",
+      lectureTime,
       semesterStart: semesterStart.toISOString(),
       semesterEnd: semesterEnd.toISOString(),
     });
