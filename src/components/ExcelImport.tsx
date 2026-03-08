@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Upload } from "lucide-react";
+import { Download } from "lucide-react";
 import { parseExcelFile } from "@/lib/excel";
 import { toast } from "sonner";
 
