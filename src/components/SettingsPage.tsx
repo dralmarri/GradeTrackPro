@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Course } from "@/types/student";
 import {
   Download,
@@ -27,6 +28,7 @@ export default function SettingsPage({
 }: SettingsPageProps) {
   const importRef = useRef<HTMLInputElement>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const navigate = useNavigate();
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -159,26 +161,37 @@ export default function SettingsPage({
           <h2 className="font-display text-lg font-bold">حول التطبيق والخصوصية</h2>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Shield size={16} className="text-muted-foreground" />
-              <h3 className="font-display text-sm font-semibold">سياسة الخصوصية والشروط</h3>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <button
+            onClick={() => navigate("/privacy")}
+            className="flex items-center gap-2 rounded-xl border border-border bg-background p-4 text-right transition-colors hover:bg-muted"
+          >
+            <Shield size={18} className="shrink-0 text-primary" />
+            <div>
+              <h3 className="font-display text-sm font-semibold">سياسة الخصوصية</h3>
+              <p className="text-[11px] text-muted-foreground">كيف نحمي بياناتك</p>
             </div>
-            <p className="mb-3 text-xs text-muted-foreground">
-              نحن نلتزم بحماية بياناتك. جميع البيانات تُخزن محلياً على جهازك ولا يتم مشاركتها مع أي طرف ثالث.
-            </p>
-          </div>
-
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Mail size={16} className="text-muted-foreground" />
-              <h3 className="font-display text-sm font-semibold">الدعم والتواصل</h3>
+          </button>
+          <button
+            onClick={() => navigate("/terms")}
+            className="flex items-center gap-2 rounded-xl border border-border bg-background p-4 text-right transition-colors hover:bg-muted"
+          >
+            <Info size={18} className="shrink-0 text-primary" />
+            <div>
+              <h3 className="font-display text-sm font-semibold">شروط الاستخدام</h3>
+              <p className="text-[11px] text-muted-foreground">أحكام وشروط التطبيق</p>
             </div>
-            <p className="mb-3 text-xs text-muted-foreground">
-              لأي استفسارات أو اقتراحات، يمكنك التواصل معنا عبر البريد الإلكتروني.
-            </p>
-          </div>
+          </button>
+          <button
+            onClick={() => navigate("/contact")}
+            className="flex items-center gap-2 rounded-xl border border-border bg-background p-4 text-right transition-colors hover:bg-muted"
+          >
+            <Mail size={18} className="shrink-0 text-primary" />
+            <div>
+              <h3 className="font-display text-sm font-semibold">تواصل معنا</h3>
+              <p className="text-[11px] text-muted-foreground">dralmarri@gmail.com</p>
+            </div>
+          </button>
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
