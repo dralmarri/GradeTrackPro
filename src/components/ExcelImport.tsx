@@ -42,7 +42,7 @@ export default function ExcelImport({ onImport }: ExcelImportProps) {
         onClick={() => inputRef.current?.click()}
         className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98]"
       >
-        <Upload size={18} />
+        <Download size={18} />
         استيراد Excel
       </button>
     </>
