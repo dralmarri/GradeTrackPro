@@ -12,7 +12,7 @@ interface BonusTableProps {
 }
 
 function clamp(val: number, max: number) {
-  return Math.max(0, Math.min(val, max));
+  return Math.max(-max, Math.min(val, max));
 }
 
 export default function BonusTable({
