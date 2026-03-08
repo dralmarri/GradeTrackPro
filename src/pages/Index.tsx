@@ -386,18 +386,19 @@ export default function Index() {
                 محاضرة
               </button>
             )}
-            <ExcelImport onImport={(names) => addStudentsToCourse(activeCourse.id, names)} />
-            <button
-              onClick={() => {
-                exportToExcel(activeCourse);
-                toast.success("تم تصدير الملف بنجاح");
-              }}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-              disabled={activeCourse.students.length === 0}
-            >
-              <Upload size={14} />
-              تصدير Excel
-            </button>
+            {courseTab === "status" && (
+              <button
+                onClick={() => {
+                  exportToExcel(activeCourse);
+                  toast.success("تم تصدير الملف بنجاح");
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                disabled={activeCourse.students.length === 0}
+              >
+                <Upload size={14} />
+                تصدير النتائج
+              </button>
+            )}
           </div>
         </div>
 
