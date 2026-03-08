@@ -53,7 +53,7 @@ export default function SettingsPage({
           {/* Export */}
           <div className="rounded-xl border border-border bg-background p-4">
             <div className="mb-2 flex items-center gap-2 text-primary">
-              <Download size={16} />
+              <Upload size={16} />
               <h3 className="font-display text-sm font-semibold">تصدير البيانات</h3>
             </div>
             <p className="mb-3 text-xs text-muted-foreground">
@@ -74,7 +74,7 @@ export default function SettingsPage({
           {/* Import */}
           <div className="rounded-xl border border-dashed border-warning/50 bg-warning/5 p-4">
             <div className="mb-2 flex items-center gap-2 text-warning">
-              <Upload size={16} />
+              <Download size={16} />
               <h3 className="font-display text-sm font-semibold">استيراد البيانات</h3>
             </div>
             <p className="mb-3 text-xs text-muted-foreground">

@@ -14,14 +14,15 @@ import CourseManager from "@/components/CourseManager";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import appIcon from "@/assets/app-icon.png";
 import {
   BookOpen,
   Plus,
+  Upload,
   Download,
   Trash2,
   ChevronLeft,
   PlusCircle,
-  GraduationCap,
   CalendarIcon,
   Star,
   ClipboardList,
@@ -150,14 +151,12 @@ export default function Index() {
         <header className="border-b border-border bg-card/80 backdrop-blur-sm">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-md">
-                <GraduationCap className="text-primary-foreground" size={22} />
-              </div>
+              <img src={appIcon} alt="GradeTrackPro" className="h-10 w-10 rounded-xl shadow-md" />
               <div>
                 <h1 className="font-display text-xl font-bold text-foreground">
-                  متابعة درجات الطلبة
+                  GradeTrackPro
                 </h1>
-                <p className="text-xs text-muted-foreground">إدارة الدرجات والكشوفات</p>
+                <p className="text-xs text-muted-foreground">متابعة درجات الطلبة</p>
               </div>
             </div>
             <button
@@ -396,7 +395,7 @@ export default function Index() {
               className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
               disabled={activeCourse.students.length === 0}
             >
-              <Download size={14} />
+              <Upload size={14} />
               تصدير Excel
             </button>
           </div>
