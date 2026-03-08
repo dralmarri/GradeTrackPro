@@ -22,6 +22,7 @@ function clamp(val: number, max: number) {
 
 export default function GradeTable({
   students,
+  lectures,
   lectureCount,
   maxBonus,
   maxExam1,
