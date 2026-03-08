@@ -33,26 +33,23 @@ export function parseExcelFile(file: File): Promise<string[]> {
 
 export function exportToExcel(course: Course) {
   const data = course.students.map((s, idx) => {
-    const row: Record<string, unknown> = {
+    const bonusTotal = s.lectureBonus.reduce((a, b) => a + b, 0);
+    return {
       "#": idx + 1,
       "اسم الطالب": s.name,
+      "مجموع البونص": bonusTotal,
+      "اختبار أول": s.exam1,
+      "اختبار ثاني": s.exam2,
+      "نهائي": s.finalExam,
+      "مشاركة": s.participation,
+      "المجموع الكلي": getTotal(s),
     };
-    s.lectureBonus.forEach((b, i) => {
-      row[`محاضرة ${i + 1}`] = b;
-    });
-    row["مجموع البونص"] = s.lectureBonus.reduce((a, b) => a + b, 0);
-    row["اختبار أول"] = s.exam1;
-    row["اختبار ثاني"] = s.exam2;
-    row["نهائي"] = s.finalExam;
-    row["مشاركة"] = s.participation;
-    row["المجموع الكلي"] = getTotal(s);
-    return row;
   });
 
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "الدرجات");
-  XLSX.writeFile(wb, `${course.name}_درجات.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, "النتائج");
+  XLSX.writeFile(wb, `${course.name}_نتائج.xlsx`);
 }
 
 export function getTotal(student: Student): number {
