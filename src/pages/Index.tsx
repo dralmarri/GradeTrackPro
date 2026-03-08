@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
 import { useCourses } from "@/hooks/useCourses";
 import { exportToExcel } from "@/lib/excel";
 import { generateLectureDates, WEEKDAYS } from "@/lib/lectures";
 import { LectureInfo } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
-import GradeTable from "@/components/GradeTable";
+import BonusTable from "@/components/BonusTable";
+import ExamsPage from "@/components/ExamsPage";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -20,8 +20,12 @@ import {
   PlusCircle,
   GraduationCap,
   CalendarIcon,
+  Star,
+  ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
+
+type CourseTab = "bonus" | "exams";
 
 export default function Index() {
   const {
@@ -41,6 +45,7 @@ export default function Index() {
   const [semesterStart, setSemesterStart] = useState<Date | undefined>();
   const [semesterEnd, setSemesterEnd] = useState<Date | undefined>();
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
 
@@ -346,7 +351,7 @@ export default function Index() {
       <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4">
           <button
-            onClick={() => setActiveCourseId(null)}
+            onClick={() => { setActiveCourseId(null); setCourseTab("bonus"); }}
             className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted"
           >
             <ChevronLeft size={20} className="rotate-180" />
@@ -358,13 +363,15 @@ export default function Index() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => addLecture(activeCourse.id)}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              <PlusCircle size={14} />
-              محاضرة
-            </button>
+            {courseTab === "bonus" && (
+              <button
+                onClick={() => addLecture(activeCourse.id)}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                <PlusCircle size={14} />
+                محاضرة
+              </button>
+            )}
             <ExcelImport onImport={(names) => addStudentsToCourse(activeCourse.id, names)} />
             <button
               onClick={() => {
@@ -379,22 +386,56 @@ export default function Index() {
             </button>
           </div>
         </div>
+
+        {/* Sub-tabs */}
+        <div className="mx-auto flex max-w-7xl gap-1 px-4 pb-2">
+          <button
+            onClick={() => setCourseTab("bonus")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+              courseTab === "bonus"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Star size={14} />
+            بونص المحاضرات
+          </button>
+          <button
+            onClick={() => setCourseTab("exams")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+              courseTab === "exams"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <ClipboardList size={14} />
+            الاختبارات والمشاركة
+          </button>
+        </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <GradeTable
-          students={activeCourse.students}
-          lectureCount={activeCourse.lectureCount}
-          lectures={activeCourse.lectures}
-          maxBonus={activeCourse.maxBonus}
-          maxExam1={activeCourse.maxExam1}
-          maxExam2={activeCourse.maxExam2}
-          maxFinal={activeCourse.maxFinal}
-          maxParticipation={activeCourse.maxParticipation}
-          onUpdateBonus={(sid, li, v) => updateLectureBonus(activeCourse.id, sid, li, v)}
-          onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
-          onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
-        />
+        {courseTab === "bonus" ? (
+          <BonusTable
+            students={activeCourse.students}
+            lectures={activeCourse.lectures}
+            maxBonus={activeCourse.maxBonus}
+            onUpdateBonus={(sid, li, v) => updateLectureBonus(activeCourse.id, sid, li, v)}
+            onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
+          />
+        ) : (
+          <ExamsPage
+            students={activeCourse.students}
+            courseId={activeCourse.id}
+            maxExam1={activeCourse.maxExam1}
+            maxExam2={activeCourse.maxExam2}
+            maxFinal={activeCourse.maxFinal}
+            maxParticipation={activeCourse.maxParticipation}
+            onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
+          />
+        )}
       </main>
     </div>
   );
