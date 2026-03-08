@@ -51,9 +51,9 @@ export default function GradeTable({
             <th className="sticky right-10 z-10 min-w-[140px] bg-secondary/50 px-3 py-3 text-right font-display font-semibold">
               اسم الطالب
             </th>
-            {Array.from({ length: lectureCount }, (_, i) => (
-              <th key={i} className="px-2 py-3 text-center font-display text-xs font-medium text-muted-foreground">
-                م{i + 1}
+            {lectures.map((lecture, i) => (
+              <th key={i} className="px-2 py-3 text-center font-display text-xs font-medium text-muted-foreground" title={lecture.label}>
+                <span className="whitespace-nowrap">{lecture.label.split(" ")[1] || `م${i + 1}`}</span>
                 <br />
                 <span className="text-[10px]">({maxBonus})</span>
               </th>
