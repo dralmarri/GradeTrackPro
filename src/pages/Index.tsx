@@ -14,14 +14,15 @@ import CourseManager from "@/components/CourseManager";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import appIcon from "@/assets/app-icon.png";
 import {
   BookOpen,
   Plus,
+  Upload,
   Download,
   Trash2,
   ChevronLeft,
   PlusCircle,
-  GraduationCap,
   CalendarIcon,
   Star,
   ClipboardList,
