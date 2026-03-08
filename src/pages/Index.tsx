@@ -280,6 +280,17 @@ export default function Index() {
                       </div>
                     </div>
 
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-muted-foreground">وقت المحاضرة</label>
+                      <input
+                        type="time"
+                        value={lectureTime}
+                        onChange={(e) => setLectureTime(e.target.value)}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        placeholder="مثال: 10:00"
+                      />
+                    </div>
+
                     {previewLectures.length > 0 && (
                       <div className="rounded-lg border border-border bg-muted/50 p-3">
                         <p className="mb-2 text-sm font-semibold text-foreground">
