@@ -130,13 +130,8 @@ export default function ExamsPage({
                   (من {currentTab.max})
                 </span>
               </th>
-              <th className="px-3 py-3 text-center font-display text-xs font-medium text-muted-foreground w-20">
-                بونص
-              </th>
-              <th className="px-3 py-3 text-center font-display text-xs font-bold text-primary w-24">
-                المجموع الكلي
-              </th>
             </tr>
+
           </thead>
           <tbody>
             {students.map((student, idx) => {
