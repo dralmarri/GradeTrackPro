@@ -57,6 +57,7 @@ export default function Index() {
   const [semesterStart, setSemesterStart] = useState<Date | undefined>();
   const [semesterEnd, setSemesterEnd] = useState<Date | undefined>();
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [lectureTime, setLectureTime] = useState("");
   const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
   const [mainView, setMainView] = useState<MainView>("courses");
 
