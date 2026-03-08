@@ -29,7 +29,12 @@ export function useCourses() {
     });
   }, []);
 
-  const addCourse = useCallback((name: string, lectures: LectureInfo[], section?: string) => {
+  const addCourse = useCallback((
+    name: string,
+    lectures: LectureInfo[],
+    section?: string,
+    schedule?: { lectureDays: number[]; lectureTime: string; semesterStart: string; semesterEnd: string }
+  ) => {
     const course: Course = {
       id: crypto.randomUUID(),
       name,
@@ -42,6 +47,10 @@ export function useCourses() {
       maxExam2: 20,
       maxFinal: 40,
       maxParticipation: 10,
+      lectureDays: schedule?.lectureDays || [],
+      lectureTime: schedule?.lectureTime || "",
+      semesterStart: schedule?.semesterStart || "",
+      semesterEnd: schedule?.semesterEnd || "",
     };
     updateCourses((prev) => [...prev, course]);
     return course.id;

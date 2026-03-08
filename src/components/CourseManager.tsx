@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Course } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
+import { format } from "date-fns";
 import {
   BookOpen,
   Trash2,
@@ -9,8 +10,14 @@ import {
   Users,
   Check,
   X,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+
+const DAYS_AR: Record<number, string> = {
+  0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء",
+  4: "الخميس", 5: "الجمعة", 6: "السبت",
+};
 
 interface CourseManagerProps {
   courses: Course[];
@@ -153,6 +160,31 @@ export default function CourseManager({
                 <span className="rounded-md bg-muted px-2 py-0.5">اختبار٢: {course.maxExam2}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">نهائي: {course.maxFinal}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">مشاركة: {course.maxParticipation}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">محاضرات: {course.lectureCount}</span>
+              </div>
+
+              {/* Schedule info */}
+              <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+                {course.lectureDays && course.lectureDays.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={12} />
+                    <span>الأيام: {course.lectureDays.map(d => DAYS_AR[d]).join("، ")}</span>
+                  </div>
+                )}
+                {course.lectureTime && (
+                  <div className="flex items-center gap-1.5">
+                    <Clock size={12} />
+                    <span>الوقت: {course.lectureTime}</span>
+                  </div>
+                )}
+                {course.semesterStart && course.semesterEnd && (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={12} />
+                    <span>
+                      من {format(new Date(course.semesterStart), "yyyy/MM/dd")} إلى {format(new Date(course.semesterEnd), "yyyy/MM/dd")}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">

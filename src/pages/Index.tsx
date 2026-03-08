@@ -57,6 +57,7 @@ export default function Index() {
   const [semesterStart, setSemesterStart] = useState<Date | undefined>();
   const [semesterEnd, setSemesterEnd] = useState<Date | undefined>();
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [lectureTime, setLectureTime] = useState("");
   const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
   const [mainView, setMainView] = useState<MainView>("courses");
 
@@ -84,7 +85,12 @@ export default function Index() {
       label: l.label,
     }));
 
-    const id = addCourse(newCourseName.trim(), lectures, newSection.trim());
+    const id = addCourse(newCourseName.trim(), lectures, newSection.trim(), {
+      lectureDays: selectedDays,
+      lectureTime,
+      semesterStart: semesterStart.toISOString(),
+      semesterEnd: semesterEnd.toISOString(),
+    });
     setActiveCourseId(id);
     resetModal();
     toast.success(`تم إنشاء المادة بـ ${lectures.length} محاضرة`);
@@ -97,6 +103,7 @@ export default function Index() {
     setSemesterStart(undefined);
     setSemesterEnd(undefined);
     setSelectedDays([]);
+    setLectureTime("");
   };
 
   // Settings / Course management view
@@ -271,6 +278,17 @@ export default function Index() {
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-muted-foreground">وقت المحاضرة</label>
+                      <input
+                        type="time"
+                        value={lectureTime}
+                        onChange={(e) => setLectureTime(e.target.value)}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        placeholder="مثال: 10:00"
+                      />
                     </div>
 
                     {previewLectures.length > 0 && (
