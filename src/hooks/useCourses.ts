@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Course, Student, LectureInfo } from "@/types/student";
 import { createStudent } from "@/lib/excel";
+import { format } from "date-fns";
 
 const STORAGE_KEY = "student-grades-courses";
 
@@ -109,14 +110,23 @@ export function useCourses() {
     );
   }, [updateCourses]);
 
-  const addLecture = useCallback((courseId: string, label?: string) => {
+  const addLecture = useCallback((courseId: string) => {
+    const DAYS_AR: Record<number, string> = {
+      0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء",
+      4: "الخميس", 5: "الجمعة", 6: "السبت",
+    };
+    const now = new Date();
+    const dayName = DAYS_AR[now.getDay()];
+    const dateStr = format(now, "MM/dd");
+    const label = `${dayName} ${dateStr}`;
+
     updateCourses((prev) =>
       prev.map((c) => {
         if (c.id !== courseId) return c;
         return {
           ...c,
           lectureCount: c.lectureCount + 1,
-          lectures: [...c.lectures, { date: new Date().toISOString(), label: label || `محاضرة ${c.lectureCount + 1}` }],
+          lectures: [...c.lectures, { date: now.toISOString(), label }],
           students: c.students.map((s) => ({
             ...s,
             lectureBonus: [...s.lectureBonus, 0],
