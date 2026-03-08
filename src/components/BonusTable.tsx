@@ -64,7 +64,7 @@ export default function BonusTable({
           </tr>
         </thead>
         <tbody>
-          {students.map((student, idx) => {
+          {safeStudents.map((student, idx) => {
             const bonusTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
             return (
               <tr
