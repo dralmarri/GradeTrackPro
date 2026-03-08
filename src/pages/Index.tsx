@@ -151,14 +151,12 @@ export default function Index() {
         <header className="border-b border-border bg-card/80 backdrop-blur-sm">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-md">
-                <GraduationCap className="text-primary-foreground" size={22} />
-              </div>
+              <img src={appIcon} alt="GradeTrackPro" className="h-10 w-10 rounded-xl shadow-md" />
               <div>
                 <h1 className="font-display text-xl font-bold text-foreground">
-                  متابعة درجات الطلبة
+                  GradeTrackPro
                 </h1>
-                <p className="text-xs text-muted-foreground">إدارة الدرجات والكشوفات</p>
+                <p className="text-xs text-muted-foreground">متابعة درجات الطلبة</p>
               </div>
             </div>
             <button
