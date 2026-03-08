@@ -377,15 +377,6 @@ export default function Index() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {courseTab === "bonus" && (
-              <button
-                onClick={() => addLecture(activeCourse.id)}
-                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                <PlusCircle size={14} />
-                محاضرة
-              </button>
-            )}
             {courseTab === "status" && (
               <button
                 onClick={() => {
@@ -405,7 +396,7 @@ export default function Index() {
         {/* Sub-tabs */}
         <div className="mx-auto flex max-w-7xl gap-1 px-4 pb-2">
           {[
-            { key: "bonus" as const, label: "بونص المحاضرات", icon: Star },
+            { key: "bonus" as const, label: "المحاضرات", icon: Star },
             { key: "exams" as const, label: "الاختبارات", icon: ClipboardList },
             { key: "status" as const, label: "وضع الطلبة", icon: BarChart3 },
           ].map((tab) => (
