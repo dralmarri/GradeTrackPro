@@ -33,7 +33,7 @@ export default function BonusTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-      <table className="w-full text-sm" style={{ minWidth: `${200 + lectures.length * 70 + 120}px` }}>
+      <table className="w-full text-sm" style={{ minWidth: `${200 + safeLectures.length * 70 + 120}px` }}>
         <thead>
           <tr className="border-b border-border bg-secondary/50">
             <th className="sticky right-0 z-10 bg-secondary/50 px-3 py-3 text-right font-display font-semibold">#</th>
