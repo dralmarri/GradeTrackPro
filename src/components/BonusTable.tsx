@@ -12,7 +12,7 @@ interface BonusTableProps {
 }
 
 function clamp(val: number, max: number) {
-  return Math.max(0, Math.min(val, max));
+  return Math.max(-max, Math.min(val, max));
 }
 
 export default function BonusTable({
@@ -102,9 +102,9 @@ export default function BonusTable({
                   <td className="px-3 py-1.5 text-center">
                     <input
                       type="number"
-                      min={0}
+                      min={-maxBonus}
                       max={maxBonus}
-                      value={currentBonus || ""}
+                      value={currentBonus === 0 ? "" : currentBonus}
                       onChange={(e) => {
                         const v = clamp(Number(e.target.value), maxBonus);
                         onUpdateBonus(student.id, selectedLecture, v);
@@ -112,7 +112,7 @@ export default function BonusTable({
                       className="w-20 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </td>
-                  <td className="bg-accent/5 px-3 py-2.5 text-center font-display font-bold text-accent">
+                  <td className={`bg-accent/5 px-3 py-2.5 text-center font-display font-bold ${bonusTotal >= 0 ? "text-accent" : "text-destructive"}`}>
                     {bonusTotal}
                   </td>
                   <td className="px-2 py-2">
