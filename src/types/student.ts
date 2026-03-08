@@ -25,4 +25,8 @@ export interface Course {
   maxExam2: number;
   maxFinal: number;
   maxParticipation: number;
+  lectureDays: number[];
+  lectureTime: string;
+  semesterStart: string;
+  semesterEnd: string;
 }
