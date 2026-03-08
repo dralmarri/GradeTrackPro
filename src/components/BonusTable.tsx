@@ -20,7 +20,9 @@ export default function BonusTable({
   onUpdateBonus,
   onDeleteStudent,
 }: BonusTableProps) {
-  if (students.length === 0) {
+  const safeStudents = students || [];
+  const safeLectures = lectures || [];
+  if (safeStudents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
         <p className="font-display text-lg">لا يوجد طلبة بعد</p>
