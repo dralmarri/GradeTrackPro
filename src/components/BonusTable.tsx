@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChevronRight, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BonusTableProps {
@@ -46,29 +46,100 @@ export default function BonusTable({
 
   const currentLecture = safeLectures[selectedLecture];
 
+  const goNext = () => {
+    if (selectedLecture < safeLectures.length - 1) setSelectedLecture(selectedLecture + 1);
+  };
+  const goPrev = () => {
+    if (selectedLecture > 0) setSelectedLecture(selectedLecture - 1);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Lecture dropdown */}
-      <div className="flex items-center gap-3">
-        <label className="font-display text-sm font-semibold text-foreground">المحاضرة:</label>
-        <select
-          value={selectedLecture}
-          onChange={(e) => setSelectedLecture(Number(e.target.value))}
-          className="rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+      {/* Lecture navigation - mobile friendly */}
+      <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card p-3 shadow-sm">
+        <button
+          onClick={goPrev}
+          disabled={selectedLecture === 0}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border transition-colors hover:bg-muted disabled:opacity-30"
         >
-          {safeLectures.map((lecture, i) => (
-            <option key={i} value={i}>
-              {lecture.label}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-muted-foreground">
-          ({selectedLecture + 1} من {safeLectures.length})
-        </span>
+          <ChevronRight size={18} />
+        </button>
+        <div className="flex-1 text-center">
+          <p className="font-display text-sm font-bold text-foreground">{currentLecture.label}</p>
+          <p className="text-[11px] text-muted-foreground">
+            المحاضرة {selectedLecture + 1} من {safeLectures.length} • أقصى بونص: {maxBonus}
+          </p>
+        </div>
+        <button
+          onClick={goNext}
+          disabled={selectedLecture === safeLectures.length - 1}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border transition-colors hover:bg-muted disabled:opacity-30"
+        >
+          <ChevronLeft size={18} />
+        </button>
       </div>
 
-      {/* Table for selected lecture */}
-      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+      {/* Lecture quick jump dropdown */}
+      <select
+        value={selectedLecture}
+        onChange={(e) => setSelectedLecture(Number(e.target.value))}
+        className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+      >
+        {safeLectures.map((lecture, i) => (
+          <option key={i} value={i}>
+            {lecture.label}
+          </option>
+        ))}
+      </select>
+
+      {/* Mobile card layout */}
+      <div className="space-y-2 sm:hidden">
+        {safeStudents.map((student, idx) => {
+          const bonusTotal = (student.lectureBonus || []).reduce((a, b) => a + b, 0);
+          const currentBonus = student.lectureBonus?.[selectedLecture] || 0;
+
+          return (
+            <div
+              key={student.id}
+              className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground">
+                {idx + 1}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">{student.name}</p>
+                <p className={cn("text-[11px] font-display font-bold", bonusTotal >= 0 ? "text-accent" : "text-destructive")}>
+                  المجموع: {bonusTotal}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={-maxBonus}
+                  max={maxBonus}
+                  value={currentBonus === 0 ? "" : currentBonus}
+                  onChange={(e) => {
+                    const v = clamp(Number(e.target.value), maxBonus);
+                    onUpdateBonus(student.id, selectedLecture, v);
+                  }}
+                  placeholder="0"
+                  className="w-16 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-bold outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+                <button
+                  onClick={() => onDeleteStudent(student.id)}
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table layout */}
+      <div className="hidden sm:block overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary/50">
