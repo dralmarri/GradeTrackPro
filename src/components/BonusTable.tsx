@@ -170,17 +170,18 @@ export default function BonusTable({
                   <td className="px-3 py-2.5 text-center text-muted-foreground">{idx + 1}</td>
                   <td className="px-3 py-2.5 font-medium">{student.name}</td>
                   <td className="px-3 py-1.5 text-center">
-                    <input
-                      type="number"
-                      min={-maxBonus}
-                      max={maxBonus}
-                      value={currentBonus === 0 ? "" : currentBonus}
+                    <select
+                      value={currentBonus}
                       onChange={(e) => {
-                        const v = clamp(Number(e.target.value), maxBonus);
+                        const v = Number(e.target.value);
                         onUpdateBonus(student.id, selectedLecture, v);
                       }}
                       className="w-20 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
+                    >
+                      {Array.from({ length: maxBonus * 2 + 1 }, (_, i) => i - maxBonus).map((v) => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className={`bg-accent/5 px-3 py-2.5 text-center font-display font-bold ${bonusTotal >= 0 ? "text-accent" : "text-destructive"}`}>
                     {bonusTotal}
