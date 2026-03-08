@@ -28,12 +28,13 @@ export function useCourses() {
     });
   }, []);
 
-  const addCourse = useCallback((name: string, lectureCount: number) => {
+  const addCourse = useCallback((name: string, lectures: LectureInfo[]) => {
     const course: Course = {
       id: crypto.randomUUID(),
       name,
       students: [],
-      lectureCount,
+      lectureCount: lectures.length,
+      lectures,
       maxBonus: 3,
       maxExam1: 20,
       maxExam2: 20,
