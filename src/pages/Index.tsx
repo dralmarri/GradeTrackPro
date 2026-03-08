@@ -396,7 +396,7 @@ export default function Index() {
         {/* Sub-tabs */}
         <div className="mx-auto flex max-w-7xl gap-1 px-4 pb-2">
           {[
-            { key: "bonus" as const, label: "بونص المحاضرات", icon: Star },
+            { key: "bonus" as const, label: "المحاضرات", icon: Star },
             { key: "exams" as const, label: "الاختبارات", icon: ClipboardList },
             { key: "status" as const, label: "وضع الطلبة", icon: BarChart3 },
           ].map((tab) => (
