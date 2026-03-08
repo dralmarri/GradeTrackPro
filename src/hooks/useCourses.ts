@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Course, Student } from "@/types/student";
+import { Course, Student, LectureInfo } from "@/types/student";
 import { createStudent } from "@/lib/excel";
 
 const STORAGE_KEY = "student-grades-courses";
