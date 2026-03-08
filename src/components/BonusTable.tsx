@@ -113,19 +113,18 @@ export default function BonusTable({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={-maxBonus}
-                  max={maxBonus}
-                  value={currentBonus === 0 ? "" : currentBonus}
+                <select
+                  value={currentBonus}
                   onChange={(e) => {
-                    const v = clamp(Number(e.target.value), maxBonus);
+                    const v = Number(e.target.value);
                     onUpdateBonus(student.id, selectedLecture, v);
                   }}
-                  placeholder="0"
-                  className="w-16 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-bold outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
+                  className="w-16 rounded-lg border border-border bg-background px-1 py-2 text-center text-sm font-bold outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  {Array.from({ length: maxBonus * 2 + 1 }, (_, i) => i - maxBonus).map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
                 <button
                   onClick={() => onDeleteStudent(student.id)}
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
