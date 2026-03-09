@@ -28,6 +28,7 @@ import {
   Star,
   ClipboardList,
   BarChart3,
+  UserCheck,
   Settings,
 } from "lucide-react";
 import { toast } from "sonner";
