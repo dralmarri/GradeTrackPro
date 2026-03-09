@@ -80,7 +80,7 @@ export default function Index() {
       ? generateLectureDates(semesterStart, semesterEnd, selectedDays)
       : [];
 
-  const handleCreateCourse = () => {
+  const handleCreateCourse = async () => {
     if (!newCourseName.trim()) { toast.error("أدخل اسم المادة"); return; }
     if (!semesterStart || !semesterEnd) { toast.error("حدد تاريخ بداية ونهاية الفصل"); return; }
     if (selectedDays.length === 0) { toast.error("اختر أيام المحاضرات"); return; }
