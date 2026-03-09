@@ -32,6 +32,7 @@ import {
   UserCheck,
   Settings,
 } from "lucide-react";
+import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type CourseTab = "bonus" | "exams" | "status" | "attendance";
