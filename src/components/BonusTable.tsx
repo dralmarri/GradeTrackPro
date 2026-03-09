@@ -8,6 +8,7 @@ interface BonusTableProps {
   lectures: LectureInfo[];
   maxBonus: number;
   onUpdateBonus: (studentId: string, lectureIndex: number, value: number) => void;
+  onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
   onDeleteStudent: (studentId: string) => void;
 }
 
