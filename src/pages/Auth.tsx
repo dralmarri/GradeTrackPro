@@ -33,18 +33,30 @@ export default function Auth() {
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          console.error("Login error:", error.message, error.status, error);
+          throw error;
+        }
         toast.success("تم تسجيل الدخول بنجاح");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
-        if (error) throw error;
-        toast.success("تم إنشاء الحساب! تحقق من بريدك الإلكتروني للتأكيد");
+        if (error) {
+          console.error("Signup error:", error.message, error.status, error);
+          throw error;
+        }
+        console.log("Signup result:", data);
+        if (data.user && !data.session) {
+          toast.success("تم إنشاء الحساب! تحقق من بريدك الإلكتروني للتأكيد");
+        } else {
+          toast.success("تم إنشاء الحساب وتسجيل الدخول بنجاح");
+        }
       }
     } catch (err: any) {
+      console.error("Auth error details:", JSON.stringify(err));
       toast.error(err.message || "حدث خطأ");
     } finally {
       setSubmitting(false);
