@@ -26,7 +26,23 @@ export default function BonusTable({
 }: BonusTableProps) {
   const safeStudents = students || [];
   const safeLectures = lectures || [];
-  const [selectedLecture, setSelectedLecture] = useState(safeLectures.length > 0 ? safeLectures.length - 1 : 0);
+  const [selectedLecture, setSelectedLecture] = useState(() => {
+    if (safeLectures.length === 0) return 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let closestIdx = 0;
+    let closestDiff = Infinity;
+    safeLectures.forEach((lec, i) => {
+      const lecDate = new Date(lec.date);
+      lecDate.setHours(0, 0, 0, 0);
+      const diff = Math.abs(lecDate.getTime() - today.getTime());
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        closestIdx = i;
+      }
+    });
+    return closestIdx;
+  });
   const [searchQuery, setSearchQuery] = useState("");
 
   if (safeStudents.length === 0) {
