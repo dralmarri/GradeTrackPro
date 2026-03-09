@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
 import { cn } from "@/lib/utils";
-import { UserX } from "lucide-react";
+import { Search, UserX } from "lucide-react";
 
 interface AttendanceSummaryProps {
   students: Student[];
