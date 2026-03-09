@@ -14,13 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      courses: {
+        Row: {
+          created_at: string | null
+          id: string
+          lecture_count: number | null
+          lecture_days: Json | null
+          lecture_time: string | null
+          lectures: Json | null
+          max_bonus: number | null
+          max_exam1: number | null
+          max_exam2: number | null
+          max_final: number | null
+          max_participation: number | null
+          name: string
+          section: string | null
+          semester_end: string | null
+          semester_start: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lecture_count?: number | null
+          lecture_days?: Json | null
+          lecture_time?: string | null
+          lectures?: Json | null
+          max_bonus?: number | null
+          max_exam1?: number | null
+          max_exam2?: number | null
+          max_final?: number | null
+          max_participation?: number | null
+          name: string
+          section?: string | null
+          semester_end?: string | null
+          semester_start?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lecture_count?: number | null
+          lecture_days?: Json | null
+          lecture_time?: string | null
+          lectures?: Json | null
+          max_bonus?: number | null
+          max_exam1?: number | null
+          max_exam2?: number | null
+          max_final?: number | null
+          max_participation?: number | null
+          name?: string
+          section?: string | null
+          semester_end?: string | null
+          semester_start?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      students: {
+        Row: {
+          attendance: Json | null
+          course_id: string
+          created_at: string | null
+          exam1: number | null
+          exam2: number | null
+          final_exam: number | null
+          id: string
+          lecture_bonus: Json | null
+          name: string
+          participation: number | null
+          user_id: string
+        }
+        Insert: {
+          attendance?: Json | null
+          course_id: string
+          created_at?: string | null
+          exam1?: number | null
+          exam2?: number | null
+          final_exam?: number | null
+          id?: string
+          lecture_bonus?: Json | null
+          name: string
+          participation?: number | null
+          user_id: string
+        }
+        Update: {
+          attendance?: Json | null
+          course_id?: string
+          created_at?: string | null
+          exam1?: number | null
+          exam2?: number | null
+          final_exam?: number | null
+          id?: string
+          lecture_bonus?: Json | null
+          name?: string
+          participation?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_course_owner: { Args: { p_course_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
