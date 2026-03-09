@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
-import { Trash2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Trash2, ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BonusTableProps {
