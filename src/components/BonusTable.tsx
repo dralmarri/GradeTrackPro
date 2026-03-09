@@ -162,6 +162,7 @@ export default function BonusTable({
               <th className="min-w-[180px] px-3 py-3 text-right font-display font-semibold">
                 اسم الطالب
               </th>
+              <th className="px-3 py-3 text-center font-display font-semibold w-16">حضور</th>
               <th className="px-3 py-3 text-center font-display font-semibold w-28">
                 {currentLecture.label}
                 <br />
