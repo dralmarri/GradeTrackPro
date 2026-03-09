@@ -178,14 +178,26 @@ export default function BonusTable({
             {safeStudents.map((student, idx) => {
               const bonusTotal = (student.lectureBonus || []).reduce((a, b) => a + b, 0);
               const currentBonus = student.lectureBonus?.[selectedLecture] || 0;
+              const isPresent = student.attendance?.[selectedLecture] !== false;
 
               return (
                 <tr
                   key={student.id}
-                  className="border-b border-border/50 transition-colors hover:bg-muted/30"
+                  className={cn("border-b border-border/50 transition-colors hover:bg-muted/30", !isPresent && "bg-destructive/5")}
                 >
                   <td className="px-3 py-2.5 text-center text-muted-foreground">{idx + 1}</td>
-                  <td className="px-3 py-2.5 font-medium">{student.name}</td>
+                  <td className={cn("px-3 py-2.5 font-medium", !isPresent && "text-muted-foreground line-through")}>{student.name}</td>
+                  <td className="px-3 py-2.5 text-center">
+                    <button
+                      onClick={() => onUpdateAttendance(student.id, selectedLecture, !isPresent)}
+                      className={cn(
+                        "h-7 w-7 rounded-md border-2 transition-colors inline-flex items-center justify-center text-xs font-bold",
+                        isPresent ? "border-primary bg-primary/10 text-primary" : "border-destructive bg-destructive/10 text-destructive"
+                      )}
+                    >
+                      {isPresent ? "✓" : "✗"}
+                    </button>
+                  </td>
                   <td className="px-3 py-1.5 text-center">
                     <select
                       value={currentBonus}
