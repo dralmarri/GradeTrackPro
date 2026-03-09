@@ -56,6 +56,8 @@ export default function Index() {
   const [newSection, setNewSection] = useState("");
   const [semesterStart, setSemesterStart] = useState<Date | undefined>();
   const [semesterEnd, setSemesterEnd] = useState<Date | undefined>();
+  const [startOpen, setStartOpen] = useState(false);
+  const [endOpen, setEndOpen] = useState(false);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [lectureTime, setLectureTime] = useState("");
   const [pendingStudentNames, setPendingStudentNames] = useState<string[]>([]);
