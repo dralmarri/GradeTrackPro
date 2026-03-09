@@ -62,6 +62,7 @@ export function createStudent(name: string, lectureCount: number): Student {
     id: crypto.randomUUID(),
     name,
     lectureBonus: new Array(lectureCount).fill(0),
+    attendance: new Array(lectureCount).fill(true),
     exam1: 0,
     exam2: 0,
     finalExam: 0,
