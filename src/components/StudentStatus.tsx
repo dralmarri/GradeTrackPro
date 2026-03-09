@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Student, Course } from "@/types/student";
 import { getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
-import { User, TrendingUp, TrendingDown, Award } from "lucide-react";
+import { User, TrendingUp, TrendingDown, Award, Search } from "lucide-react";
 
 interface StudentStatusProps {
   students: Student[];
