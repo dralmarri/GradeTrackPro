@@ -207,6 +207,7 @@ export function useCourses() {
     addStudentsToCourse,
     updateStudent,
     updateLectureBonus,
+    updateAttendance,
     deleteCourse,
     deleteStudent,
     addLecture,
