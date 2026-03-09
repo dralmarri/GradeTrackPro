@@ -27,6 +27,7 @@ export default function BonusTable({
   const safeStudents = students || [];
   const safeLectures = lectures || [];
   const [selectedLecture, setSelectedLecture] = useState(safeLectures.length > 0 ? safeLectures.length - 1 : 0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   if (safeStudents.length === 0) {
     return (
