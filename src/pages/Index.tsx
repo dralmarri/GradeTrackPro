@@ -485,6 +485,12 @@ export default function Index() {
             onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
           />
         )}
+        {courseTab === "attendance" && (
+          <AttendanceSummary
+            students={activeCourse.students}
+            lectures={activeCourse.lectures}
+          />
+        )}
         {courseTab === "status" && (
           <StudentStatus
             students={activeCourse.students}
