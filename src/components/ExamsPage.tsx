@@ -122,6 +122,18 @@ export default function ExamsPage({
         ))}
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="بحث باسم الطالب..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full rounded-lg border border-input bg-background pr-9 pl-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+
       {/* Actions */}
       <div className="flex items-center gap-3">
         <input
