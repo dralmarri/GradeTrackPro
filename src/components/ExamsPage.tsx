@@ -158,7 +158,7 @@ export default function ExamsPage({
 
       {/* Mobile card layout */}
       <div className="space-y-2 sm:hidden">
-        {students.map((student, idx) => {
+        {filteredStudents.map((student, idx) => {
           const currentVal = (student[currentTab.key] as number) || 0;
 
           return (
