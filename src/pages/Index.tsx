@@ -91,16 +91,16 @@ export default function Index() {
       label: l.label,
     }));
 
-    const id = addCourse(newCourseName.trim(), lectures, newSection.trim(), {
+    const id = await addCourse(newCourseName.trim(), lectures, newSection.trim(), {
       lectureDays: selectedDays,
       lectureTime,
       semesterStart: semesterStart.toISOString(),
       semesterEnd: semesterEnd.toISOString(),
     });
-    if (pendingStudentNames.length > 0) {
-      addStudentsToCourse(id, pendingStudentNames);
+    if (id && pendingStudentNames.length > 0) {
+      await addStudentsToCourse(id, pendingStudentNames);
     }
-    setActiveCourseId(id);
+    if (id) setActiveCourseId(id);
     resetModal();
     toast.success(`تم إنشاء المادة بـ ${lectures.length} محاضرة${pendingStudentNames.length > 0 ? ` و ${pendingStudentNames.length} طالب` : ""}`);
   };
