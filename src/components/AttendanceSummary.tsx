@@ -97,7 +97,7 @@ export default function AttendanceSummary({ students, lectures }: AttendanceSumm
             </tr>
           </thead>
           <tbody>
-            {studentAbsences.map(({ student, absentCount, absentDates }, idx) => (
+            {filtered.map(({ student, absentCount, absentDates }, idx) => (
               <tr key={student.id} className={cn("border-b border-border/50 transition-colors hover:bg-muted/30", absentCount > 0 && "bg-destructive/5")}>
                 <td className="px-3 py-2.5 text-center text-muted-foreground">{idx + 1}</td>
                 <td className="px-3 py-2.5 font-medium">{student.name}</td>
