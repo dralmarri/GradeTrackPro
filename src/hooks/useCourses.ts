@@ -1,218 +1,248 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Course, Student, LectureInfo } from "@/types/student";
-import { createStudent } from "@/lib/excel";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-const STORAGE_KEY = "student-grades-courses";
+// Use any-typed client to bypass empty generated types until tables are created
+const db = supabase as any;
 
-function loadCourses(): Course[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
+function dbRowToCourse(row: any): Omit<Course, "students"> {
+  return {
+    id: row.id,
+    name: row.name,
+    section: row.section || "",
+    lectureCount: row.lecture_count || 0,
+    lectures: (row.lectures || []) as LectureInfo[],
+    maxBonus: Number(row.max_bonus) || 3,
+    maxExam1: Number(row.max_exam1) || 20,
+    maxExam2: Number(row.max_exam2) || 20,
+    maxFinal: Number(row.max_final) || 40,
+    maxParticipation: Number(row.max_participation) || 10,
+    lectureDays: (row.lecture_days || []) as number[],
+    lectureTime: row.lecture_time || "",
+    semesterStart: row.semester_start || "",
+    semesterEnd: row.semester_end || "",
+  };
 }
 
-function saveCourses(courses: Course[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+function dbRowToStudent(row: any): Student {
+  return {
+    id: row.id,
+    name: row.name,
+    lectureBonus: (row.lecture_bonus || []) as number[],
+    attendance: (row.attendance || []) as boolean[],
+    exam1: Number(row.exam1) || 0,
+    exam2: Number(row.exam2) || 0,
+    finalExam: Number(row.final_exam) || 0,
+    participation: Number(row.participation) || 0,
+  };
 }
 
 export function useCourses() {
-  const [courses, setCourses] = useState<Course[]>(loadCourses);
+  const { user } = useAuth();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const updateCourses = useCallback((updater: (prev: Course[]) => Course[]) => {
-    setCourses((prev) => {
-      const next = updater(prev);
-      saveCourses(next);
-      return next;
+  const fetchCourses = useCallback(async () => {
+    if (!user) { setCourses([]); setLoading(false); return; }
+
+    const { data: courseRows, error: cErr } = await db
+      .from("courses").select("*").order("created_at", { ascending: true });
+    if (cErr) { console.error("Error fetching courses:", cErr); setLoading(false); return; }
+
+    const { data: studentRows, error: sErr } = await db
+      .from("students").select("*").order("created_at", { ascending: true });
+    if (sErr) { console.error("Error fetching students:", sErr); setLoading(false); return; }
+
+    const coursesWithStudents: Course[] = (courseRows || []).map((cr: any) => {
+      const courseStudents = (studentRows || [])
+        .filter((sr: any) => sr.course_id === cr.id)
+        .map(dbRowToStudent);
+      return { ...dbRowToCourse(cr), students: courseStudents };
     });
-  }, []);
 
-  const addCourse = useCallback((
-    name: string,
-    lectures: LectureInfo[],
-    section?: string,
+    setCourses(coursesWithStudents);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => { fetchCourses(); }, [fetchCourses]);
+
+  const addCourse = useCallback(async (
+    name: string, lectures: LectureInfo[], section?: string,
     schedule?: { lectureDays: number[]; lectureTime: string; semesterStart: string; semesterEnd: string }
-  ) => {
-    const course: Course = {
-      id: crypto.randomUUID(),
-      name,
-      section: section || "",
-      students: [],
-      lectureCount: lectures.length,
-      lectures,
-      maxBonus: 3,
-      maxExam1: 20,
-      maxExam2: 20,
-      maxFinal: 40,
-      maxParticipation: 10,
-      lectureDays: schedule?.lectureDays || [],
-      lectureTime: schedule?.lectureTime || "",
-      semesterStart: schedule?.semesterStart || "",
-      semesterEnd: schedule?.semesterEnd || "",
-    };
-    updateCourses((prev) => [...prev, course]);
-    return course.id;
-  }, [updateCourses]);
+  ): Promise<string> => {
+    if (!user) return "";
+    const { data, error } = await db.from("courses").insert({
+      user_id: user.id, name, section: section || "",
+      lecture_count: lectures.length, lectures,
+      max_bonus: 3, max_exam1: 20, max_exam2: 20, max_final: 40, max_participation: 10,
+      lecture_days: schedule?.lectureDays || [], lecture_time: schedule?.lectureTime || "",
+      semester_start: schedule?.semesterStart || "", semester_end: schedule?.semesterEnd || "",
+    }).select().single();
+    if (error || !data) { console.error("Error adding course:", error); return ""; }
+    await fetchCourses();
+    return data.id;
+  }, [user, fetchCourses]);
 
-  const updateCourse = useCallback((courseId: string, updates: Partial<Omit<Course, "id" | "students">>) => {
-    updateCourses((prev) =>
-      prev.map((c) => (c.id === courseId ? { ...c, ...updates } : c))
-    );
-  }, [updateCourses]);
+  const updateCourse = useCallback(async (courseId: string, updates: Partial<Omit<Course, "id" | "students">>) => {
+    const u: any = {};
+    if (updates.name !== undefined) u.name = updates.name;
+    if (updates.section !== undefined) u.section = updates.section;
+    if (updates.lectureCount !== undefined) u.lecture_count = updates.lectureCount;
+    if (updates.lectures !== undefined) u.lectures = updates.lectures;
+    if (updates.maxBonus !== undefined) u.max_bonus = updates.maxBonus;
+    if (updates.maxExam1 !== undefined) u.max_exam1 = updates.maxExam1;
+    if (updates.maxExam2 !== undefined) u.max_exam2 = updates.maxExam2;
+    if (updates.maxFinal !== undefined) u.max_final = updates.maxFinal;
+    if (updates.maxParticipation !== undefined) u.max_participation = updates.maxParticipation;
+    if (updates.lectureDays !== undefined) u.lecture_days = updates.lectureDays;
+    if (updates.lectureTime !== undefined) u.lecture_time = updates.lectureTime;
+    if (updates.semesterStart !== undefined) u.semester_start = updates.semesterStart;
+    if (updates.semesterEnd !== undefined) u.semester_end = updates.semesterEnd;
+    const { error } = await db.from("courses").update(u).eq("id", courseId);
+    if (error) console.error("Error updating course:", error);
+    else await fetchCourses();
+  }, [fetchCourses]);
 
-  const addStudentsToCourse = useCallback((courseId: string, names: string[]) => {
-    updateCourses((prev) =>
-      prev.map((c) => {
-        if (c.id !== courseId) return c;
-        const newStudents = names.map((n) => createStudent(n, c.lectureCount));
-        return { ...c, students: [...c.students, ...newStudents] };
-      })
-    );
-  }, [updateCourses]);
+  const addStudentsToCourse = useCallback(async (courseId: string, names: string[]) => {
+    if (!user) return;
+    const course = courses.find((c) => c.id === courseId);
+    const lc = course?.lectureCount || 0;
+    const rows = names.map((name) => ({
+      course_id: courseId, user_id: user.id, name,
+      lecture_bonus: new Array(lc).fill(0), attendance: new Array(lc).fill(true),
+      exam1: 0, exam2: 0, final_exam: 0, participation: 0,
+    }));
+    const { error } = await db.from("students").insert(rows);
+    if (error) console.error("Error adding students:", error);
+    else await fetchCourses();
+  }, [user, courses, fetchCourses]);
 
-  const updateStudent = useCallback((courseId: string, studentId: string, updates: Partial<Student>) => {
-    updateCourses((prev) =>
-      prev.map((c) => {
-        if (c.id !== courseId) return c;
-        return {
-          ...c,
-          students: c.students.map((s) =>
-            s.id === studentId ? { ...s, ...updates } : s
-          ),
-        };
-      })
-    );
-  }, [updateCourses]);
+  const updateStudent = useCallback(async (_courseId: string, studentId: string, updates: Partial<Student>) => {
+    const u: any = {};
+    if (updates.name !== undefined) u.name = updates.name;
+    if (updates.lectureBonus !== undefined) u.lecture_bonus = updates.lectureBonus;
+    if (updates.attendance !== undefined) u.attendance = updates.attendance;
+    if (updates.exam1 !== undefined) u.exam1 = updates.exam1;
+    if (updates.exam2 !== undefined) u.exam2 = updates.exam2;
+    if (updates.finalExam !== undefined) u.final_exam = updates.finalExam;
+    if (updates.participation !== undefined) u.participation = updates.participation;
+    const { error } = await db.from("students").update(u).eq("id", studentId);
+    if (error) console.error("Error updating student:", error);
+    else await fetchCourses();
+  }, [fetchCourses]);
 
-  const updateLectureBonus = useCallback(
-    (courseId: string, studentId: string, lectureIndex: number, value: number) => {
-      updateCourses((prev) =>
-        prev.map((c) => {
-          if (c.id !== courseId) return c;
-          return {
-            ...c,
-            students: c.students.map((s) => {
-              if (s.id !== studentId) return s;
-              const newBonus = [...s.lectureBonus];
-              newBonus[lectureIndex] = value;
-              return { ...s, lectureBonus: newBonus };
-            }),
-          };
-        })
-      );
-    },
-    [updateCourses]
-  );
+  const updateLectureBonus = useCallback(async (courseId: string, studentId: string, lectureIndex: number, value: number) => {
+    const student = courses.find((c) => c.id === courseId)?.students.find((s) => s.id === studentId);
+    if (!student) return;
+    const newBonus = [...student.lectureBonus];
+    newBonus[lectureIndex] = value;
+    const { error } = await db.from("students").update({ lecture_bonus: newBonus }).eq("id", studentId);
+    if (error) console.error("Error updating bonus:", error);
+    else await fetchCourses();
+  }, [courses, fetchCourses]);
 
-  const updateAttendance = useCallback(
-    (courseId: string, studentId: string, lectureIndex: number, present: boolean) => {
-      updateCourses((prev) =>
-        prev.map((c) => {
-          if (c.id !== courseId) return c;
-          return {
-            ...c,
-            students: c.students.map((s) => {
-              if (s.id !== studentId) return s;
-              const newAttendance = [...(s.attendance || new Array(c.lectureCount).fill(true))];
-              newAttendance[lectureIndex] = present;
-              return { ...s, attendance: newAttendance };
-            }),
-          };
-        })
-      );
-    },
-    [updateCourses]
-  );
+  const updateAttendance = useCallback(async (courseId: string, studentId: string, lectureIndex: number, present: boolean) => {
+    const course = courses.find((c) => c.id === courseId);
+    const student = course?.students.find((s) => s.id === studentId);
+    if (!student || !course) return;
+    const newAtt = [...(student.attendance || new Array(course.lectureCount).fill(true))];
+    newAtt[lectureIndex] = present;
+    const { error } = await db.from("students").update({ attendance: newAtt }).eq("id", studentId);
+    if (error) console.error("Error updating attendance:", error);
+    else await fetchCourses();
+  }, [courses, fetchCourses]);
 
-  const deleteCourse = useCallback((courseId: string) => {
-    updateCourses((prev) => prev.filter((c) => c.id !== courseId));
-  }, [updateCourses]);
+  const deleteCourse = useCallback(async (courseId: string) => {
+    const { error } = await db.from("courses").delete().eq("id", courseId);
+    if (error) console.error("Error deleting course:", error);
+    else await fetchCourses();
+  }, [fetchCourses]);
 
-  const deleteStudent = useCallback((courseId: string, studentId: string) => {
-    updateCourses((prev) =>
-      prev.map((c) => {
-        if (c.id !== courseId) return c;
-        return { ...c, students: c.students.filter((s) => s.id !== studentId) };
-      })
-    );
-  }, [updateCourses]);
+  const deleteStudent = useCallback(async (_courseId: string, studentId: string) => {
+    const { error } = await db.from("students").delete().eq("id", studentId);
+    if (error) console.error("Error deleting student:", error);
+    else await fetchCourses();
+  }, [fetchCourses]);
 
-  const addLecture = useCallback((courseId: string) => {
+  const addLecture = useCallback(async (courseId: string) => {
     const DAYS_AR: Record<number, string> = {
       0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء",
       4: "الخميس", 5: "الجمعة", 6: "السبت",
     };
     const now = new Date();
-    const dayName = DAYS_AR[now.getDay()];
-    const dateStr = format(now, "MM/dd");
-    const label = `${dayName} ${dateStr}`;
+    const label = `${DAYS_AR[now.getDay()]} ${format(now, "MM/dd")}`;
+    const course = courses.find((c) => c.id === courseId);
+    if (!course) return;
 
-    updateCourses((prev) =>
-      prev.map((c) => {
-        if (c.id !== courseId) return c;
-        return {
-          ...c,
-          lectureCount: c.lectureCount + 1,
-          lectures: [...c.lectures, { date: now.toISOString(), label }],
-          students: c.students.map((s) => ({
-            ...s,
-            lectureBonus: [...s.lectureBonus, 0],
-            attendance: [...(s.attendance || []), true],
-          })),
-        };
-      })
-    );
-  }, [updateCourses]);
+    await db.from("courses").update({
+      lecture_count: course.lectureCount + 1,
+      lectures: [...course.lectures, { date: now.toISOString(), label }],
+    }).eq("id", courseId);
 
-  const deleteAllData = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setCourses([]);
-  }, []);
+    for (const s of course.students) {
+      await db.from("students").update({
+        lecture_bonus: [...s.lectureBonus, 0],
+        attendance: [...(s.attendance || []), true],
+      }).eq("id", s.id);
+    }
+    await fetchCourses();
+  }, [courses, fetchCourses]);
+
+  const deleteAllData = useCallback(async () => {
+    if (!user) return;
+    await db.from("courses").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await fetchCourses();
+  }, [user, fetchCourses]);
 
   const exportAllData = useCallback(() => {
     const data = JSON.stringify(courses, null, 2);
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = "student-grades-backup.json";
-    a.click();
+    a.href = url; a.download = "student-grades-backup.json"; a.click();
     URL.revokeObjectURL(url);
   }, [courses]);
 
-  const importAllData = useCallback((file: File): Promise<void> => {
+  const importAllData = useCallback(async (file: File): Promise<void> => {
+    if (!user) return;
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
-          const data = JSON.parse(e.target?.result as string) as Course[];
-          saveCourses(data);
-          setCourses(data);
+          const imported = JSON.parse(e.target?.result as string) as Course[];
+          await db.from("courses").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+          for (const course of imported) {
+            const { data: nc } = await db.from("courses").insert({
+              user_id: user.id, name: course.name, section: course.section || "",
+              lecture_count: course.lectureCount, lectures: course.lectures,
+              max_bonus: course.maxBonus, max_exam1: course.maxExam1,
+              max_exam2: course.maxExam2, max_final: course.maxFinal,
+              max_participation: course.maxParticipation,
+              lecture_days: course.lectureDays || [], lecture_time: course.lectureTime || "",
+              semester_start: course.semesterStart || "", semester_end: course.semesterEnd || "",
+            }).select().single();
+            if (nc && course.students.length > 0) {
+              await db.from("students").insert(course.students.map((s: Student) => ({
+                course_id: nc.id, user_id: user.id, name: s.name,
+                lecture_bonus: s.lectureBonus, attendance: s.attendance,
+                exam1: s.exam1, exam2: s.exam2, final_exam: s.finalExam, participation: s.participation,
+              })));
+            }
+          }
+          await fetchCourses();
           resolve();
-        } catch {
-          reject(new Error("فشل في قراءة ملف النسخة الاحتياطية"));
-        }
+        } catch { reject(new Error("فشل في قراءة ملف النسخة الاحتياطية")); }
       };
       reader.onerror = () => reject(new Error("فشل في قراءة الملف"));
       reader.readAsText(file);
     });
-  }, []);
+  }, [user, fetchCourses]);
 
   return {
-    courses,
-    addCourse,
-    updateCourse,
-    addStudentsToCourse,
-    updateStudent,
-    updateLectureBonus,
-    updateAttendance,
-    deleteCourse,
-    deleteStudent,
-    addLecture,
-    deleteAllData,
-    exportAllData,
-    importAllData,
+    courses, loading, addCourse, updateCourse, addStudentsToCourse,
+    updateStudent, updateLectureBonus, updateAttendance,
+    deleteCourse, deleteStudent, addLecture, deleteAllData, exportAllData, importAllData,
   };
 }

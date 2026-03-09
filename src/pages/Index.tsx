@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { useCourses } from "@/hooks/useCourses";
@@ -31,14 +32,17 @@ import {
   UserCheck,
   Settings,
 } from "lucide-react";
+import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type CourseTab = "bonus" | "exams" | "status" | "attendance";
 type MainView = "courses" | "settings";
 
 export default function Index() {
+  const { signOut } = useAuth();
   const {
     courses,
+    loading,
     addCourse,
     updateCourse,
     addStudentsToCourse,
@@ -80,7 +84,7 @@ export default function Index() {
       ? generateLectureDates(semesterStart, semesterEnd, selectedDays)
       : [];
 
-  const handleCreateCourse = () => {
+  const handleCreateCourse = async () => {
     if (!newCourseName.trim()) { toast.error("أدخل اسم المادة"); return; }
     if (!semesterStart || !semesterEnd) { toast.error("حدد تاريخ بداية ونهاية الفصل"); return; }
     if (selectedDays.length === 0) { toast.error("اختر أيام المحاضرات"); return; }
@@ -91,16 +95,16 @@ export default function Index() {
       label: l.label,
     }));
 
-    const id = addCourse(newCourseName.trim(), lectures, newSection.trim(), {
+    const id = await addCourse(newCourseName.trim(), lectures, newSection.trim(), {
       lectureDays: selectedDays,
       lectureTime,
       semesterStart: semesterStart.toISOString(),
       semesterEnd: semesterEnd.toISOString(),
     });
-    if (pendingStudentNames.length > 0) {
-      addStudentsToCourse(id, pendingStudentNames);
+    if (id && pendingStudentNames.length > 0) {
+      await addStudentsToCourse(id, pendingStudentNames);
     }
-    setActiveCourseId(id);
+    if (id) setActiveCourseId(id);
     resetModal();
     toast.success(`تم إنشاء المادة بـ ${lectures.length} محاضرة${pendingStudentNames.length > 0 ? ` و ${pendingStudentNames.length} طالب` : ""}`);
   };
@@ -115,6 +119,14 @@ export default function Index() {
     setLectureTime("");
     setPendingStudentNames([]);
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // Settings / Course management view
   if (!activeCourse && mainView === "settings") {
@@ -176,13 +188,22 @@ export default function Index() {
                 <p className="text-xs text-muted-foreground">متابعة درجات الطلبة</p>
               </div>
             </div>
-            <button
-              onClick={() => setMainView("settings")}
-              className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
-              title="الإعدادات"
-            >
-              <Settings size={20} className="text-muted-foreground" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMainView("settings")}
+                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+                title="الإعدادات"
+              >
+                <Settings size={20} className="text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => { signOut(); toast.success("تم تسجيل الخروج"); }}
+                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+                title="تسجيل الخروج"
+              >
+                <LogOut size={18} className="text-muted-foreground" />
+              </button>
+            </div>
           </div>
         </header>
 
