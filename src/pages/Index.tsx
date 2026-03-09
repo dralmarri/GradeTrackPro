@@ -9,6 +9,7 @@ import ExcelImport from "@/components/ExcelImport";
 import BonusTable from "@/components/BonusTable";
 import ExamsPage from "@/components/ExamsPage";
 import StudentStatus from "@/components/StudentStatus";
+import AttendanceSummary from "@/components/AttendanceSummary";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
 import { Calendar } from "@/components/ui/calendar";
