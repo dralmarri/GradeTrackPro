@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-type CourseTab = "bonus" | "exams" | "status";
+type CourseTab = "bonus" | "exams" | "status" | "attendance";
 type MainView = "courses" | "settings";
 
 export default function Index() {
