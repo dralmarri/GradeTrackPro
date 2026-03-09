@@ -43,6 +43,7 @@ export default function Index() {
     addStudentsToCourse,
     updateStudent,
     updateLectureBonus,
+    updateAttendance,
     deleteCourse,
     deleteStudent,
     addLecture,
