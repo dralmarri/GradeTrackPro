@@ -30,11 +30,27 @@ export default function AttendanceSummary({ students, lectures }: AttendanceSumm
   // Sort by most absences first
   studentAbsences.sort((a, b) => b.absentCount - a.absentCount);
 
+  const [search, setSearch] = useState("");
+
+  const filtered = studentAbsences.filter(({ student }) =>
+    student.name.includes(search.trim())
+  );
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
         <h3 className="font-display text-sm font-bold text-foreground mb-1">ملخص الحضور والغياب</h3>
-        <p className="text-xs text-muted-foreground">إجمالي المحاضرات: {lectures.length}</p>
+        <p className="text-xs text-muted-foreground mb-3">إجمالي المحاضرات: {lectures.length}</p>
+        <div className="relative">
+          <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="بحث بالاسم..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-border bg-background py-2 pr-9 pl-3 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+          />
+        </div>
       </div>
 
       {/* Mobile cards */}
