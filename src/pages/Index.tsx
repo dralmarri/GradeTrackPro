@@ -458,7 +458,7 @@ export default function Index() {
         </div>
 
         {/* Sub-tabs */}
-        <div className="mx-auto flex max-w-7xl gap-1 px-4 pb-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-4 pb-2">
           {[
             { key: "bonus" as const, label: "المحاضرات", icon: Star },
             { key: "exams" as const, label: "الاختبارات", icon: ClipboardList },
@@ -469,7 +469,7 @@ export default function Index() {
               key={tab.key}
               onClick={() => setCourseTab(tab.key)}
               className={cn(
-                "flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+                "flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
                 courseTab === tab.key
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
