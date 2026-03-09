@@ -99,17 +99,24 @@ export default function BonusTable({
         {safeStudents.map((student, idx) => {
           const bonusTotal = (student.lectureBonus || []).reduce((a, b) => a + b, 0);
           const currentBonus = student.lectureBonus?.[selectedLecture] || 0;
+          const isPresent = student.attendance?.[selectedLecture] !== false;
 
           return (
             <div
               key={student.id}
-              className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
+              className={cn("flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm", !isPresent ? "border-destructive/30 bg-destructive/5" : "border-border")}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground">
-                {idx + 1}
-              </span>
+              <button
+                onClick={() => onUpdateAttendance(student.id, selectedLecture, !isPresent)}
+                className={cn(
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors",
+                  isPresent ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"
+                )}
+              >
+                {isPresent ? "✓" : "✗"}
+              </button>
               <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{student.name}</p>
+                <p className={cn("truncate text-sm font-medium", !isPresent ? "text-muted-foreground line-through" : "text-foreground")}>{student.name}</p>
                 <p className={cn("text-[11px] font-display font-bold", bonusTotal >= 0 ? "text-accent" : "text-destructive")}>
                   المجموع: {bonusTotal}
                 </p>
