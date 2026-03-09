@@ -106,6 +106,26 @@ export function useCourses() {
     [updateCourses]
   );
 
+  const updateAttendance = useCallback(
+    (courseId: string, studentId: string, lectureIndex: number, present: boolean) => {
+      updateCourses((prev) =>
+        prev.map((c) => {
+          if (c.id !== courseId) return c;
+          return {
+            ...c,
+            students: c.students.map((s) => {
+              if (s.id !== studentId) return s;
+              const newAttendance = [...(s.attendance || new Array(c.lectureCount).fill(true))];
+              newAttendance[lectureIndex] = present;
+              return { ...s, attendance: newAttendance };
+            }),
+          };
+        })
+      );
+    },
+    [updateCourses]
+  );
+
   const deleteCourse = useCallback((courseId: string) => {
     updateCourses((prev) => prev.filter((c) => c.id !== courseId));
   }, [updateCourses]);
@@ -139,6 +159,7 @@ export function useCourses() {
           students: c.students.map((s) => ({
             ...s,
             lectureBonus: [...s.lectureBonus, 0],
+            attendance: [...(s.attendance || []), true],
           })),
         };
       })
@@ -186,6 +207,7 @@ export function useCourses() {
     addStudentsToCourse,
     updateStudent,
     updateLectureBonus,
+    updateAttendance,
     deleteCourse,
     deleteStudent,
     addLecture,

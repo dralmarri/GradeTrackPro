@@ -2,6 +2,7 @@ export interface Student {
   id: string;
   name: string;
   lectureBonus: number[];
+  attendance: boolean[]; // true = present (default), false = absent
   exam1: number;
   exam2: number;
   finalExam: number;

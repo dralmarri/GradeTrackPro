@@ -9,6 +9,7 @@ import ExcelImport from "@/components/ExcelImport";
 import BonusTable from "@/components/BonusTable";
 import ExamsPage from "@/components/ExamsPage";
 import StudentStatus from "@/components/StudentStatus";
+import AttendanceSummary from "@/components/AttendanceSummary";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,11 +28,12 @@ import {
   Star,
   ClipboardList,
   BarChart3,
+  UserCheck,
   Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type CourseTab = "bonus" | "exams" | "status";
+type CourseTab = "bonus" | "exams" | "status" | "attendance";
 type MainView = "courses" | "settings";
 
 export default function Index() {
@@ -42,6 +44,7 @@ export default function Index() {
     addStudentsToCourse,
     updateStudent,
     updateLectureBonus,
+    updateAttendance,
     deleteCourse,
     deleteStudent,
     addLecture,
@@ -441,6 +444,7 @@ export default function Index() {
           {[
             { key: "bonus" as const, label: "المحاضرات", icon: Star },
             { key: "exams" as const, label: "الاختبارات", icon: ClipboardList },
+            { key: "attendance" as const, label: "الحضور", icon: UserCheck },
             { key: "status" as const, label: "وضع الطلبة", icon: BarChart3 },
           ].map((tab) => (
             <button
@@ -467,6 +471,7 @@ export default function Index() {
             lectures={activeCourse.lectures}
             maxBonus={activeCourse.maxBonus}
             onUpdateBonus={(sid, li, v) => updateLectureBonus(activeCourse.id, sid, li, v)}
+            onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
             onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
           />
         )}
@@ -479,6 +484,12 @@ export default function Index() {
             maxFinal={activeCourse.maxFinal}
             maxParticipation={activeCourse.maxParticipation}
             onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
+          />
+        )}
+        {courseTab === "attendance" && (
+          <AttendanceSummary
+            students={activeCourse.students}
+            lectures={activeCourse.lectures}
           />
         )}
         {courseTab === "status" && (
