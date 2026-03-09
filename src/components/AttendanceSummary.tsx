@@ -55,7 +55,7 @@ export default function AttendanceSummary({ students, lectures }: AttendanceSumm
 
       {/* Mobile cards */}
       <div className="space-y-2 sm:hidden">
-        {studentAbsences.map(({ student, absentCount, absentDates }) => (
+        {filtered.map(({ student, absentCount, absentDates }) => (
           <div
             key={student.id}
             className={cn(
