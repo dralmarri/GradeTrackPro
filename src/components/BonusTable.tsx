@@ -48,6 +48,9 @@ export default function BonusTable({
   }
 
   const currentLecture = safeLectures[selectedLecture];
+  const filteredStudents = searchQuery
+    ? safeStudents.filter((s) => s.name.includes(searchQuery))
+    : safeStudents;
 
   const goNext = () => {
     if (selectedLecture < safeLectures.length - 1) setSelectedLecture(selectedLecture + 1);
