@@ -36,6 +36,7 @@ export default function ExamsPage({
 }: ExamsPageProps) {
   const [activeTab, setActiveTab] = useState<ExamKey>("exam1");
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs: ExamTabConfig[] = [
