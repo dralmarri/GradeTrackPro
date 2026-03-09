@@ -180,13 +180,22 @@ export default function Index() {
                 <p className="text-xs text-muted-foreground">متابعة درجات الطلبة</p>
               </div>
             </div>
-            <button
-              onClick={() => setMainView("settings")}
-              className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
-              title="الإعدادات"
-            >
-              <Settings size={20} className="text-muted-foreground" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMainView("settings")}
+                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+                title="الإعدادات"
+              >
+                <Settings size={20} className="text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => { signOut(); toast.success("تم تسجيل الخروج"); }}
+                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+                title="تسجيل الخروج"
+              >
+                <LogOut size={18} className="text-muted-foreground" />
+              </button>
+            </div>
           </div>
         </header>
 
