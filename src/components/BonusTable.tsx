@@ -21,6 +21,7 @@ export default function BonusTable({
   lectures,
   maxBonus,
   onUpdateBonus,
+  onUpdateAttendance,
   onDeleteStudent,
 }: BonusTableProps) {
   const safeStudents = students || [];
