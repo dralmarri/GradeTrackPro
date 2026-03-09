@@ -253,7 +253,7 @@ export default function Index() {
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-muted-foreground">نهاية الفصل</label>
-                        <Popover>
+                        <Popover open={endOpen} onOpenChange={setEndOpen}>
                           <PopoverTrigger asChild>
                             <button className={cn("flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted", !semesterEnd && "text-muted-foreground")}>
                               <CalendarIcon size={14} />
@@ -261,7 +261,7 @@ export default function Index() {
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={semesterEnd} onSelect={setSemesterEnd} disabled={(date) => semesterStart ? date < semesterStart : false} initialFocus className="pointer-events-auto p-3" />
+                            <Calendar mode="single" selected={semesterEnd} onSelect={(d) => { setSemesterEnd(d); setEndOpen(false); }} disabled={(date) => semesterStart ? date < semesterStart : false} initialFocus className="pointer-events-auto p-3" />
                           </PopoverContent>
                         </Popover>
                       </div>
