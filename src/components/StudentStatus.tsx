@@ -19,6 +19,8 @@ function getGrade(total: number, max: number): { label: string; color: string } 
 }
 
 export default function StudentStatus({ students, course }: StudentStatusProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
   if (students.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
