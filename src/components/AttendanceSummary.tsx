@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
 import { cn } from "@/lib/utils";
-import { UserX } from "lucide-react";
+import { Search, UserX } from "lucide-react";
 
 interface AttendanceSummaryProps {
   students: Student[];
@@ -8,6 +9,8 @@ interface AttendanceSummaryProps {
 }
 
 export default function AttendanceSummary({ students, lectures }: AttendanceSummaryProps) {
+  const [search, setSearch] = useState("");
+
   if (students.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -29,16 +32,30 @@ export default function AttendanceSummary({ students, lectures }: AttendanceSumm
   // Sort by most absences first
   studentAbsences.sort((a, b) => b.absentCount - a.absentCount);
 
+  const filtered = studentAbsences.filter(({ student }) =>
+    student.name.includes(search.trim())
+  );
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
         <h3 className="font-display text-sm font-bold text-foreground mb-1">ملخص الحضور والغياب</h3>
-        <p className="text-xs text-muted-foreground">إجمالي المحاضرات: {lectures.length}</p>
+        <p className="text-xs text-muted-foreground mb-3">إجمالي المحاضرات: {lectures.length}</p>
+        <div className="relative">
+          <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="بحث بالاسم..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-border bg-background py-2 pr-9 pl-3 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+          />
+        </div>
       </div>
 
       {/* Mobile cards */}
       <div className="space-y-2 sm:hidden">
-        {studentAbsences.map(({ student, absentCount, absentDates }) => (
+        {filtered.map(({ student, absentCount, absentDates }) => (
           <div
             key={student.id}
             className={cn(
@@ -80,7 +97,7 @@ export default function AttendanceSummary({ students, lectures }: AttendanceSumm
             </tr>
           </thead>
           <tbody>
-            {studentAbsences.map(({ student, absentCount, absentDates }, idx) => (
+            {filtered.map(({ student, absentCount, absentDates }, idx) => (
               <tr key={student.id} className={cn("border-b border-border/50 transition-colors hover:bg-muted/30", absentCount > 0 && "bg-destructive/5")}>
                 <td className="px-3 py-2.5 text-center text-muted-foreground">{idx + 1}</td>
                 <td className="px-3 py-2.5 font-medium">{student.name}</td>
