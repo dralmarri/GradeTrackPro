@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
-import { Trash2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Trash2, ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BonusTableProps {
@@ -27,6 +27,7 @@ export default function BonusTable({
   const safeStudents = students || [];
   const safeLectures = lectures || [];
   const [selectedLecture, setSelectedLecture] = useState(safeLectures.length > 0 ? safeLectures.length - 1 : 0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   if (safeStudents.length === 0) {
     return (
@@ -47,6 +48,9 @@ export default function BonusTable({
   }
 
   const currentLecture = safeLectures[selectedLecture];
+  const filteredStudents = searchQuery
+    ? safeStudents.filter((s) => s.name.includes(searchQuery))
+    : safeStudents;
 
   const goNext = () => {
     if (selectedLecture < safeLectures.length - 1) setSelectedLecture(selectedLecture + 1);
@@ -81,6 +85,18 @@ export default function BonusTable({
         </button>
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="بحث باسم الطالب..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full rounded-lg border border-input bg-background pr-9 pl-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+
       {/* Lecture quick jump dropdown */}
       <select
         value={selectedLecture}
@@ -96,7 +112,7 @@ export default function BonusTable({
 
       {/* Mobile card layout */}
       <div className="space-y-2 sm:hidden">
-        {safeStudents.map((student, idx) => {
+        {filteredStudents.map((student, idx) => {
           const bonusTotal = (student.lectureBonus || []).reduce((a, b) => a + b, 0);
           const currentBonus = student.lectureBonus?.[selectedLecture] || 0;
           const isPresent = student.attendance?.[selectedLecture] !== false;
@@ -175,7 +191,7 @@ export default function BonusTable({
             </tr>
           </thead>
           <tbody>
-            {safeStudents.map((student, idx) => {
+            {filteredStudents.map((student, idx) => {
               const bonusTotal = (student.lectureBonus || []).reduce((a, b) => a + b, 0);
               const currentBonus = student.lectureBonus?.[selectedLecture] || 0;
               const isPresent = student.attendance?.[selectedLecture] !== false;

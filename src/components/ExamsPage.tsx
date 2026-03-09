@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Student } from "@/types/student";
-import { FileText, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, Loader2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,7 @@ export default function ExamsPage({
 }: ExamsPageProps) {
   const [activeTab, setActiveTab] = useState<ExamKey>("exam1");
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs: ExamTabConfig[] = [
@@ -47,6 +48,9 @@ export default function ExamsPage({
 
   const currentTab = tabs.find((t) => t.key === activeTab)!;
   const currentTabIndex = tabs.findIndex((t) => t.key === activeTab);
+  const filteredStudents = searchQuery
+    ? students.filter((s) => s.name.includes(searchQuery))
+    : students;
 
   const goNextTab = () => {
     if (currentTabIndex < tabs.length - 1) setActiveTab(tabs[currentTabIndex + 1].key);
@@ -118,6 +122,18 @@ export default function ExamsPage({
         ))}
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="بحث باسم الطالب..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full rounded-lg border border-input bg-background pr-9 pl-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+
       {/* Actions */}
       <div className="flex items-center gap-3">
         <input
@@ -142,7 +158,7 @@ export default function ExamsPage({
 
       {/* Mobile card layout */}
       <div className="space-y-2 sm:hidden">
-        {students.map((student, idx) => {
+        {filteredStudents.map((student, idx) => {
           const currentVal = (student[currentTab.key] as number) || 0;
 
           return (
@@ -203,7 +219,7 @@ export default function ExamsPage({
             </tr>
           </thead>
           <tbody>
-            {students.map((student, idx) => (
+            {filteredStudents.map((student, idx) => (
               <tr
                 key={student.id}
                 className="border-b border-border/50 transition-colors hover:bg-muted/30"
