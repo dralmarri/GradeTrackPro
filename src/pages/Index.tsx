@@ -443,6 +443,7 @@ export default function Index() {
           {[
             { key: "bonus" as const, label: "المحاضرات", icon: Star },
             { key: "exams" as const, label: "الاختبارات", icon: ClipboardList },
+            { key: "attendance" as const, label: "الحضور", icon: BarChart3 },
             { key: "status" as const, label: "وضع الطلبة", icon: BarChart3 },
           ].map((tab) => (
             <button
