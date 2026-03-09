@@ -32,8 +32,6 @@ export default function AttendanceSummary({ students, lectures }: AttendanceSumm
   // Sort by most absences first
   studentAbsences.sort((a, b) => b.absentCount - a.absentCount);
 
-  const [search, setSearch] = useState("");
-
   const filtered = studentAbsences.filter(({ student }) =>
     student.name.includes(search.trim())
   );
