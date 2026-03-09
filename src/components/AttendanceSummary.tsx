@@ -9,6 +9,8 @@ interface AttendanceSummaryProps {
 }
 
 export default function AttendanceSummary({ students, lectures }: AttendanceSummaryProps) {
+  const [search, setSearch] = useState("");
+
   if (students.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
