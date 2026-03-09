@@ -139,6 +139,7 @@ export function useCourses() {
           students: c.students.map((s) => ({
             ...s,
             lectureBonus: [...s.lectureBonus, 0],
+            attendance: [...(s.attendance || []), true],
           })),
         };
       })
