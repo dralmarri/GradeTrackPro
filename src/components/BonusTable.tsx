@@ -191,7 +191,7 @@ export default function BonusTable({
             </tr>
           </thead>
           <tbody>
-            {safeStudents.map((student, idx) => {
+            {filteredStudents.map((student, idx) => {
               const bonusTotal = (student.lectureBonus || []).reduce((a, b) => a + b, 0);
               const currentBonus = student.lectureBonus?.[selectedLecture] || 0;
               const isPresent = student.attendance?.[selectedLecture] !== false;

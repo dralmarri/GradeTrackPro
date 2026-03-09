@@ -219,7 +219,7 @@ export default function ExamsPage({
             </tr>
           </thead>
           <tbody>
-            {students.map((student, idx) => (
+            {filteredStudents.map((student, idx) => (
               <tr
                 key={student.id}
                 className="border-b border-border/50 transition-colors hover:bg-muted/30"

@@ -56,9 +56,21 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
         ))}
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="بحث باسم الطالب..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full rounded-lg border border-input bg-background pr-9 pl-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+
       {/* Student Cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {students.map((student, idx) => {
+        {(searchQuery ? students.filter((s) => s.name.includes(searchQuery)) : students).map((student, idx) => {
           const total = getTotal(student);
           const bonusTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
           const grade = getGrade(total, maxTotal);
