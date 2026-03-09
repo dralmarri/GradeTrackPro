@@ -39,8 +39,10 @@ type CourseTab = "bonus" | "exams" | "status" | "attendance";
 type MainView = "courses" | "settings";
 
 export default function Index() {
+  const { signOut } = useAuth();
   const {
     courses,
+    loading,
     addCourse,
     updateCourse,
     addStudentsToCourse,
