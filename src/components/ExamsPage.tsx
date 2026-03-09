@@ -48,6 +48,9 @@ export default function ExamsPage({
 
   const currentTab = tabs.find((t) => t.key === activeTab)!;
   const currentTabIndex = tabs.findIndex((t) => t.key === activeTab);
+  const filteredStudents = searchQuery
+    ? students.filter((s) => s.name.includes(searchQuery))
+    : students;
 
   const goNextTab = () => {
     if (currentTabIndex < tabs.length - 1) setActiveTab(tabs[currentTabIndex + 1].key);
