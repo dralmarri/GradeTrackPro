@@ -52,7 +52,7 @@ export function useCourses() {
     if (cErr) { console.error("Error fetching courses:", cErr); setLoading(false); return; }
 
     const { data: studentRows, error: sErr } = await db
-      .from("students").select("*").order("created_at", { ascending: true });
+      .from("students").select("*").order("name", { ascending: true });
     if (sErr) { console.error("Error fetching students:", sErr); setLoading(false); return; }
 
     const coursesWithStudents: Course[] = (courseRows || []).map((cr: any) => {
