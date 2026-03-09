@@ -147,9 +147,6 @@ export default function Index() {
         </header>
 
         <SettingsPage
-          courses={courses}
-          onExportAll={exportAllData}
-          onImportAll={importAllData}
           onDeleteAll={() => { deleteAllData(); setMainView("courses"); }}
         />
 
