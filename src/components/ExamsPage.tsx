@@ -182,9 +182,17 @@ export default function ExamsPage({
                 >
                   −
                 </button>
-                <span className="w-10 text-center text-sm font-bold text-foreground">
-                  {currentVal}
-                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={currentTab.max}
+                  value={currentVal || ""}
+                  onChange={(e) => {
+                    const v = clamp(Number(e.target.value), currentTab.max);
+                    onUpdateStudent(student.id, { [currentTab.key]: v });
+                  }}
+                  className="w-12 rounded-lg border border-border bg-background px-1 py-1.5 text-center text-sm font-bold outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
                 <button
                   onClick={() => {
                     const v = clamp(currentVal + 1, currentTab.max);
