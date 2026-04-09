@@ -1,9 +1,5 @@
 {
-  "appId": "app.lovable.grademanager",
-  "appName": "GradeTrackPro",
-  "webDir": "dist",
-  "server": {
-    "url": "https://2c312875-7ed0-45f9-91ca-d3b50326bf68.lovableproject.com?forceHideBadge=true",
-    "cleartext": true
-  }
+  "appId": "app.lovable.2c3128757ed045f991cad3b50326bf68",
+  "appName": "class-score-helper",
+  "webDir": "dist"
 }
