@@ -119,6 +119,30 @@ export default function Auth() {
             )}
             {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
           </button>
+
+          {isLogin && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  toast.error("أدخل بريدك الإلكتروني أولاً");
+                  return;
+                }
+                try {
+                  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/reset-password`,
+                  });
+                  if (error) throw error;
+                  toast.success("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني");
+                } catch (err: any) {
+                  toast.error(err.message || "حدث خطأ");
+                }
+              }}
+              className="w-full text-center text-sm text-primary hover:underline"
+            >
+              نسيت كلمة المرور؟
+            </button>
+          )}
         </form>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
