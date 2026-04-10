@@ -49,7 +49,32 @@ export function exportToExcel(course: Course) {
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "النتائج");
-  XLSX.writeFile(wb, `${course.name}_نتائج.xlsx`);
+  
+  const fileName = `${course.name}_نتائج.xlsx`;
+  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const file = new File([blob], fileName, { type: blob.type });
+
+  // Try Web Share API first (works well on mobile)
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: fileName }).catch(() => {
+      // Fallback to download if share is cancelled
+      downloadBlob(blob, fileName);
+    });
+  } else {
+    downloadBlob(blob, fileName);
+  }
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export function getTotal(student: Student): number {
