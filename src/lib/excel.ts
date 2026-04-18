@@ -42,6 +42,7 @@ export function exportToExcel(course: Course) {
       "اختبار ثاني": s.exam2,
       "نهائي": s.finalExam,
       "مشاركة": s.participation,
+      "واجب": s.homework,
       "المجموع الكلي": getTotal(s),
     };
   });
@@ -79,7 +80,7 @@ function downloadBlob(blob: Blob, fileName: string) {
 
 export function getTotal(student: Student): number {
   const bonusTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
-  return bonusTotal + student.exam1 + student.exam2 + student.finalExam + student.participation;
+  return bonusTotal + student.exam1 + student.exam2 + student.finalExam + student.participation + (student.homework || 0);
 }
 
 export function createStudent(name: string, lectureCount: number): Student {
@@ -92,5 +93,6 @@ export function createStudent(name: string, lectureCount: number): Student {
     exam2: 0,
     finalExam: 0,
     participation: 0,
+    homework: 0,
   };
 }
