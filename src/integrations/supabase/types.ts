@@ -26,6 +26,7 @@ export type Database = {
           max_exam1: number | null
           max_exam2: number | null
           max_final: number | null
+          max_homework: number | null
           max_participation: number | null
           name: string
           section: string | null
@@ -44,6 +45,7 @@ export type Database = {
           max_exam1?: number | null
           max_exam2?: number | null
           max_final?: number | null
+          max_homework?: number | null
           max_participation?: number | null
           name: string
           section?: string | null
@@ -62,6 +64,7 @@ export type Database = {
           max_exam1?: number | null
           max_exam2?: number | null
           max_final?: number | null
+          max_homework?: number | null
           max_participation?: number | null
           name?: string
           section?: string | null
@@ -79,6 +82,7 @@ export type Database = {
           exam1: number | null
           exam2: number | null
           final_exam: number | null
+          homework: number | null
           id: string
           lecture_bonus: Json | null
           name: string
@@ -92,6 +96,7 @@ export type Database = {
           exam1?: number | null
           exam2?: number | null
           final_exam?: number | null
+          homework?: number | null
           id?: string
           lecture_bonus?: Json | null
           name: string
@@ -105,6 +110,7 @@ export type Database = {
           exam1?: number | null
           exam2?: number | null
           final_exam?: number | null
+          homework?: number | null
           id?: string
           lecture_bonus?: Json | null
           name?: string
