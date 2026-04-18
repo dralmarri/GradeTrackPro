@@ -490,7 +490,6 @@ export default function Index() {
             maxBonus={activeCourse.maxBonus}
             onUpdateBonus={(sid, li, v) => updateLectureBonus(activeCourse.id, sid, li, v)}
             onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
-            onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
           />
         )}
         {courseTab === "exams" && (
