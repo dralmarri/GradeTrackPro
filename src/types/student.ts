@@ -7,6 +7,7 @@ export interface Student {
   exam2: number;
   finalExam: number;
   participation: number;
+  homework: number;
 }
 
 export interface LectureInfo {
@@ -26,6 +27,7 @@ export interface Course {
   maxExam2: number;
   maxFinal: number;
   maxParticipation: number;
+  maxHomework: number;
   lectureDays: number[];
   lectureTime: string;
   semesterStart: string;

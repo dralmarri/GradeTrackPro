@@ -501,6 +501,7 @@ export default function Index() {
             maxExam2={activeCourse.maxExam2}
             maxFinal={activeCourse.maxFinal}
             maxParticipation={activeCourse.maxParticipation}
+            maxHomework={activeCourse.maxHomework}
             onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
           />
         )}

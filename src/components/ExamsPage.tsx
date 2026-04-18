@@ -4,7 +4,7 @@ import { FileText, Loader2, ChevronLeft, ChevronRight, Search } from "lucide-rea
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type ExamKey = "exam1" | "exam2" | "finalExam" | "participation";
+type ExamKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
 interface ExamTabConfig {
   key: ExamKey;
@@ -19,6 +19,7 @@ interface ExamsPageProps {
   maxExam2: number;
   maxFinal: number;
   maxParticipation: number;
+  maxHomework: number;
   onUpdateStudent: (studentId: string, updates: Partial<Student>) => void;
 }
 
@@ -32,6 +33,7 @@ export default function ExamsPage({
   maxExam2,
   maxFinal,
   maxParticipation,
+  maxHomework,
   onUpdateStudent,
 }: ExamsPageProps) {
   const [activeTab, setActiveTab] = useState<ExamKey>("exam1");
@@ -44,6 +46,7 @@ export default function ExamsPage({
     { key: "exam2", label: "الاختبار الثاني", max: maxExam2 },
     { key: "finalExam", label: "الاختبار النهائي", max: maxFinal },
     { key: "participation", label: "المشاركة", max: maxParticipation },
+    { key: "homework", label: "الواجب", max: maxHomework },
   ];
 
   const currentTab = tabs.find((t) => t.key === activeTab)!;
