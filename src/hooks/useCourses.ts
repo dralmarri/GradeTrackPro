@@ -19,6 +19,7 @@ function dbRowToCourse(row: any): Omit<Course, "students"> {
     maxExam2: Number(row.max_exam2) || 20,
     maxFinal: Number(row.max_final) || 40,
     maxParticipation: Number(row.max_participation) || 10,
+    maxHomework: Number(row.max_homework) || 10,
     lectureDays: (row.lecture_days || []) as number[],
     lectureTime: row.lecture_time || "",
     semesterStart: row.semester_start || "",
@@ -36,6 +37,7 @@ function dbRowToStudent(row: any): Student {
     exam2: Number(row.exam2) || 0,
     finalExam: Number(row.final_exam) || 0,
     participation: Number(row.participation) || 0,
+    homework: Number(row.homework) || 0,
   };
 }
 
@@ -76,7 +78,7 @@ export function useCourses() {
     const { data, error } = await db.from("courses").insert({
       user_id: user.id, name, section: section || "",
       lecture_count: lectures.length, lectures,
-      max_bonus: 3, max_exam1: 20, max_exam2: 20, max_final: 40, max_participation: 10,
+      max_bonus: 3, max_exam1: 20, max_exam2: 20, max_final: 40, max_participation: 10, max_homework: 10,
       lecture_days: schedule?.lectureDays || [], lecture_time: schedule?.lectureTime || "",
       semester_start: schedule?.semesterStart || "", semester_end: schedule?.semesterEnd || "",
     }).select().single();
@@ -96,6 +98,7 @@ export function useCourses() {
     if (updates.maxExam2 !== undefined) u.max_exam2 = updates.maxExam2;
     if (updates.maxFinal !== undefined) u.max_final = updates.maxFinal;
     if (updates.maxParticipation !== undefined) u.max_participation = updates.maxParticipation;
+    if ((updates as any).maxHomework !== undefined) u.max_homework = (updates as any).maxHomework;
     if (updates.lectureDays !== undefined) u.lecture_days = updates.lectureDays;
     if (updates.lectureTime !== undefined) u.lecture_time = updates.lectureTime;
     if (updates.semesterStart !== undefined) u.semester_start = updates.semesterStart;
@@ -112,7 +115,7 @@ export function useCourses() {
     const rows = names.map((name) => ({
       course_id: courseId, user_id: user.id, name,
       lecture_bonus: new Array(lc).fill(0), attendance: new Array(lc).fill(true),
-      exam1: 0, exam2: 0, final_exam: 0, participation: 0,
+      exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0,
     }));
     const { error } = await db.from("students").insert(rows);
     if (error) console.error("Error adding students:", error);
@@ -128,6 +131,7 @@ export function useCourses() {
     if (updates.exam2 !== undefined) u.exam2 = updates.exam2;
     if (updates.finalExam !== undefined) u.final_exam = updates.finalExam;
     if (updates.participation !== undefined) u.participation = updates.participation;
+    if ((updates as any).homework !== undefined) u.homework = (updates as any).homework;
     const { error } = await db.from("students").update(u).eq("id", studentId);
     if (error) console.error("Error updating student:", error);
     else await fetchCourses();
@@ -220,6 +224,7 @@ export function useCourses() {
               max_bonus: course.maxBonus, max_exam1: course.maxExam1,
               max_exam2: course.maxExam2, max_final: course.maxFinal,
               max_participation: course.maxParticipation,
+              max_homework: (course as any).maxHomework || 10,
               lecture_days: course.lectureDays || [], lecture_time: course.lectureTime || "",
               semester_start: course.semesterStart || "", semester_end: course.semesterEnd || "",
             }).select().single();
@@ -228,6 +233,7 @@ export function useCourses() {
                 course_id: nc.id, user_id: user.id, name: s.name,
                 lecture_bonus: s.lectureBonus, attendance: s.attendance,
                 exam1: s.exam1, exam2: s.exam2, final_exam: s.finalExam, participation: s.participation,
+                homework: (s as any).homework || 0,
               })));
             }
           }
