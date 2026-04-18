@@ -41,6 +41,7 @@ export default function CourseManager({
   const [editMaxExam2, setEditMaxExam2] = useState(20);
   const [editMaxFinal, setEditMaxFinal] = useState(40);
   const [editMaxParticipation, setEditMaxParticipation] = useState(10);
+  const [editMaxHomework, setEditMaxHomework] = useState(10);
   const [editMaxBonus, setEditMaxBonus] = useState(3);
 
   const startEdit = (course: Course) => {
@@ -51,6 +52,7 @@ export default function CourseManager({
     setEditMaxExam2(course.maxExam2);
     setEditMaxFinal(course.maxFinal);
     setEditMaxParticipation(course.maxParticipation);
+    setEditMaxHomework(course.maxHomework || 10);
     setEditMaxBonus(course.maxBonus);
   };
 
@@ -62,6 +64,7 @@ export default function CourseManager({
       maxExam2: editMaxExam2,
       maxFinal: editMaxFinal,
       maxParticipation: editMaxParticipation,
+      maxHomework: editMaxHomework,
       maxBonus: editMaxBonus,
     });
     setEditingId(null);
@@ -106,12 +109,13 @@ export default function CourseManager({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                 {[
                   { label: "اختبار١", value: editMaxExam1, set: setEditMaxExam1 },
                   { label: "اختبار٢", value: editMaxExam2, set: setEditMaxExam2 },
                   { label: "نهائي", value: editMaxFinal, set: setEditMaxFinal },
                   { label: "مشاركة", value: editMaxParticipation, set: setEditMaxParticipation },
+                  { label: "واجب", value: editMaxHomework, set: setEditMaxHomework },
                   { label: "بونص", value: editMaxBonus, set: setEditMaxBonus },
                 ].map((field) => (
                   <div key={field.label}>
@@ -160,6 +164,7 @@ export default function CourseManager({
                 <span className="rounded-md bg-muted px-2 py-0.5">اختبار٢: {course.maxExam2}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">نهائي: {course.maxFinal}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">مشاركة: {course.maxParticipation}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">واجب: {course.maxHomework || 10}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">محاضرات: {course.lectureCount}</span>
               </div>
 

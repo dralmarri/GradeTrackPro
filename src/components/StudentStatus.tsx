@@ -29,7 +29,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
     );
   }
 
-  const maxTotal = course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxBonus * course.lectureCount);
+  const maxTotal = course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0) + (course.maxBonus * course.lectureCount);
   const totals = students.map((s) => getTotal(s));
   const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
   const highest = Math.max(...totals);
@@ -113,6 +113,10 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">مشاركة ({course.maxParticipation})</span>
                   <span className="font-medium">{student.participation}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">واجب ({course.maxHomework || 10})</span>
+                  <span className="font-medium">{student.homework || 0}</span>
                 </div>
                 <div className="border-t border-border pt-1.5">
                   <div className="flex justify-between">
