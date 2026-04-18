@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
-import { Trash2, ChevronRight, ChevronLeft, Search } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BonusTableProps {
@@ -9,7 +9,6 @@ interface BonusTableProps {
   maxBonus: number;
   onUpdateBonus: (studentId: string, lectureIndex: number, value: number) => void;
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
-  onDeleteStudent: (studentId: string) => void;
 }
 
 function clamp(val: number, max: number) {
@@ -22,7 +21,6 @@ export default function BonusTable({
   maxBonus,
   onUpdateBonus,
   onUpdateAttendance,
-  onDeleteStudent,
 }: BonusTableProps) {
   const safeStudents = students || [];
   const safeLectures = lectures || [];
@@ -173,12 +171,6 @@ export default function BonusTable({
                 >
                   +
                 </button>
-                <button
-                  onClick={() => onDeleteStudent(student.id)}
-                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Trash2 size={14} />
-                </button>
               </div>
             </div>
           );
@@ -203,7 +195,6 @@ export default function BonusTable({
               <th className="bg-accent/10 px-3 py-3 text-center font-display text-xs font-semibold text-accent w-24">
                 مجموع البونص
               </th>
-              <th className="px-2 py-3 w-8"></th>
             </tr>
           </thead>
           <tbody>
@@ -246,14 +237,6 @@ export default function BonusTable({
                   </td>
                   <td className={`bg-accent/5 px-3 py-2.5 text-center font-display font-bold ${bonusTotal >= 0 ? "text-accent" : "text-destructive"}`}>
                     {bonusTotal}
-                  </td>
-                  <td className="px-2 py-2">
-                    <button
-                      onClick={() => onDeleteStudent(student.id)}
-                      className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 size={14} />
-                    </button>
                   </td>
                 </tr>
               );
