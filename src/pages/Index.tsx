@@ -457,6 +457,22 @@ export default function Index() {
             </div>
           )}
         </main>
+
+        <ConfirmDialog
+          open={!!pendingDeleteCourse}
+          onOpenChange={(o) => !o && setPendingDeleteCourse(null)}
+          title="حذف المادة؟"
+          description={pendingDeleteCourse ? `سيتم حذف "${pendingDeleteCourse.name}" وكل بياناتها وطلبتها. لا يمكن التراجع.` : ""}
+          confirmLabel="حذف"
+          destructive
+          onConfirm={() => {
+            if (pendingDeleteCourse) {
+              deleteCourse(pendingDeleteCourse.id);
+              toast.success("تم حذف المادة");
+              setPendingDeleteCourse(null);
+            }
+          }}
+        />
       </div>
     );
   }
