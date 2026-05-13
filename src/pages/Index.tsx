@@ -13,6 +13,8 @@ import StudentStatus from "@/components/StudentStatus";
 import AttendanceSummary from "@/components/AttendanceSummary";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
+import AuditLogPage from "@/components/AuditLogPage";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -36,7 +38,7 @@ import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type CourseTab = "bonus" | "exams" | "status" | "attendance";
-type MainView = "courses" | "settings";
+type MainView = "courses" | "settings" | "audit";
 
 export default function Index() {
   const { signOut } = useAuth();
@@ -70,6 +72,8 @@ export default function Index() {
   const [pendingStudentNames, setPendingStudentNames] = useState<string[]>([]);
   const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
   const [mainView, setMainView] = useState<MainView>("courses");
+  const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
+  const [pendingDeleteAll, setPendingDeleteAll] = useState(false);
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
 
@@ -147,7 +151,23 @@ export default function Index() {
         </header>
 
         <SettingsPage
-          onDeleteAll={() => { deleteAllData(); setMainView("courses"); }}
+          onDeleteAll={() => setPendingDeleteAll(true)}
+          onOpenAuditLog={() => setMainView("audit")}
+        />
+
+        <ConfirmDialog
+          open={pendingDeleteAll}
+          onOpenChange={setPendingDeleteAll}
+          title="حذف جميع البيانات نهائياً؟"
+          description="سيتم حذف كل المقررات والطلبة. لا يمكن التراجع عن هذا الإجراء."
+          confirmLabel="حذف الكل"
+          destructive
+          onConfirm={() => {
+            deleteAllData();
+            setPendingDeleteAll(false);
+            setMainView("courses");
+            toast.success("تم حذف جميع البيانات");
+          }}
         />
 
         {/* Course Manager */}
@@ -166,6 +186,26 @@ export default function Index() {
             />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Audit log view
+  if (!activeCourse && mainView === "audit") {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
+            <button
+              onClick={() => setMainView("settings")}
+              className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+            >
+              <ChevronLeft size={20} className="rotate-180" />
+            </button>
+            <h1 className="font-display text-xl font-bold text-foreground">سجل المراجعة</h1>
+          </div>
+        </header>
+        <AuditLogPage />
       </div>
     );
   }
@@ -397,8 +437,7 @@ export default function Index() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteCourse(course.id);
-                        toast.success("تم حذف المادة");
+                        setPendingDeleteCourse({ id: course.id, name: course.name });
                       }}
                       className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
                     >
@@ -418,6 +457,22 @@ export default function Index() {
             </div>
           )}
         </main>
+
+        <ConfirmDialog
+          open={!!pendingDeleteCourse}
+          onOpenChange={(o) => !o && setPendingDeleteCourse(null)}
+          title="حذف المادة؟"
+          description={pendingDeleteCourse ? `سيتم حذف "${pendingDeleteCourse.name}" وكل بياناتها وطلبتها. لا يمكن التراجع.` : ""}
+          confirmLabel="حذف"
+          destructive
+          onConfirm={() => {
+            if (pendingDeleteCourse) {
+              deleteCourse(pendingDeleteCourse.id);
+              toast.success("تم حذف المادة");
+              setPendingDeleteCourse(null);
+            }
+          }}
+        />
       </div>
     );
   }
