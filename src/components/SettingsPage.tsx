@@ -5,14 +5,16 @@ import {
   Info,
   Mail,
   Shield,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 
 interface SettingsPageProps {
   onDeleteAll: () => void;
+  onOpenAuditLog?: () => void;
 }
 
-export default function SettingsPage({ onDeleteAll }: SettingsPageProps) {
+export default function SettingsPage({ onDeleteAll, onOpenAuditLog }: SettingsPageProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const navigate = useNavigate();
 
