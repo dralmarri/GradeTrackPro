@@ -437,8 +437,7 @@ export default function Index() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteCourse(course.id);
-                        toast.success("تم حذف المادة");
+                        setPendingDeleteCourse({ id: course.id, name: course.name });
                       }}
                       className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
                     >
