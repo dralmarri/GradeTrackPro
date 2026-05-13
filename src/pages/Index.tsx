@@ -72,6 +72,8 @@ export default function Index() {
   const [pendingStudentNames, setPendingStudentNames] = useState<string[]>([]);
   const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
   const [mainView, setMainView] = useState<MainView>("courses");
+  const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
+  const [pendingDeleteAll, setPendingDeleteAll] = useState(false);
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
 
