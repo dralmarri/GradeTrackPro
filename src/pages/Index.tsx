@@ -455,7 +455,7 @@ export default function Index() {
               className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-5 py-2.5 font-display text-sm font-semibold text-primary shadow-sm transition-all hover:bg-primary/20 hover:shadow-md active:scale-[0.98]"
             >
               <MessageCircle size={16} />
-              Send Feedback
+              Share Your Feedback
             </a>
           </div>
 
