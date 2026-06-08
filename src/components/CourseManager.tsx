@@ -35,6 +35,7 @@ export default function CourseManager({
   onDeleteCourse,
   onUpdateCourse,
   onAddStudents,
+  onDeleteStudent,
   onSelectCourse,
 }: CourseManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
