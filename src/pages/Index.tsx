@@ -466,11 +466,11 @@ export default function Index() {
           )}
 
           <footer className="mt-12 border-t border-border pt-6 text-center">
-            <p className="text-xs text-muted-foreground">
-              تم تصميمه من قِبَل <span className="font-semibold text-foreground">Prof. Ayedh Almarri</span>
+            <p className="text-xs text-muted-foreground" dir="ltr">
+              Developed by <span className="font-semibold text-foreground">Prof. Ayedh Almarri</span>
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              الإصدار <strong>v1.0.0</strong>
+            <p className="mt-1 text-[11px] text-muted-foreground" dir="ltr">
+              Version <strong>v1.0.0</strong>
             </p>
           </footer>
         </main>
