@@ -36,24 +36,6 @@ export default function SettingsPage({ onDeleteAll }: SettingsPageProps) {
         </button>
       </div>
 
-      {/* Audit Log */}
-      {onOpenAuditLog && (
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <div className="mb-3 flex items-center gap-2">
-            <History className="text-primary" size={20} />
-            <h2 className="font-display text-lg font-bold">سجل المراجعة</h2>
-          </div>
-          <p className="mb-3 text-xs text-muted-foreground">
-            عرض كل التغييرات التي تمت على المقررات والطلبة (إضافة، تعديل، حذف).
-          </p>
-          <button
-            onClick={onOpenAuditLog}
-            className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            فتح السجل
-          </button>
-        </div>
-      )}
 
       {/* Danger Zone */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
