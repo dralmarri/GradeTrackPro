@@ -14,6 +14,10 @@ import {
   Cloud,
   HelpCircle,
   MessageSquare,
+  Smartphone,
+  Apple,
+  Share,
+  MoreVertical,
 } from "lucide-react";
 
 export default function Help() {
@@ -162,6 +166,78 @@ export default function Help() {
             </section>
           ))}
         </div>
+
+        {/* Install on phone */}
+        <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Smartphone size={18} />
+            </div>
+            <h3 className="font-display text-base font-bold text-foreground">
+              تثبيت التطبيق كأيقونة على جوالك
+            </h3>
+          </div>
+          <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+            تستطيع إضافة GradeTrackPro كأيقونة على شاشة جوالك ليفتح كتطبيق مستقل بدون شريط المتصفح.
+          </p>
+
+          {/* iPhone */}
+          <div className="mb-4 rounded-xl border border-border bg-background p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Apple size={18} className="text-foreground" />
+              <h4 className="font-display text-sm font-bold">على iPhone / iPad (Safari)</h4>
+            </div>
+            <ol className="space-y-2 pr-2">
+              {[
+                "افتح الموقع gradetrackpro.com في متصفح Safari",
+                <>
+                  اضغط زر المشاركة{" "}
+                  <Share size={14} className="inline align-text-bottom text-primary" /> في أسفل الشاشة
+                </>,
+                "اختر «إضافة إلى الشاشة الرئيسية» (Add to Home Screen)",
+                "اضغط «إضافة» في الأعلى — ستظهر الأيقونة على شاشتك مباشرة",
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
+                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                    {i + 1}
+                  </span>
+                  <span className="leading-relaxed">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {/* Android */}
+          <div className="rounded-xl border border-border bg-background p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Smartphone size={18} className="text-foreground" />
+              <h4 className="font-display text-sm font-bold">على Android (Chrome)</h4>
+            </div>
+            <ol className="space-y-2 pr-2">
+              {[
+                "افتح الموقع gradetrackpro.com في متصفح Chrome",
+                <>
+                  اضغط زر القائمة{" "}
+                  <MoreVertical size={14} className="inline align-text-bottom text-primary" /> في أعلى يمين الشاشة
+                </>,
+                "اختر «تثبيت التطبيق» (Install app) أو «إضافة إلى الشاشة الرئيسية»",
+                "أكّد الإضافة — ستظهر الأيقونة في قائمة تطبيقاتك",
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
+                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                    {i + 1}
+                  </span>
+                  <span className="leading-relaxed">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+            💡 بعد التثبيت، سيفتح التطبيق بملء الشاشة كأي تطبيق آخر — نفس البيانات ونفس الحساب.
+          </p>
+        </section>
+
 
         <div className="mt-8 rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center">
           <p className="text-sm font-medium text-foreground">
