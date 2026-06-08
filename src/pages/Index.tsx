@@ -56,8 +56,8 @@ export default function Index() {
     deleteCourse,
     deleteStudent,
     addLecture,
-    deleteAllData,
     exportAllData,
+
     importAllData,
   } = useCourses();
 
