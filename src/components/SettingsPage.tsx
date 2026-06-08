@@ -37,6 +37,11 @@ export default function SettingsPage({ onDeleteAll }: SettingsPageProps) {
         </button>
       </div>
 
+      {/* Add to Home Screen */}
+      <AddToHomeScreen />
+
+
+
 
       {/* Danger Zone */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
