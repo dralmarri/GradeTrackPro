@@ -33,6 +33,7 @@ import {
   BarChart3,
   UserCheck,
   Settings,
+  HelpCircle,
 } from "lucide-react";
 import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -226,6 +227,13 @@ export default function Index() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <a
+                href="/help"
+                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+                title="دليل الاستخدام"
+              >
+                <HelpCircle size={20} className="text-muted-foreground" />
+              </a>
               <button
                 onClick={() => setMainView("settings")}
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
