@@ -154,7 +154,6 @@ export default function Index() {
 
         <SettingsPage
           onDeleteAll={() => setPendingDeleteAll(true)}
-          onOpenAuditLog={() => setMainView("audit")}
         />
 
         <ConfirmDialog
