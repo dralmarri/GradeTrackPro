@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Course } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
+import ManualDeleteStudents from "@/components/ManualDeleteStudents";
 import { format } from "date-fns";
 import {
   BookOpen,
@@ -25,6 +26,7 @@ interface CourseManagerProps {
   onDeleteCourse: (courseId: string) => void;
   onUpdateCourse: (courseId: string, updates: Partial<Omit<Course, "id" | "students">>) => void;
   onAddStudents: (courseId: string, names: string[]) => void;
+  onDeleteStudent: (courseId: string, studentId: string) => void;
   onSelectCourse: (courseId: string) => void;
 }
 
@@ -33,6 +35,7 @@ export default function CourseManager({
   onDeleteCourse,
   onUpdateCourse,
   onAddStudents,
+  onDeleteStudent,
   onSelectCourse,
 }: CourseManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -274,6 +277,10 @@ export default function CourseManager({
                 }} />
                 <ManualAddStudents
                   onAdd={(names) => onAddStudents(course.id, names)}
+                />
+                <ManualDeleteStudents
+                  students={course.students}
+                  onDelete={(studentId) => onDeleteStudent(course.id, studentId)}
                 />
                 <button
                   onClick={() => startEdit(course)}

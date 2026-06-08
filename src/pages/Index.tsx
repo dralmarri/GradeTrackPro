@@ -183,6 +183,7 @@ export default function Index() {
               onDeleteCourse={deleteCourse}
               onUpdateCourse={updateCourse}
               onAddStudents={addStudentsToCourse}
+              onDeleteStudent={deleteStudent}
               onSelectCourse={(id) => { setActiveCourseId(id); setMainView("courses"); }}
             />
           </div>
