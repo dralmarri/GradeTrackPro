@@ -13,6 +13,7 @@ import {
   Settings as SettingsIcon,
   Cloud,
   HelpCircle,
+  MessageSquare,
 } from "lucide-react";
 
 export default function Help() {
@@ -166,12 +167,21 @@ export default function Help() {
           <p className="text-sm font-medium text-foreground">
             هل تواجه مشكلة أو لديك اقتراح؟
           </p>
-          <Link
-            to="/contact"
-            className="mt-2 inline-block text-sm font-semibold text-primary hover:underline"
-          >
-            تواصل معنا
-          </Link>
+          <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+            <a
+              href={`mailto:dralmarri@gmail.com?subject=${encodeURIComponent("ملاحظات على تطبيق GradeTrackPro")}&body=${encodeURIComponent("اكتب ملاحظتك أو اقتراحك هنا:\n\n")}`}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98]"
+            >
+              <MessageSquare size={16} />
+              إرسال ملاحظات
+            </a>
+            <Link
+              to="/contact"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              تواصل معنا
+            </Link>
+          </div>
         </div>
       </main>
     </div>
