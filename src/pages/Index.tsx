@@ -7,6 +7,7 @@ import { exportToExcel } from "@/lib/excel";
 import { generateLectureDates, WEEKDAYS } from "@/lib/lectures";
 import { LectureInfo } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
+import ManualAddStudents from "@/components/ManualAddStudents";
 import BonusTable from "@/components/BonusTable";
 import ExamsPage from "@/components/ExamsPage";
 import StudentStatus from "@/components/StudentStatus";
@@ -387,21 +388,38 @@ export default function Index() {
                       </div>
                     )}
 
-                    {/* Import Students */}
+                    {/* Add Students */}
                     <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="mb-3 flex items-center justify-between gap-2">
                         <div>
-                          <h4 className="font-display text-sm font-semibold text-foreground">استيراد كشف الطلبة</h4>
+                          <h4 className="font-display text-sm font-semibold text-foreground">إضافة الطلبة</h4>
                           <p className="text-[11px] text-muted-foreground">
                             {pendingStudentNames.length > 0
                               ? `✓ تم تحميل ${pendingStudentNames.length} طالب`
                               : "اختياري - يمكنك إضافتهم لاحقاً"}
                           </p>
                         </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
                         <ExcelImport onImport={(names) => {
-                          setPendingStudentNames(names);
+                          setPendingStudentNames((prev) => [...prev, ...names]);
                           toast.success(`تم تحميل ${names.length} طالب`);
                         }} />
+                        <ManualAddStudents
+                          label="إضافة يدوية"
+                          onAdd={(names) => {
+                            setPendingStudentNames((prev) => [...prev, ...names]);
+                          }}
+                        />
+                        {pendingStudentNames.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setPendingStudentNames([])}
+                            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+                          >
+                            مسح القائمة
+                          </button>
+                        )}
                       </div>
                     </div>
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Course } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
+import ManualAddStudents from "@/components/ManualAddStudents";
 import { format } from "date-fns";
 import {
   BookOpen,
@@ -196,6 +197,9 @@ export default function CourseManager({
                 <ExcelImport onImport={(names) => {
                   onAddStudents(course.id, names);
                 }} />
+                <ManualAddStudents
+                  onAdd={(names) => onAddStudents(course.id, names)}
+                />
                 <button
                   onClick={() => startEdit(course)}
                   className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
