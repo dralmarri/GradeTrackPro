@@ -56,8 +56,8 @@ export default function Index() {
     deleteCourse,
     deleteStudent,
     addLecture,
-    deleteAllData,
     exportAllData,
+
     importAllData,
   } = useCourses();
 
@@ -75,7 +75,7 @@ export default function Index() {
   const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
   const [mainView, setMainView] = useState<MainView>("courses");
   const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
-  const [pendingDeleteAll, setPendingDeleteAll] = useState(false);
+
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
 
@@ -152,24 +152,8 @@ export default function Index() {
           </div>
         </header>
 
-        <SettingsPage
-          onDeleteAll={() => setPendingDeleteAll(true)}
-        />
+        <SettingsPage />
 
-        <ConfirmDialog
-          open={pendingDeleteAll}
-          onOpenChange={setPendingDeleteAll}
-          title="حذف جميع البيانات نهائياً؟"
-          description="سيتم حذف كل المقررات والطلبة. لا يمكن التراجع عن هذا الإجراء."
-          confirmLabel="حذف الكل"
-          destructive
-          onConfirm={() => {
-            deleteAllData();
-            setPendingDeleteAll(false);
-            setMainView("courses");
-            toast.success("تم حذف جميع البيانات");
-          }}
-        />
 
         {/* Course Manager */}
         <div className="mx-auto max-w-3xl px-4 pb-8">
