@@ -103,10 +103,51 @@ export function useCourses() {
     if (updates.lectureTime !== undefined) u.lecture_time = updates.lectureTime;
     if (updates.semesterStart !== undefined) u.semester_start = updates.semesterStart;
     if (updates.semesterEnd !== undefined) u.semester_end = updates.semesterEnd;
+
+    // Auto-regenerate lectures if schedule changed
+    const course = courses.find((c) => c.id === courseId);
+    const scheduleChanged =
+      updates.lectureDays !== undefined ||
+      updates.semesterStart !== undefined ||
+      updates.semesterEnd !== undefined;
+    if (course && scheduleChanged && updates.lectures === undefined) {
+      const days = updates.lectureDays ?? course.lectureDays ?? [];
+      const start = updates.semesterStart ?? course.semesterStart;
+      const end = updates.semesterEnd ?? course.semesterEnd;
+      if (days.length > 0 && start && end) {
+        const { generateLectureDates } = await import("@/lib/lectures");
+        const newLectures = generateLectureDates(new Date(start), new Date(end), days).map((l) => ({
+          date: l.date.toISOString(),
+          label: l.label,
+        }));
+        u.lectures = newLectures;
+        u.lecture_count = newLectures.length;
+      }
+    }
+
     const { error } = await db.from("courses").update(u).eq("id", courseId);
-    if (error) console.error("Error updating course:", error);
-    else await fetchCourses();
-  }, [fetchCourses]);
+    if (error) { console.error("Error updating course:", error); return; }
+
+    // Resize student arrays if lecture_count changed
+    if (course && u.lecture_count !== undefined && u.lecture_count !== course.lectureCount) {
+      const newCount = u.lecture_count as number;
+      for (const s of course.students) {
+        const oldBonus = s.lectureBonus || [];
+        const oldAtt = s.attendance || [];
+        const newBonus =
+          newCount > oldBonus.length
+            ? [...oldBonus, ...new Array(newCount - oldBonus.length).fill(0)]
+            : oldBonus.slice(0, newCount);
+        const newAtt =
+          newCount > oldAtt.length
+            ? [...oldAtt, ...new Array(newCount - oldAtt.length).fill(true)]
+            : oldAtt.slice(0, newCount);
+        await db.from("students").update({ lecture_bonus: newBonus, attendance: newAtt }).eq("id", s.id);
+      }
+    }
+    await fetchCourses();
+  }, [courses, fetchCourses]);
+
 
   const addStudentsToCourse = useCallback(async (courseId: string, names: string[]) => {
     if (!user) return;
