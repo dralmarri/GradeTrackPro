@@ -14,7 +14,7 @@ import StudentStatus from "@/components/StudentStatus";
 import AttendanceSummary from "@/components/AttendanceSummary";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
-import AuditLogPage from "@/components/AuditLogPage";
+
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -40,7 +40,7 @@ import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type CourseTab = "bonus" | "exams" | "status" | "attendance";
-type MainView = "courses" | "settings" | "audit";
+type MainView = "courses" | "settings";
 
 export default function Index() {
   const { signOut } = useAuth();
@@ -154,7 +154,6 @@ export default function Index() {
 
         <SettingsPage
           onDeleteAll={() => setPendingDeleteAll(true)}
-          onOpenAuditLog={() => setMainView("audit")}
         />
 
         <ConfirmDialog
@@ -192,25 +191,6 @@ export default function Index() {
     );
   }
 
-  // Audit log view
-  if (!activeCourse && mainView === "audit") {
-    return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border bg-card/80 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
-            <button
-              onClick={() => setMainView("settings")}
-              className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted"
-            >
-              <ChevronLeft size={20} className="rotate-180" />
-            </button>
-            <h1 className="font-display text-xl font-bold text-foreground">سجل المراجعة</h1>
-          </div>
-        </header>
-        <AuditLogPage />
-      </div>
-    );
-  }
 
   // Course list view
   if (!activeCourse) {
