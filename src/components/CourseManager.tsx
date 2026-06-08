@@ -149,6 +149,63 @@ export default function CourseManager({
                   </div>
                 ))}
               </div>
+
+              {/* Schedule edit */}
+              <div className="space-y-3 rounded-lg border border-dashed border-border p-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">أيام المحاضرات</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(DAYS_AR).map(([d, label]) => {
+                      const day = Number(d);
+                      const active = editLectureDays.includes(day);
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => toggleEditDay(day)}
+                          className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+                            active
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-background text-foreground hover:bg-muted"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">وقت المحاضرة</label>
+                    <input
+                      type="time"
+                      value={editLectureTime}
+                      onChange={(e) => setEditLectureTime(e.target.value)}
+                      className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">بداية الفصل</label>
+                    <input
+                      type="date"
+                      value={editSemesterStart}
+                      onChange={(e) => setEditSemesterStart(e.target.value)}
+                      className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">نهاية الفصل</label>
+                    <input
+                      type="date"
+                      value={editSemesterEnd}
+                      onChange={(e) => setEditSemesterEnd(e.target.value)}
+                      className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={() => saveEdit(course.id)}
