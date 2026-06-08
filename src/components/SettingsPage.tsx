@@ -1,21 +1,13 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertTriangle,
   Info,
   Mail,
   Shield,
   HelpCircle,
 } from "lucide-react";
-import { toast } from "sonner";
 import AddToHomeScreen from "./AddToHomeScreen";
 
-interface SettingsPageProps {
-  onDeleteAll: () => void;
-}
-
-export default function SettingsPage({ onDeleteAll }: SettingsPageProps) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
+export default function SettingsPage() {
   const navigate = useNavigate();
 
   return (
@@ -39,54 +31,6 @@ export default function SettingsPage({ onDeleteAll }: SettingsPageProps) {
 
       {/* Add to Home Screen */}
       <AddToHomeScreen />
-
-
-
-
-      {/* Danger Zone */}
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <AlertTriangle className="text-destructive" size={20} />
-          <h2 className="font-display text-lg font-bold">إدارة البيانات</h2>
-        </div>
-
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <div className="mb-2 flex items-center gap-2 text-destructive">
-            <AlertTriangle size={16} />
-            <h3 className="font-display text-sm font-semibold">منطقة الخطر</h3>
-          </div>
-          <p className="mb-3 text-xs text-muted-foreground">
-            حذف جميع البيانات نهائياً. <strong className="text-destructive">لا يمكن التراجع عن هذا الإجراء أبداً</strong>
-          </p>
-          {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="rounded-lg border border-destructive/30 bg-background px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-            >
-              حذف الكل نهائياً
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  onDeleteAll();
-                  setConfirmDelete(false);
-                  toast.success("تم حذف جميع البيانات");
-                }}
-                className="rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground"
-              >
-                تأكيد الحذف
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
-              >
-                إلغاء
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* About */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
