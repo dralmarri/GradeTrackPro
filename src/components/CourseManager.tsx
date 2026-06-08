@@ -26,6 +26,7 @@ interface CourseManagerProps {
   onDeleteCourse: (courseId: string) => void;
   onUpdateCourse: (courseId: string, updates: Partial<Omit<Course, "id" | "students">>) => void;
   onAddStudents: (courseId: string, names: string[]) => void;
+  onDeleteStudent: (courseId: string, studentId: string) => void;
   onSelectCourse: (courseId: string) => void;
 }
 
