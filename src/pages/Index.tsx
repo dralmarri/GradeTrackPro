@@ -152,24 +152,8 @@ export default function Index() {
           </div>
         </header>
 
-        <SettingsPage
-          onDeleteAll={() => setPendingDeleteAll(true)}
-        />
+        <SettingsPage />
 
-        <ConfirmDialog
-          open={pendingDeleteAll}
-          onOpenChange={setPendingDeleteAll}
-          title="حذف جميع البيانات نهائياً؟"
-          description="سيتم حذف كل المقررات والطلبة. لا يمكن التراجع عن هذا الإجراء."
-          confirmLabel="حذف الكل"
-          destructive
-          onConfirm={() => {
-            deleteAllData();
-            setPendingDeleteAll(false);
-            setMainView("courses");
-            toast.success("تم حذف جميع البيانات");
-          }}
-        />
 
         {/* Course Manager */}
         <div className="mx-auto max-w-3xl px-4 pb-8">
