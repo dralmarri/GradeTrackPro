@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Course } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
+import ManualDeleteStudents from "@/components/ManualDeleteStudents";
 import { format } from "date-fns";
 import {
   BookOpen,
