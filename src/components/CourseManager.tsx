@@ -44,6 +44,10 @@ export default function CourseManager({
   const [editMaxParticipation, setEditMaxParticipation] = useState(10);
   const [editMaxHomework, setEditMaxHomework] = useState(10);
   const [editMaxBonus, setEditMaxBonus] = useState(3);
+  const [editLectureDays, setEditLectureDays] = useState<number[]>([]);
+  const [editLectureTime, setEditLectureTime] = useState("");
+  const [editSemesterStart, setEditSemesterStart] = useState("");
+  const [editSemesterEnd, setEditSemesterEnd] = useState("");
 
   const startEdit = (course: Course) => {
     setEditingId(course.id);
@@ -55,6 +59,16 @@ export default function CourseManager({
     setEditMaxParticipation(course.maxParticipation);
     setEditMaxHomework(course.maxHomework || 10);
     setEditMaxBonus(course.maxBonus);
+    setEditLectureDays(course.lectureDays || []);
+    setEditLectureTime(course.lectureTime || "");
+    setEditSemesterStart(course.semesterStart ? course.semesterStart.slice(0, 10) : "");
+    setEditSemesterEnd(course.semesterEnd ? course.semesterEnd.slice(0, 10) : "");
+  };
+
+  const toggleEditDay = (d: number) => {
+    setEditLectureDays((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()
+    );
   };
 
   const saveEdit = (courseId: string) => {
@@ -67,6 +81,10 @@ export default function CourseManager({
       maxParticipation: editMaxParticipation,
       maxHomework: editMaxHomework,
       maxBonus: editMaxBonus,
+      lectureDays: editLectureDays,
+      lectureTime: editLectureTime,
+      semesterStart: editSemesterStart,
+      semesterEnd: editSemesterEnd,
     });
     setEditingId(null);
     toast.success("تم تحديث بيانات المقرر");
