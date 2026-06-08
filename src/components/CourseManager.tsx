@@ -278,6 +278,10 @@ export default function CourseManager({
                 <ManualAddStudents
                   onAdd={(names) => onAddStudents(course.id, names)}
                 />
+                <ManualDeleteStudents
+                  students={course.students}
+                  onDelete={(studentId) => onDeleteStudent(course.id, studentId)}
+                />
                 <button
                   onClick={() => startEdit(course)}
                   className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
