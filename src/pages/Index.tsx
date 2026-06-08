@@ -191,25 +191,6 @@ export default function Index() {
     );
   }
 
-  // Audit log view
-  if (!activeCourse && mainView === "audit") {
-    return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border bg-card/80 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
-            <button
-              onClick={() => setMainView("settings")}
-              className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted"
-            >
-              <ChevronLeft size={20} className="rotate-180" />
-            </button>
-            <h1 className="font-display text-xl font-bold text-foreground">سجل المراجعة</h1>
-          </div>
-        </header>
-        <AuditLogPage />
-      </div>
-    );
-  }
 
   // Course list view
   if (!activeCourse) {
