@@ -115,7 +115,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                   <span className="font-medium">{student.participation}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">واجب ({course.maxHomework || 10})</span>
+                  <span className="text-muted-foreground">واجب ({course.maxHomework ?? 10})</span>
                   <span className="font-medium">{student.homework || 0}</span>
                 </div>
                 <div className="border-t border-border pt-1.5">

@@ -57,7 +57,7 @@ export default function CourseManager({
     setEditMaxExam2(course.maxExam2);
     setEditMaxFinal(course.maxFinal);
     setEditMaxParticipation(course.maxParticipation);
-    setEditMaxHomework(course.maxHomework || 10);
+    setEditMaxHomework(course.maxHomework ?? 10);
     setEditMaxBonus(course.maxBonus);
     setEditLectureDays(course.lectureDays || []);
     setEditLectureTime(course.lectureTime || "");
@@ -240,7 +240,7 @@ export default function CourseManager({
                 <span className="rounded-md bg-muted px-2 py-0.5">اختبار٢: {course.maxExam2}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">نهائي: {course.maxFinal}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">مشاركة: {course.maxParticipation}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">واجب: {course.maxHomework || 10}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">واجب: {course.maxHomework ?? 10}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">محاضرات: {course.lectureCount}</span>
               </div>
 
