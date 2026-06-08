@@ -57,7 +57,7 @@ export default function CourseManager({
     setEditMaxExam2(course.maxExam2);
     setEditMaxFinal(course.maxFinal);
     setEditMaxParticipation(course.maxParticipation);
-    setEditMaxHomework(course.maxHomework || 10);
+    setEditMaxHomework(course.maxHomework ?? 10);
     setEditMaxBonus(course.maxBonus);
     setEditLectureDays(course.lectureDays || []);
     setEditLectureTime(course.lectureTime || "");
