@@ -8,6 +8,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import AddToHomeScreen from "./AddToHomeScreen";
 
 interface SettingsPageProps {
   onDeleteAll: () => void;
