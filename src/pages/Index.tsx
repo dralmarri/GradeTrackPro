@@ -40,7 +40,7 @@ import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type CourseTab = "bonus" | "exams" | "status" | "attendance";
-type MainView = "courses" | "settings" | "audit";
+type MainView = "courses" | "settings";
 
 export default function Index() {
   const { signOut } = useAuth();
