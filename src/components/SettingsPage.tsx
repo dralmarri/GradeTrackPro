@@ -8,6 +8,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import AddToHomeScreen from "./AddToHomeScreen";
 
 interface SettingsPageProps {
   onDeleteAll: () => void;
@@ -35,6 +36,11 @@ export default function SettingsPage({ onDeleteAll }: SettingsPageProps) {
           فتح دليل الاستخدام
         </button>
       </div>
+
+      {/* Add to Home Screen */}
+      <AddToHomeScreen />
+
+
 
 
       {/* Danger Zone */}
