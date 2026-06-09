@@ -523,6 +523,14 @@ export default function Index() {
                 تصدير النتائج
               </button>
             )}
+            <button
+              onClick={() => setStudentsDialogOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
+              title="إدارة الطلبة والدرجات"
+            >
+              <Users size={14} />
+              <span className="hidden sm:inline">إدارة الطلبة</span>
+            </button>
           </div>
         </div>
 
@@ -587,6 +595,15 @@ export default function Index() {
           />
         )}
       </main>
+
+      <CourseStudentsDialog
+        open={studentsDialogOpen}
+        onOpenChange={setStudentsDialogOpen}
+        course={activeCourse}
+        onAddStudents={(names) => addStudentsToCourse(activeCourse.id, names)}
+        onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
+        onUpdateCourse={(u) => updateCourse(activeCourse.id, u)}
+      />
     </div>
   );
 }
