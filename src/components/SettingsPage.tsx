@@ -49,6 +49,31 @@ export default function SettingsPage() {
     toast.success("تمت إعادة التقسيمات إلى الافتراضي");
   };
 
+  const [letterTiers, setLetterTiers] = useState<LetterTier[]>(loadLetterTiers());
+  const updateLetter = (i: number, patch: Partial<LetterTier>) => {
+    const next = letterTiers.map((t, idx) => (idx === i ? { ...t, ...patch } : t));
+    setLetterTiers(next);
+    saveLetterTiers(next);
+  };
+  const addLetter = () => {
+    const next = [...letterTiers, { letter: "?", minPercent: 50, color: "text-primary" }];
+    setLetterTiers(next);
+    saveLetterTiers(next);
+  };
+  const removeLetter = (i: number) => {
+    if (letterTiers.length <= 1) return;
+    const next = letterTiers.filter((_, idx) => idx !== i);
+    setLetterTiers(next);
+    saveLetterTiers(next);
+  };
+  const resetLetters = () => {
+    setLetterTiers(DEFAULT_LETTER_TIERS);
+    saveLetterTiers(DEFAULT_LETTER_TIERS);
+    toast.success("تمت إعادة سلم الحروف إلى الافتراضي");
+  };
+
+
+
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
