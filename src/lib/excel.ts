@@ -7,7 +7,7 @@ export function getBonusTotal(student: Student, maxBonus?: number): number {
 }
 
 export function getMaxTotal(course: Pick<Course, "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "maxBonus">): number {
-  return course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0) + (course.maxBonus || 0);
+  return course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0);
 }
 
 export function getPercentage(total: number, maxTotal: number): number {
@@ -92,9 +92,14 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-export function getTotal(student: Student, course?: Pick<Course, "maxBonus">): number {
+export function getTotal(student: Student, course?: Partial<Pick<Course, "maxBonus" | "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework">>): number {
   const bonusTotal = getBonusTotal(student, course?.maxBonus);
-  return bonusTotal + student.exam1 + student.exam2 + student.finalExam + student.participation + (student.homework || 0);
+  const base = student.exam1 + student.exam2 + student.finalExam + student.participation + (student.homework || 0);
+  if (course && course.maxExam1 !== undefined) {
+    const maxTotal = getMaxTotal(course as Course);
+    return Math.min(maxTotal, base + bonusTotal);
+  }
+  return base + bonusTotal;
 }
 
 export function createStudent(name: string, lectureCount: number): Student {
