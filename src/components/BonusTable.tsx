@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
 import { ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import NumberInput from "@/components/NumberInput";
 
 interface BonusTableProps {
   students: Student[];
