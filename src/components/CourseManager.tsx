@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Course } from "@/types/student";
+import { Course, ComponentLabels, DEFAULT_COMPONENT_LABELS, getLabel } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
@@ -51,6 +51,7 @@ export default function CourseManager({
   const [editLectureTime, setEditLectureTime] = useState("");
   const [editSemesterStart, setEditSemesterStart] = useState("");
   const [editSemesterEnd, setEditSemesterEnd] = useState("");
+  const [editLabels, setEditLabels] = useState<Required<ComponentLabels>>({ ...DEFAULT_COMPONENT_LABELS });
 
   const startEdit = (course: Course) => {
     setEditingId(course.id);
@@ -66,6 +67,7 @@ export default function CourseManager({
     setEditLectureTime(course.lectureTime || "");
     setEditSemesterStart(course.semesterStart ? course.semesterStart.slice(0, 10) : "");
     setEditSemesterEnd(course.semesterEnd ? course.semesterEnd.slice(0, 10) : "");
+    setEditLabels({ ...DEFAULT_COMPONENT_LABELS, ...(course.componentLabels || {}) });
   };
 
   const toggleEditDay = (d: number) => {
@@ -88,7 +90,8 @@ export default function CourseManager({
       lectureTime: editLectureTime,
       semesterStart: editSemesterStart,
       semesterEnd: editSemesterEnd,
-    });
+      componentLabels: editLabels,
+    } as any);
     setEditingId(null);
     toast.success("تم تحديث بيانات المقرر");
   };
