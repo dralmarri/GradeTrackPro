@@ -33,6 +33,24 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
     return { tier: getTierFor(pct, tiers), letter: getLetterFor(pct, letterTiers) };
   };
 
+  const getTaqdeer = (letter: string): string => {
+    const map: Record<string, string> = {
+      "A": "ممتاز مرتفع",
+      "A-": "ممتاز",
+      "B+": "جيد جداً مرتفع",
+      "B": "جيد جداً",
+      "B-": "جيد جداً منخفض",
+      "C+": "جيد مرتفع",
+      "C": "جيد",
+      "C-": "جيد منخفض",
+      "D+": "مقبول مرتفع",
+      "D": "مقبول",
+      "F": "راسب",
+    };
+    return map[letter] || letter;
+  };
+
+
   if (students.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -103,10 +121,14 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                   <h3 className="font-display text-sm font-bold text-foreground">{student.name}</h3>
                 </div>
                 <div className="flex items-center gap-2">
+                  <span className={`rounded-md bg-muted px-2 py-0.5 font-display text-[11px] font-semibold ${grade.letter.color}`}>
+                    {getTaqdeer(grade.letter.letter)}
+                  </span>
                   <span className={`font-display text-sm font-bold ${grade.letter.color}`} dir="ltr">{grade.letter.letter}</span>
                   <span className={`font-display text-xl ${grade.tier.color}`}>{grade.tier.emoji}</span>
                 </div>
               </div>
+
 
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
