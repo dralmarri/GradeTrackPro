@@ -12,6 +12,7 @@ import TermsOfUse from "./pages/TermsOfUse";
 import ContactUs from "./pages/ContactUs";
 import ResetPassword from "./pages/ResetPassword";
 import Help from "./pages/Help";
+import Admin from "./pages/Admin";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const AppRoutes = () => (
     <Route path="/terms" element={<TermsOfUse />} />
     <Route path="/contact" element={<ContactUs />} />
     <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
+    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
