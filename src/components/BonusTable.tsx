@@ -238,17 +238,15 @@ export default function BonusTable({
                       >
                         −
                       </button>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={currentBonus === 0 ? "" : currentBonus}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          const num = raw === "" || raw === "-" ? 0 : Number(raw);
-                          onUpdateBonus(student.id, selectedLecture, clamp(num, maxBonus));
-                        }}
-                        className="w-16 rounded-md border border-border bg-background px-1 py-1.5 text-center text-sm font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      <NumberInput
+                        value={currentBonus}
+                        onChange={(v) => onUpdateBonus(student.id, selectedLecture, v)}
+                        min={-maxBonus}
+                        max={maxBonus}
+                        allowNegative
+                        className="w-16"
                       />
+
                       <button
                         onClick={() => onUpdateBonus(student.id, selectedLecture, clamp(currentBonus + 1, maxBonus))}
                         className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-bold transition-colors hover:bg-primary/20"
