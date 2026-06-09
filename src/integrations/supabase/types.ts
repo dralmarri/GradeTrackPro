@@ -49,6 +49,7 @@ export type Database = {
       }
       courses: {
         Row: {
+          component_labels: Json | null
           created_at: string | null
           id: string
           lecture_count: number | null
@@ -68,6 +69,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          component_labels?: Json | null
           created_at?: string | null
           id?: string
           lecture_count?: number | null
@@ -87,6 +89,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          component_labels?: Json | null
           created_at?: string | null
           id?: string
           lecture_count?: number | null
