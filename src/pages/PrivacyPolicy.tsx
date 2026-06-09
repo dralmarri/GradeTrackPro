@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8 space-y-6 text-sm leading-relaxed text-foreground" dir="rtl">
-        <p className="text-muted-foreground">آخر تحديث: مارس 2026</p>
+        <p className="text-muted-foreground">آخر تحديث: يونيو 2026</p>
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">مقدمة</h2>
@@ -27,37 +27,53 @@ export default function PrivacyPolicy() {
         </section>
 
         <section className="space-y-2">
+          <h2 className="font-display text-lg font-bold">الحساب وتسجيل الدخول</h2>
+          <p>يتطلب التطبيق إنشاء حساب وتسجيل الدخول للوصول إلى بياناتكم ومزامنتها بين أجهزتكم. نقوم بجمع بريدكم الإلكتروني وكلمة المرور (مُشفّرة) لأغراض المصادقة فقط.</p>
+        </section>
+
+        <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">البيانات التي نجمعها</h2>
           <ul className="list-disc pr-6 space-y-1">
+            <li>بيانات الحساب: البريد الإلكتروني المستخدم لتسجيل الدخول</li>
             <li>بيانات المقررات الدراسية (أسماء المواد، الشُعب، جداول المحاضرات)</li>
-            <li>بيانات الطلاب (الأسماء، الدرجات، البونص)</li>
+            <li>بيانات الطلاب (الأسماء، الدرجات، الحضور، البونص، الملاحظات)</li>
+            <li>نتائج الاختبارات المُستوردة من ملفات Excel</li>
             <li>إعدادات التطبيق والتفضيلات</li>
           </ul>
         </section>
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">كيفية تخزين البيانات</h2>
-          <p>جميع البيانات تُخزّن محلياً على جهازك فقط باستخدام تقنية التخزين المحلي (Local Storage). لا يتم إرسال أي بيانات إلى خوادم خارجية أو أطراف ثالثة.</p>
+          <p>تُخزَّن بياناتكم بشكل آمن في قاعدة بيانات سحابية (Lovable Cloud / Supabase) لتمكين المزامنة الفورية بين أجهزتكم المختلفة. كل مستخدم لا يستطيع الوصول إلا إلى بياناته الخاصة فقط عبر سياسات أمان صارمة (Row-Level Security).</p>
+          <p>قد يحتفظ التطبيق بنسخة مؤقتة من بعض البيانات على جهازكم لتحسين الأداء والعمل دون اتصال.</p>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="font-display text-lg font-bold">استيراد ملفات Excel</h2>
+          <p>عند استيراد قوائم الطلاب أو نتائج الاختبارات من ملفات Excel، تتم معالجة الملف محلياً على جهازكم فقط، ولا يتم رفع الملف الأصلي إلى أي خادم. تُحفظ فقط البيانات النهائية (الأسماء والدرجات) في حسابكم السحابي.</p>
         </section>
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">حماية البيانات</h2>
           <p>نحن نتخذ التدابير المناسبة لحماية بياناتكم، بما في ذلك:</p>
           <ul className="list-disc pr-6 space-y-1">
-            <li>التخزين المحلي على الجهاز فقط</li>
-            <li>عدم مشاركة البيانات مع أي طرف ثالث</li>
-            <li>إمكانية حذف جميع البيانات في أي وقت من الإعدادات</li>
+            <li>تشفير الاتصال بين التطبيق والخادم (HTTPS)</li>
+            <li>عزل بيانات كل مستخدم عبر سياسات أمان على مستوى الصف (RLS)</li>
+            <li>عدم مشاركة البيانات مع أي طرف ثالث لأغراض تسويقية أو إعلانية</li>
+            <li>إمكانية تصدير بياناتكم أو حذفها في أي وقت</li>
           </ul>
         </section>
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">حقوقكم</h2>
           <ul className="list-disc pr-6 space-y-1">
-            <li>الوصول إلى بياناتكم وتصديرها في أي وقت</li>
+            <li>الوصول إلى بياناتكم وتصديرها بصيغة Excel في أي وقت</li>
             <li>تعديل أو حذف أي بيانات مُخزّنة</li>
-            <li>حذف جميع البيانات نهائياً من الإعدادات</li>
+            <li>إعادة تعيين الفصل الدراسي وحذف بياناته</li>
+            <li>طلب حذف الحساب وجميع البيانات المرتبطة به نهائياً</li>
           </ul>
         </section>
+
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">التواصل</h2>
