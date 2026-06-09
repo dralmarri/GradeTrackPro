@@ -3,7 +3,7 @@ import { Student } from "@/types/student";
 import { FileText, Loader2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { ocrImageToGrades } from "@/lib/ocr";
 
 type ExamKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
@@ -74,53 +74,27 @@ export default function ExamsPage({
     }
 
     setOcrLoading(true);
-    const tId = toast.loading("جارٍ قراءة الصورة بالذكاء الاصطناعي...");
+    const tId = toast.loading("جارٍ تحميل محرك القراءة... 0%");
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(String(r.result));
-        r.onerror = () => reject(r.error);
-        r.readAsDataURL(file);
-      });
+      const matches = await ocrImageToGrades(
+        file,
+        students.map((s) => ({ id: s.id, name: s.name })),
+        currentTab.max,
+        (pct) => toast.loading(`جارٍ قراءة الصورة... ${pct}%`, { id: tId }),
+      );
 
-      const { data, error } = await supabase.functions.invoke("ocr-exam-grades", {
-        body: {
-          imageBase64: base64,
-          mimeType: file.type,
-          studentNames: students.map((s) => s.name),
-          maxScore: currentTab.max,
-          examLabel: currentTab.label,
-        },
-      });
-
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-
-      const grades: { name: string; score: number }[] = (data as any)?.grades ?? [];
-      if (!grades.length) {
-        toast.dismiss(tId);
-        toast.error("لم يتم استخراج أي درجات من الصورة");
+      toast.dismiss(tId);
+      if (!matches.length) {
+        toast.error("لم يتم استخراج أي درجات. تأكد أن الصورة واضحة وأن الأسماء مطابقة.");
         return;
       }
 
-      // Match by exact name, then by best inclusion overlap
-      const normalize = (s: string) => s.replace(/\s+/g, " ").trim();
-      let matched = 0;
-      for (const g of grades) {
-        const target = normalize(g.name);
-        let student =
-          students.find((s) => normalize(s.name) === target) ||
-          students.find((s) => normalize(s.name).includes(target) || target.includes(normalize(s.name)));
-        if (student) {
-          const v = clamp(Number(g.score) || 0, currentTab.max);
-          onUpdateStudent(student.id, { [currentTab.key]: v });
-          matched++;
-        }
+      for (const m of matches) {
+        const v = clamp(m.score, currentTab.max);
+        onUpdateStudent(m.studentId, { [currentTab.key]: v });
       }
 
-      toast.dismiss(tId);
-      if (matched > 0) toast.success(`تم استخراج ${matched} درجة بنجاح ✅`);
-      else toast.error("تعذّر مطابقة الأسماء المستخرجة مع قائمة الطلاب");
+      toast.success(`تم استخراج ${matches.length} درجة بنجاح ✅ (راجعها قبل الحفظ)`);
     } catch (err: any) {
       toast.dismiss(tId);
       toast.error(err?.message || "فشل في قراءة الصورة");
