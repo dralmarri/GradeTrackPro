@@ -13,9 +13,13 @@ import {
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
   GradeTier,
+  LetterTier,
   loadGradeTiers,
   saveGradeTiers,
   DEFAULT_TIERS,
+  loadLetterTiers,
+  saveLetterTiers,
+  DEFAULT_LETTER_TIERS,
 } from "@/lib/gradeTiers";
 import { toast } from "sonner";
 
