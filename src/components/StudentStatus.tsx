@@ -1,25 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Student, Course } from "@/types/student";
 import { getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
 import { User, TrendingUp, TrendingDown, Award, Search } from "lucide-react";
+import { GradeTier, loadGradeTiers, getTierFor } from "@/lib/gradeTiers";
 
 interface StudentStatusProps {
   students: Student[];
   course: Course;
 }
 
-function getGrade(total: number, max: number): { label: string; color: string } {
-  const pct = (total / max) * 100;
-  if (pct >= 90) return { label: "🌟", color: "text-success" };
-  if (pct >= 80) return { label: "🏆", color: "text-primary" };
-  if (pct >= 70) return { label: "👍", color: "text-accent" };
-  if (pct >= 60) return { label: "✅", color: "text-warning" };
-  return { label: "❌", color: "text-destructive" };
-}
-
 export default function StudentStatus({ students, course }: StudentStatusProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
+
+  useEffect(() => {
+    const handler = () => setTiers(loadGradeTiers());
+    window.addEventListener("gradeTiersChanged", handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener("gradeTiersChanged", handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, []);
+
+  const getGrade = (total: number, max: number) => {
+    const pct = max > 0 ? (total / max) * 100 : 0;
+    return getTierFor(pct, tiers);
+  };
 
   if (students.length === 0) {
     return (
@@ -90,7 +98,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                   </div>
                   <h3 className="font-display text-sm font-bold text-foreground">{student.name}</h3>
                 </div>
-                <span className={`font-display text-sm font-bold ${grade.color}`}>{grade.label}</span>
+                <span className={`font-display text-xl ${grade.color}`}>{grade.emoji}</span>
               </div>
 
               <div className="space-y-1.5 text-xs">
