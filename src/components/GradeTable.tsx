@@ -125,17 +125,14 @@ export default function GradeTable({
                   { key: "participation" as const, max: maxParticipation },
                 ].map(({ key, max }) => (
                   <td key={key} className="px-1 py-1 text-center">
-                    <input
-                      type="number"
+                    <NumberInput
+                      value={(student[key] as number) || 0}
+                      onChange={(v) => onUpdateStudent(student.id, { [key]: v })}
                       min={0}
                       max={max}
-                      value={student[key] || ""}
-                      onChange={(e) => {
-                        const v = clamp(Number(e.target.value), max);
-                        onUpdateStudent(student.id, { [key]: v });
-                      }}
-                      className="w-14 rounded-md border border-border bg-background px-1 py-1 text-center text-xs outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary/30"
+                      className="w-14 px-1 py-1 text-xs"
                     />
+
                   </td>
                 ))}
                 <td className="bg-primary/5 px-3 py-2 text-center font-display font-bold text-primary">
