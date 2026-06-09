@@ -153,35 +153,14 @@ export default function BonusTable({
                 </p>
               </div>
               <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-
-                <button
-                  onClick={() => {
-                    const v = clamp(currentBonus - 1, maxBonus);
-                    onUpdateBonus(student.id, selectedLecture, v);
-                  }}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10 text-destructive font-bold text-lg transition-colors active:bg-destructive/20"
-                >
-                  −
-                </button>
                 <NumberInput
                   value={currentBonus}
                   onChange={(v) => onUpdateBonus(student.id, selectedLecture, v)}
-                  min={-maxBonus}
-                  max={maxBonus}
                   allowNegative
-                  className="w-14 px-1 py-1.5 text-sm font-bold"
+                  className="w-20 px-2 py-2 text-base font-bold"
                 />
-
-                <button
-                  onClick={() => {
-                    const v = clamp(currentBonus + 1, maxBonus);
-                    onUpdateBonus(student.id, selectedLecture, v);
-                  }}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-lg transition-colors active:bg-primary/20"
-                >
-                  +
-                </button>
               </div>
+
             </div>
           );
         })}
