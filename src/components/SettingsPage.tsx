@@ -261,6 +261,8 @@ export default function SettingsPage() {
           <Plus size={14} />
           إضافة حرف
         </button>
+        </div>
+        )}
       </div>
 
 
