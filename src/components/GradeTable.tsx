@@ -106,16 +106,12 @@ export default function GradeTable({
                 </td>
                 {student.lectureBonus.map((bonus, li) => (
                   <td key={li} className="px-1 py-1 text-center">
-                    <input
-                      type="number"
+                    <NumberInput
+                      value={bonus}
+                      onChange={(v) => onUpdateBonus(student.id, li, v)}
                       min={0}
                       max={maxBonus}
-                      value={bonus || ""}
-                      onChange={(e) => {
-                        const v = clamp(Number(e.target.value), maxBonus);
-                        onUpdateBonus(student.id, li, v);
-                      }}
-                      className="w-10 rounded-md border border-border bg-background px-1 py-1 text-center text-xs outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary/30"
+                      className="w-10 px-1 py-1 text-xs"
                     />
                   </td>
                 ))}
