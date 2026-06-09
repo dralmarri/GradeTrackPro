@@ -211,30 +211,16 @@ export default function BonusTable({
                     </button>
                   </td>
                   <td className="px-3 py-1.5 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => onUpdateBonus(student.id, selectedLecture, clamp(currentBonus - 1, maxBonus))}
-                        className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/10 text-destructive font-bold transition-colors hover:bg-destructive/20"
-                      >
-                        −
-                      </button>
+                    <div className="flex items-center justify-center">
                       <NumberInput
                         value={currentBonus}
                         onChange={(v) => onUpdateBonus(student.id, selectedLecture, v)}
-                        min={-maxBonus}
-                        max={maxBonus}
                         allowNegative
-                        className="w-16"
+                        className="w-20"
                       />
-
-                      <button
-                        onClick={() => onUpdateBonus(student.id, selectedLecture, clamp(currentBonus + 1, maxBonus))}
-                        className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-bold transition-colors hover:bg-primary/20"
-                      >
-                        +
-                      </button>
                     </div>
                   </td>
+
                   <td className={`bg-accent/5 px-3 py-2.5 text-center font-display font-bold ${bonusTotal >= 0 ? "text-accent" : "text-destructive"}`}>
                     {bonusTotal}
                   </td>
