@@ -123,6 +123,12 @@ export default function Auth() {
             {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
           </button>
 
+          {!isLogin && (
+            <p className="rounded-lg border border-amber-300/40 bg-amber-50 px-3 py-2 text-center text-[12px] leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              بعد إنشاء الحساب سنرسل لك رسالة تأكيد. إذا لم تجدها في صندوق الوارد فتحقق من مجلد الرسائل غير المرغوب فيها (Junk / Spam).
+            </p>
+          )}
+
           {isLogin && (
             <button
               type="button"
