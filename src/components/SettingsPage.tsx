@@ -1,11 +1,23 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Info,
   Mail,
   Shield,
   HelpCircle,
+  Award,
+  Plus,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import AddToHomeScreen from "./AddToHomeScreen";
+import {
+  GradeTier,
+  loadGradeTiers,
+  saveGradeTiers,
+  DEFAULT_TIERS,
+} from "@/lib/gradeTiers";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
