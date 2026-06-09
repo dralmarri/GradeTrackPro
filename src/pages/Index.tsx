@@ -14,6 +14,7 @@ import StudentStatus from "@/components/StudentStatus";
 import AttendanceSummary from "@/components/AttendanceSummary";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
+import CourseStudentsDialog from "@/components/CourseStudentsDialog";
 
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Calendar } from "@/components/ui/calendar";
@@ -36,6 +37,7 @@ import {
   Settings,
   HelpCircle,
   MessageCircle,
+  Users,
 } from "lucide-react";
 import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -76,6 +78,7 @@ export default function Index() {
   const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
   const [mainView, setMainView] = useState<MainView>("courses");
   const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
+  const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
 
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
