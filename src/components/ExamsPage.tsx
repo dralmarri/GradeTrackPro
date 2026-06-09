@@ -4,6 +4,7 @@ import { FileSpreadsheet, Loader2, ChevronLeft, ChevronRight, Search, X, AlertCi
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { importAllGradesFromExcel, type GradeMatch } from "@/lib/ocr";
+import NumberInput from "@/components/NumberInput";
 
 type ExamKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
@@ -374,17 +375,14 @@ export default function ExamsPage({
                 >
                   −
                 </button>
-                <input
-                  type="number"
+                <NumberInput
+                  value={currentVal}
+                  onChange={(v) => onUpdateStudent(student.id, { [currentTab.key]: v })}
                   min={0}
                   max={currentTab.max}
-                  value={currentVal || ""}
-                  onChange={(e) => {
-                    const v = clamp(Number(e.target.value), currentTab.max);
-                    onUpdateStudent(student.id, { [currentTab.key]: v });
-                  }}
-                  className="w-12 rounded-lg border border-border bg-background px-1 py-1.5 text-center text-sm font-bold outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="w-14 px-1 py-1.5 text-sm font-bold"
                 />
+
                 <button
                   onClick={() => {
                     const v = clamp(currentVal + 1, currentTab.max);
@@ -437,18 +435,14 @@ export default function ExamsPage({
                     >
                       −
                     </button>
-                    <input
-                      type="number"
-                      inputMode="numeric"
+                    <NumberInput
+                      value={(student[currentTab.key] as number) || 0}
+                      onChange={(v) => onUpdateStudent(student.id, { [currentTab.key]: v })}
                       min={0}
                       max={currentTab.max}
-                      value={student[currentTab.key] || ""}
-                      onChange={(e) => {
-                        const v = clamp(Number(e.target.value), currentTab.max);
-                        onUpdateStudent(student.id, { [currentTab.key]: v });
-                      }}
-                      className="w-16 rounded-md border border-border bg-background px-1 py-1.5 text-center text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="w-16"
                     />
+
                     <button
                       onClick={() => {
                         const curr = (student[currentTab.key] as number) || 0;

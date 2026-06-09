@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
 import { ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import NumberInput from "@/components/NumberInput";
 
 interface BonusTableProps {
   students: Student[];
@@ -161,18 +162,15 @@ export default function BonusTable({
                 >
                   −
                 </button>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={currentBonus === 0 ? "" : currentBonus}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const num = raw === "" || raw === "-" ? 0 : Number(raw);
-                    const v = clamp(num, maxBonus);
-                    onUpdateBonus(student.id, selectedLecture, v);
-                  }}
-                  className="w-12 rounded-lg border border-border bg-background px-1 py-1.5 text-center text-sm font-bold outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                <NumberInput
+                  value={currentBonus}
+                  onChange={(v) => onUpdateBonus(student.id, selectedLecture, v)}
+                  min={-maxBonus}
+                  max={maxBonus}
+                  allowNegative
+                  className="w-14 px-1 py-1.5 text-sm font-bold"
                 />
+
                 <button
                   onClick={() => {
                     const v = clamp(currentBonus + 1, maxBonus);
@@ -240,17 +238,15 @@ export default function BonusTable({
                       >
                         −
                       </button>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={currentBonus === 0 ? "" : currentBonus}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          const num = raw === "" || raw === "-" ? 0 : Number(raw);
-                          onUpdateBonus(student.id, selectedLecture, clamp(num, maxBonus));
-                        }}
-                        className="w-16 rounded-md border border-border bg-background px-1 py-1.5 text-center text-sm font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      <NumberInput
+                        value={currentBonus}
+                        onChange={(v) => onUpdateBonus(student.id, selectedLecture, v)}
+                        min={-maxBonus}
+                        max={maxBonus}
+                        allowNegative
+                        className="w-16"
                       />
+
                       <button
                         onClick={() => onUpdateBonus(student.id, selectedLecture, clamp(currentBonus + 1, maxBonus))}
                         className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-bold transition-colors hover:bg-primary/20"

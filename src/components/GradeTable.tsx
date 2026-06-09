@@ -1,6 +1,7 @@
 import { Student, LectureInfo } from "@/types/student";
 import { getTotal } from "@/lib/excel";
 import { Trash2 } from "lucide-react";
+import NumberInput from "@/components/NumberInput";
 
 interface GradeTableProps {
   students: Student[];
@@ -105,16 +106,12 @@ export default function GradeTable({
                 </td>
                 {student.lectureBonus.map((bonus, li) => (
                   <td key={li} className="px-1 py-1 text-center">
-                    <input
-                      type="number"
+                    <NumberInput
+                      value={bonus}
+                      onChange={(v) => onUpdateBonus(student.id, li, v)}
                       min={0}
                       max={maxBonus}
-                      value={bonus || ""}
-                      onChange={(e) => {
-                        const v = clamp(Number(e.target.value), maxBonus);
-                        onUpdateBonus(student.id, li, v);
-                      }}
-                      className="w-10 rounded-md border border-border bg-background px-1 py-1 text-center text-xs outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary/30"
+                      className="w-10 px-1 py-1 text-xs"
                     />
                   </td>
                 ))}
@@ -128,17 +125,14 @@ export default function GradeTable({
                   { key: "participation" as const, max: maxParticipation },
                 ].map(({ key, max }) => (
                   <td key={key} className="px-1 py-1 text-center">
-                    <input
-                      type="number"
+                    <NumberInput
+                      value={(student[key] as number) || 0}
+                      onChange={(v) => onUpdateStudent(student.id, { [key]: v })}
                       min={0}
                       max={max}
-                      value={student[key] || ""}
-                      onChange={(e) => {
-                        const v = clamp(Number(e.target.value), max);
-                        onUpdateStudent(student.id, { [key]: v });
-                      }}
-                      className="w-14 rounded-md border border-border bg-background px-1 py-1 text-center text-xs outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary/30"
+                      className="w-14 px-1 py-1 text-xs"
                     />
+
                   </td>
                 ))}
                 <td className="bg-primary/5 px-3 py-2 text-center font-display font-bold text-primary">
