@@ -42,6 +42,11 @@ function isHeaderLike(cell: string): boolean {
   return true;
 }
 
+function isNameHeader(cell: string): boolean {
+  const toks = normalizeArabic(cell).split(" ").filter(Boolean);
+  return toks.includes("اسم") || toks.includes("الاسم") || toks.includes("الطالب") || toks.includes("الطالبه") || toks.includes("الطالبة") || toks.includes("name") || toks.includes("student");
+}
+
 function parseScore(cell: string, maxScore: number, strictColumn: boolean): number | null {
   const value = cell.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).trim();
   const exact = value.match(/^-?\d+(?:[.,]\d+)?$/);
@@ -80,6 +85,14 @@ const EXAM_KEYWORDS: Record<string, string[]> = {
   finalExam: ["نهائي", "النهائي", "اختبار نهائي", "final"],
   participation: ["مشاركة", "المشاركة"],
   homework: ["واجب", "الواجب", "homework"],
+};
+
+const EXAM_LABELS: Record<string, string> = {
+  exam1: "الاختبار الأول",
+  exam2: "الاختبار الثاني",
+  finalExam: "الاختبار النهائي",
+  participation: "المشاركة",
+  homework: "الواجب",
 };
 
 function headerMatchesExam(header: string, examKey?: string): boolean {
@@ -143,13 +156,16 @@ export async function importGradesFromExcel(
         headerRowIdx = Math.max(headerRowIdx, i);
       }
       if (nameCol === -1) {
-        const n = normalizeArabic(cell);
-        if (n.includes("اسم") || n === "name") {
+        if (isNameHeader(cell)) {
           nameCol = c;
           headerRowIdx = Math.max(headerRowIdx, i);
         }
       }
     }
+  }
+
+  if (examKey && scoreCol === -1) {
+    throw new Error(`لم أجد عمود "${EXAM_LABELS[examKey] || "الدرجة"}" في الملف. تأكد من عنوان العمود ثم أعد الاستيراد.`);
   }
 
   const sourceRows = headerRowIdx >= 0 ? rows.slice(headerRowIdx + 1) : rows;
