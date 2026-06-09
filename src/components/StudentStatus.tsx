@@ -59,7 +59,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
     );
   }
 
-  const maxTotal = course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0) + (course.maxBonus * course.lectureCount);
+  const maxTotal = course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0) + (course.maxBonus || 0);
   const totals = students.map((s) => getTotal(s));
   const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
   const highest = Math.max(...totals);
