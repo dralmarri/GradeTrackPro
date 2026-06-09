@@ -311,7 +311,7 @@ export default function SettingsPage() {
             <Mail size={18} className="shrink-0 text-primary" />
             <div>
               <h3 className="font-display text-sm font-semibold">تواصل معنا</h3>
-              <p className="text-[11px] text-muted-foreground">dralmarri@gmail.com</p>
+              <p className="text-[11px] text-muted-foreground">أرسل اقتراحك أو ملاحظتك</p>
             </div>
           </button>
         </div>
