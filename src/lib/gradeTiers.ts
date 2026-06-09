@@ -39,7 +39,7 @@ export const DEFAULT_LETTER_TIERS: LetterTier[] = [
   { letter: "F", minPercent: 0, color: "text-destructive" },
 ];
 
-const KEY = "gradeTiers.v2";
+const KEY = "gradeTiers.v3";
 const LETTER_KEY = "letterTiers.v1";
 
 export function loadGradeTiers(): GradeTier[] {
