@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 // Formspree endpoint — replace YOUR_FORM_ID after creating the form
-const FORMSPREE_ENDPOINT = "https://formspree.io/f/YOUR_FORM_ID";
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/mbdeyvrp";
 
 export default function ContactUs() {
   const navigate = useNavigate();
