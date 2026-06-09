@@ -1,6 +1,20 @@
 import { Student, Course } from "@/types/student";
 import * as XLSX from "xlsx";
 
+export function getBonusTotal(student: Student, maxBonus?: number): number {
+  const rawTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
+  return typeof maxBonus === "number" ? Math.min(rawTotal, maxBonus) : rawTotal;
+}
+
+export function getMaxTotal(course: Pick<Course, "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "maxBonus">): number {
+  return course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0) + (course.maxBonus || 0);
+}
+
+export function getPercentage(total: number, maxTotal: number): number {
+  if (!Number.isFinite(total) || !Number.isFinite(maxTotal) || maxTotal <= 0) return 0;
+  return Math.max(0, Math.min(100, (total / maxTotal) * 100));
+}
+
 export function parseExcelFile(file: File): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -37,13 +51,13 @@ export function exportToExcel(course: Course) {
     return {
       "#": idx + 1,
       "اسم الطالب": s.name,
-      "مجموع البونص": bonusTotal,
+      "مجموع البونص": Math.min(bonusTotal, course.maxBonus),
       "اختبار أول": s.exam1,
       "اختبار ثاني": s.exam2,
       "نهائي": s.finalExam,
       "مشاركة": s.participation,
       "واجب": s.homework,
-      "المجموع الكلي": getTotal(s),
+      "المجموع الكلي": getTotal(s, course),
     };
   });
 
@@ -78,8 +92,8 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-export function getTotal(student: Student): number {
-  const bonusTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
+export function getTotal(student: Student, course?: Pick<Course, "maxBonus">): number {
+  const bonusTotal = getBonusTotal(student, course?.maxBonus);
   return bonusTotal + student.exam1 + student.exam2 + student.finalExam + student.participation + (student.homework || 0);
 }
 

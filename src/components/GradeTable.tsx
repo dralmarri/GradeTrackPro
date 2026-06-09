@@ -1,5 +1,5 @@
 import { Student, LectureInfo } from "@/types/student";
-import { getTotal } from "@/lib/excel";
+import { getBonusTotal, getTotal } from "@/lib/excel";
 import { Trash2 } from "lucide-react";
 import NumberInput from "@/components/NumberInput";
 
@@ -90,8 +90,8 @@ export default function GradeTable({
         </thead>
         <tbody>
           {students.map((student, idx) => {
-            const bonusTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
-            const total = getTotal(student);
+            const bonusTotal = getBonusTotal(student, maxBonus);
+            const total = getTotal(student, { maxBonus });
 
             return (
               <tr

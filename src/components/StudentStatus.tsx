@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Student, Course, getLabel } from "@/types/student";
-import { getTotal } from "@/lib/excel";
+import { getBonusTotal, getMaxTotal, getPercentage, getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
 import { User, TrendingUp, TrendingDown, Award, Search } from "lucide-react";
 import { GradeTier, LetterTier, loadGradeTiers, loadLetterTiers, getTierFor, getLetterFor } from "@/lib/gradeTiers";
@@ -29,7 +29,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
   }, []);
 
   const getGrade = (total: number, max: number) => {
-    const pct = max > 0 ? (total / max) * 100 : 0;
+    const pct = getPercentage(total, max);
     return { tier: getTierFor(pct, tiers), letter: getLetterFor(pct, letterTiers) };
   };
 
@@ -59,12 +59,12 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
     );
   }
 
-  const maxTotal = course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0) + (course.maxBonus || 0);
-  const totals = students.map((s) => getTotal(s));
+  const maxTotal = getMaxTotal(course);
+  const totals = students.map((s) => getTotal(s, course));
   const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
   const highest = Math.max(...totals);
   const lowest = Math.min(...totals);
-  const passCount = totals.filter((t) => (t / maxTotal) * 100 >= 60).length;
+  const passCount = totals.filter((t) => getPercentage(t, maxTotal) >= 60).length;
 
   return (
     <div className="space-y-6">
@@ -101,9 +101,10 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
       {/* Student Cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(searchQuery ? students.filter((s) => s.name.includes(searchQuery)) : students).map((student, idx) => {
-          const total = getTotal(student);
-          const bonusTotal = student.lectureBonus.reduce((a, b) => a + b, 0);
+          const total = getTotal(student, course);
+          const bonusTotal = getBonusTotal(student, course.maxBonus);
           const grade = getGrade(total, maxTotal);
+          const pct = getPercentage(total, maxTotal);
 
           return (
             <motion.div
@@ -156,7 +157,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                 <div className="border-t border-border pt-1.5">
                   <div className="flex justify-between">
                     <span className="font-display font-bold text-foreground">المجموع الكلي</span>
-                    <span className="font-display font-bold text-primary">{total}</span>
+                    <span className="font-display font-bold text-primary">{total} / {maxTotal}</span>
                   </div>
                 </div>
               </div>
@@ -165,7 +166,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${Math.min((total / maxTotal) * 100, 100)}%` }}
+                  style={{ width: `${pct}%` }}
                 />
               </div>
             </motion.div>
