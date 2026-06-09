@@ -98,7 +98,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                   </div>
                   <h3 className="font-display text-sm font-bold text-foreground">{student.name}</h3>
                 </div>
-                <span className={`font-display text-sm font-bold ${grade.color}`}>{grade.label}</span>
+                <span className={`font-display text-xl ${grade.color}`}>{grade.emoji}</span>
               </div>
 
               <div className="space-y-1.5 text-xs">
