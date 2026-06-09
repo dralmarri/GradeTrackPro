@@ -3,7 +3,7 @@ import { Student } from "@/types/student";
 import { FileSpreadsheet, Loader2, ChevronLeft, ChevronRight, Search, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { importGradesFromExcel, type GradeMatch } from "@/lib/ocr";
+import { importAllGradesFromExcel, type GradeMatch } from "@/lib/ocr";
 
 type ExamKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
@@ -57,6 +57,8 @@ export default function ExamsPage({
 
   const currentTab = tabs.find((t) => t.key === activeTab)!;
   const currentTabIndex = tabs.findIndex((t) => t.key === activeTab);
+  const maxByKey = Object.fromEntries(tabs.map((t) => [t.key, t.max])) as Record<ExamKey, number>;
+  const labelByKey = Object.fromEntries(tabs.map((t) => [t.key, t.label])) as Record<ExamKey, string>;
   const filteredStudents = searchQuery
     ? students.filter((s) => s.name.includes(searchQuery))
     : students;
@@ -87,11 +89,10 @@ export default function ExamsPage({
 
     setImportLoading(true);
     try {
-      const result = await importGradesFromExcel(
+      const result = await importAllGradesFromExcel(
         file,
         students.map((s) => ({ id: s.id, name: s.name })),
-        currentTab.max,
-        currentTab.key,
+        maxByKey,
       );
 
       if (!result.matches.length && !result.unmatchedRows.length) {
@@ -114,8 +115,15 @@ export default function ExamsPage({
   const applyPreview = () => {
     if (!preview) return;
     for (const m of preview.matches) {
-      const v = clamp(m.score, currentTab.max);
-      onUpdateStudent(m.studentId, { [currentTab.key]: v });
+      if (m.scores) {
+        const updates = Object.fromEntries(
+          Object.entries(m.scores).map(([key, value]) => [key, clamp(Number(value), maxByKey[key as ExamKey])]),
+        ) as Partial<Student>;
+        onUpdateStudent(m.studentId, updates);
+      } else {
+        const v = clamp(m.score, currentTab.max);
+        onUpdateStudent(m.studentId, { [currentTab.key]: v });
+      }
     }
     toast.success(`تم حفظ ${preview.matches.length} درجة بنجاح ✅`);
     setPreview(null);
@@ -214,7 +222,7 @@ export default function ExamsPage({
               <div>
                 <h3 className="font-display text-lg font-bold">مراجعة الدرجات قبل الحفظ</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {currentTab.label} — من {currentTab.max} درجة
+                  سيتم تحديث كل أعمدة الاختبارات الموجودة في الملف
                 </p>
               </div>
               <button
@@ -250,17 +258,30 @@ export default function ExamsPage({
                     <table className="w-full text-sm">
                       <tbody>
                         {preview.matches.map((m) => {
-                          const old = (students.find((s) => s.id === m.studentId)?.[currentTab.key] as number) || 0;
-                          const next = clamp(m.score, currentTab.max);
-                          const changed = old !== next;
+                          const student = students.find((s) => s.id === m.studentId);
+                          const entries = m.scores
+                            ? Object.entries(m.scores) as [ExamKey, number][]
+                            : [[currentTab.key, m.score] as [ExamKey, number]];
                           return (
                             <tr key={m.studentId} className="border-b border-border/50 last:border-0">
                               <td className="px-3 py-2 font-medium">{m.studentName}</td>
-                              <td className="px-3 py-2 text-center w-32">
-                                <span className={cn("text-xs", !changed && "text-muted-foreground")}>
-                                  {old} <span className="mx-1">←</span>{" "}
-                                  <span className={cn("font-bold", changed && "text-primary")}>{next}</span>
-                                </span>
+                              <td className="px-3 py-2 text-center w-52">
+                                <div className="space-y-1 text-xs">
+                                  {entries.map(([key, value]) => {
+                                    const old = (student?.[key] as number) || 0;
+                                    const next = clamp(value, maxByKey[key]);
+                                    const changed = old !== next;
+                                    return (
+                                      <div key={key} className={cn("flex items-center justify-between gap-2", !changed && "text-muted-foreground")}>
+                                        <span>{labelByKey[key]}</span>
+                                        <span>
+                                          {old} <span className="mx-1">←</span>{" "}
+                                          <span className={cn("font-bold", changed && "text-primary")}>{next}</span>
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </td>
                             </tr>
                           );
