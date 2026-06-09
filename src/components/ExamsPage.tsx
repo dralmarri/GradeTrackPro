@@ -91,6 +91,7 @@ export default function ExamsPage({
         file,
         students.map((s) => ({ id: s.id, name: s.name })),
         currentTab.max,
+        currentTab.key,
       );
 
       if (!result.matches.length && !result.unmatchedRows.length) {
