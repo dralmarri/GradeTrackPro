@@ -1,9 +1,9 @@
 import { useState, useRef } from "react";
 import { Student } from "@/types/student";
-import { FileText, Loader2, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { FileSpreadsheet, Loader2, ChevronLeft, ChevronRight, Search, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ocrImageToGrades } from "@/lib/ocr";
+import { importGradesFromExcel, type GradeMatch } from "@/lib/ocr";
 
 type ExamKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
@@ -38,9 +38,14 @@ export default function ExamsPage({
   onUpdateStudent,
 }: ExamsPageProps) {
   const [activeTab, setActiveTab] = useState<ExamKey>("exam1");
-  const [ocrLoading, setOcrLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<null | {
+    matches: GradeMatch[];
+    unmatched: { name: string; score: number }[];
+    missing: { id: string; name: string }[];
+  }>(null);
 
   const tabs: ExamTabConfig[] = [
     { key: "exam1", label: "الاختبار الأول", max: maxExam1 },
@@ -63,54 +68,56 @@ export default function ExamsPage({
     if (currentTabIndex > 0) setActiveTab(tabs[currentTabIndex - 1].key);
   };
 
-  const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (!file) return;
 
     const name = file.name.toLowerCase();
     const isSupported =
-      file.type.startsWith("image/") ||
-      file.type === "application/pdf" ||
       file.type.includes("spreadsheet") ||
       file.type === "text/csv" ||
-      name.endsWith(".pdf") ||
       name.endsWith(".csv") ||
       name.endsWith(".xlsx") ||
       name.endsWith(".xls");
     if (!isSupported) {
-      toast.error("صيغة غير مدعومة. ارفع صورة أو PDF أو Excel أو CSV");
+      toast.error("صيغة غير مدعومة. ارفع ملف Excel (.xlsx / .xls) أو CSV");
       return;
     }
 
-    setOcrLoading(true);
-    const tId = toast.loading("جارٍ تحميل محرك القراءة... 0%");
+    setImportLoading(true);
     try {
-      const matches = await ocrImageToGrades(
+      const result = await importGradesFromExcel(
         file,
         students.map((s) => ({ id: s.id, name: s.name })),
         currentTab.max,
-        (pct) => toast.loading(`جارٍ قراءة الصورة... ${pct}%`, { id: tId }),
       );
 
-      toast.dismiss(tId);
-      if (!matches.length) {
-        toast.error("لم يتم استخراج أي درجات. تأكد أن الصورة واضحة وأن الأسماء مطابقة.");
+      if (!result.matches.length && !result.unmatchedRows.length) {
+        toast.error("لم يتم العثور على درجات في الملف. تأكد أن الملف يحتوي على أعمدة الأسماء والدرجات.");
         return;
       }
 
-      for (const m of matches) {
-        const v = clamp(m.score, currentTab.max);
-        onUpdateStudent(m.studentId, { [currentTab.key]: v });
-      }
-
-      toast.success(`تم استخراج ${matches.length} درجة بنجاح ✅ (راجعها قبل الحفظ)`);
+      setPreview({
+        matches: result.matches,
+        unmatched: result.unmatchedRows,
+        missing: result.missingStudents,
+      });
     } catch (err: any) {
-      toast.dismiss(tId);
-      toast.error(err?.message || "فشل في قراءة الصورة");
+      toast.error(err?.message || "فشل في قراءة الملف");
     } finally {
-      setOcrLoading(false);
+      setImportLoading(false);
     }
+  };
+
+  const applyPreview = () => {
+    if (!preview) return;
+    for (const m of preview.matches) {
+      const v = clamp(m.score, currentTab.max);
+      onUpdateStudent(m.studentId, { [currentTab.key]: v });
+    }
+    toast.success(`تم حفظ ${preview.matches.length} درجة بنجاح ✅`);
+    setPreview(null);
   };
 
   if (students.length === 0) {
@@ -181,22 +188,140 @@ export default function ExamsPage({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,application/pdf,.pdf,.xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.csv"
           className="hidden"
-          onChange={handleOcrUpload}
+          onChange={handleExcelUpload}
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={ocrLoading}
+          disabled={importLoading}
           className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-display text-sm font-semibold text-accent-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
         >
-          {ocrLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-          استيراد الدرجات (صورة / PDF / Excel)
+          {importLoading ? <Loader2 size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
+          استيراد من Excel
         </button>
         <p className="hidden sm:block text-xs text-muted-foreground">
-          ارفع صورة، PDF، Excel، أو CSV وسيتم استخراج الدرجات تلقائياً
+          ارفع ملف Excel أو CSV — المطابقة بحسب اسم الطالب (لا يهم ترتيب الأسماء)
         </p>
       </div>
+
+      {/* Import Preview Dialog */}
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-2 sm:p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-card shadow-2xl border border-border">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div>
+                <h3 className="font-display text-lg font-bold">مراجعة الدرجات قبل الحفظ</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {currentTab.label} — من {currentTab.max} درجة
+                </p>
+              </div>
+              <button
+                onClick={() => setPreview(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Summary */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg bg-primary/10 p-3">
+                  <p className="text-2xl font-bold text-primary">{preview.matches.length}</p>
+                  <p className="text-[11px] text-muted-foreground">سيتم تحديثها</p>
+                </div>
+                <div className="rounded-lg bg-amber-500/10 p-3">
+                  <p className="text-2xl font-bold text-amber-600">{preview.missing.length}</p>
+                  <p className="text-[11px] text-muted-foreground">طلبة بدون درجة</p>
+                </div>
+                <div className="rounded-lg bg-destructive/10 p-3">
+                  <p className="text-2xl font-bold text-destructive">{preview.unmatched.length}</p>
+                  <p className="text-[11px] text-muted-foreground">أسماء غير مطابقة</p>
+                </div>
+              </div>
+
+              {/* Matched rows */}
+              {preview.matches.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">التغييرات (قديم ← جديد):</p>
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {preview.matches.map((m) => {
+                          const old = (students.find((s) => s.id === m.studentId)?.[currentTab.key] as number) || 0;
+                          const next = clamp(m.score, currentTab.max);
+                          const changed = old !== next;
+                          return (
+                            <tr key={m.studentId} className="border-b border-border/50 last:border-0">
+                              <td className="px-3 py-2 font-medium">{m.studentName}</td>
+                              <td className="px-3 py-2 text-center w-32">
+                                <span className={cn("text-xs", !changed && "text-muted-foreground")}>
+                                  {old} <span className="mx-1">←</span>{" "}
+                                  <span className={cn("font-bold", changed && "text-primary")}>{next}</span>
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Unmatched names */}
+              {preview.unmatched.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2 text-destructive">
+                    <AlertCircle size={14} />
+                    <p className="text-xs font-semibold">أسماء في الملف لم يتم التعرف عليها:</p>
+                  </div>
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-2 space-y-1">
+                    {preview.unmatched.map((u, i) => (
+                      <div key={i} className="text-xs flex justify-between gap-2">
+                        <span className="truncate">{u.name}</span>
+                        <span className="font-bold shrink-0">{u.score}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Missing students */}
+              {preview.missing.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2 text-amber-600">
+                    <AlertCircle size={14} />
+                    <p className="text-xs font-semibold">طلبة في المقرر ليس لهم درجة في الملف:</p>
+                  </div>
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1 max-h-40 overflow-y-auto">
+                    {preview.missing.map((s) => (
+                      <div key={s.id} className="text-xs">{s.name}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 p-4 border-t border-border">
+              <button
+                onClick={() => setPreview(null)}
+                className="flex-1 rounded-lg border border-border bg-background py-2.5 text-sm font-medium hover:bg-muted"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={applyPreview}
+                disabled={preview.matches.length === 0}
+                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-md hover:brightness-110 disabled:opacity-50"
+              >
+                حفظ {preview.matches.length} درجة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile card layout */}
       <div className="space-y-2 sm:hidden">
