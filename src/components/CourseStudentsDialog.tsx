@@ -142,14 +142,14 @@ export default function CourseStudentsDialog({
                         placeholder={DEFAULT_COMPONENT_LABELS[f.key]}
                         className="mb-1 w-full rounded-md border border-input bg-background px-2 py-1 text-center text-xs outline-none focus:border-primary"
                       />
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
+                      <NumberInput
                         value={f.value}
-                        onChange={(e) => f.set(Number(e.target.value))}
-                        className="w-full rounded-md border border-input bg-background px-2 py-1 text-center text-sm font-bold outline-none focus:border-primary"
+                        onChange={(v) => f.set(v)}
+                        min={0}
+                        showZero
+                        className="w-full px-2 py-1 text-sm font-bold"
                       />
+
                     </div>
                   ))}
                 </div>
