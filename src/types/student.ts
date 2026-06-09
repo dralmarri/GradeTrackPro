@@ -15,6 +15,28 @@ export interface LectureInfo {
   label: string;
 }
 
+export interface ComponentLabels {
+  exam1?: string;
+  exam2?: string;
+  finalExam?: string;
+  participation?: string;
+  homework?: string;
+  bonus?: string;
+}
+
+export const DEFAULT_COMPONENT_LABELS: Required<ComponentLabels> = {
+  exam1: "اختبار أول",
+  exam2: "اختبار ثاني",
+  finalExam: "نهائي",
+  participation: "مشاركة",
+  homework: "واجب",
+  bonus: "بونص",
+};
+
+export function getLabel(course: { componentLabels?: ComponentLabels }, key: keyof ComponentLabels): string {
+  return course.componentLabels?.[key] || DEFAULT_COMPONENT_LABELS[key];
+}
+
 export interface Course {
   id: string;
   name: string;
@@ -32,4 +54,5 @@ export interface Course {
   lectureTime: string;
   semesterStart: string;
   semesterEnd: string;
+  componentLabels?: ComponentLabels;
 }

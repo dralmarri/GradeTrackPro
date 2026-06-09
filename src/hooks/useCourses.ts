@@ -24,6 +24,7 @@ function dbRowToCourse(row: any): Omit<Course, "students"> {
     lectureTime: row.lecture_time || "",
     semesterStart: row.semester_start || "",
     semesterEnd: row.semester_end || "",
+    componentLabels: (row.component_labels || {}) as Course["componentLabels"],
   };
 }
 
@@ -103,6 +104,7 @@ export function useCourses() {
     if (updates.lectureTime !== undefined) u.lecture_time = updates.lectureTime;
     if (updates.semesterStart !== undefined) u.semester_start = updates.semesterStart;
     if (updates.semesterEnd !== undefined) u.semester_end = updates.semesterEnd;
+    if ((updates as any).componentLabels !== undefined) u.component_labels = (updates as any).componentLabels;
 
     // Auto-regenerate lectures if schedule changed
     const course = courses.find((c) => c.id === courseId);
