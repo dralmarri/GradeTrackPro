@@ -24,7 +24,22 @@ function tokens(s: string): string[] {
 
 function isHeaderLike(cell: string): boolean {
   const n = normalizeArabic(cell);
-  return n.includes("اسم") || n.includes("اختبار") || n.includes("مشاركه") || n.includes("واجب") || n.includes("المجموع");
+  const toks = n.split(" ").filter(Boolean);
+  if (!toks.length) return false;
+  // Whole-token header keywords only (avoid matching student names like "أسماء" which contains "اسم")
+  const HEADER_TOKENS = new Set([
+    "اسم", "الاسم", "الطالب", "الطالبه", "الطالبة",
+    "اختبار", "الاختبار", "مشاركه", "المشاركه", "واجب", "الواجب",
+    "المجموع", "مجموع", "نهائي", "النهائي", "البونص", "بونص",
+    "اول", "الاول", "ثاني", "الثاني", "name", "student", "score", "grade",
+  ]);
+  // Header row: at least one token is a known header keyword AND the row has no
+  // long person-name structure (a student name is typically 3+ tokens).
+  const hasHeaderTok = toks.some((t) => HEADER_TOKENS.has(t));
+  if (!hasHeaderTok) return false;
+  // If it looks like a full personal name (>=3 tokens and not "اسم الطالب" style), treat as name.
+  if (toks.length >= 3 && !toks.includes("اسم") && !toks.includes("الاسم") && !toks.includes("الطالب")) return false;
+  return true;
 }
 
 function parseScore(cell: string, maxScore: number, strictColumn: boolean): number | null {
