@@ -11,11 +11,11 @@ interface StudentStatusProps {
 
 function getGrade(total: number, max: number): { label: string; color: string } {
   const pct = (total / max) * 100;
-  if (pct >= 90) return { label: "ممتاز", color: "text-success" };
-  if (pct >= 80) return { label: "جيد جداً", color: "text-primary" };
-  if (pct >= 70) return { label: "جيد", color: "text-accent" };
-  if (pct >= 60) return { label: "مقبول", color: "text-warning" };
-  return { label: "راسب", color: "text-destructive" };
+  if (pct >= 90) return { label: "🌟", color: "text-success" };
+  if (pct >= 80) return { label: "🏆", color: "text-primary" };
+  if (pct >= 70) return { label: "👍", color: "text-accent" };
+  if (pct >= 60) return { label: "✅", color: "text-warning" };
+  return { label: "❌", color: "text-destructive" };
 }
 
 export default function StudentStatus({ students, course }: StudentStatusProps) {
