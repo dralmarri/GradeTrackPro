@@ -435,18 +435,14 @@ export default function ExamsPage({
                     >
                       −
                     </button>
-                    <input
-                      type="number"
-                      inputMode="numeric"
+                    <NumberInput
+                      value={(student[currentTab.key] as number) || 0}
+                      onChange={(v) => onUpdateStudent(student.id, { [currentTab.key]: v })}
                       min={0}
                       max={currentTab.max}
-                      value={student[currentTab.key] || ""}
-                      onChange={(e) => {
-                        const v = clamp(Number(e.target.value), currentTab.max);
-                        onUpdateStudent(student.id, { [currentTab.key]: v });
-                      }}
-                      className="w-16 rounded-md border border-border bg-background px-1 py-1.5 text-center text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="w-16"
                     />
+
                     <button
                       onClick={() => {
                         const curr = (student[currentTab.key] as number) || 0;
