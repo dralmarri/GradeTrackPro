@@ -427,17 +427,38 @@ export default function ExamsPage({
                 <td className="px-3 py-2.5 text-center text-muted-foreground">{idx + 1}</td>
                 <td className="px-3 py-2.5 font-medium">{student.name}</td>
                 <td className="px-3 py-1.5 text-center">
-                  <input
-                    type="number"
-                    min={0}
-                    max={currentTab.max}
-                    value={student[currentTab.key] || ""}
-                    onChange={(e) => {
-                      const v = clamp(Number(e.target.value), currentTab.max);
-                      onUpdateStudent(student.id, { [currentTab.key]: v });
-                    }}
-                    className="w-20 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      onClick={() => {
+                        const curr = (student[currentTab.key] as number) || 0;
+                        onUpdateStudent(student.id, { [currentTab.key]: clamp(curr - 1, currentTab.max) });
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/10 text-destructive font-bold transition-colors hover:bg-destructive/20"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={currentTab.max}
+                      value={student[currentTab.key] || ""}
+                      onChange={(e) => {
+                        const v = clamp(Number(e.target.value), currentTab.max);
+                        onUpdateStudent(student.id, { [currentTab.key]: v });
+                      }}
+                      className="w-16 rounded-md border border-border bg-background px-1 py-1.5 text-center text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                    <button
+                      onClick={() => {
+                        const curr = (student[currentTab.key] as number) || 0;
+                        onUpdateStudent(student.id, { [currentTab.key]: clamp(curr + 1, currentTab.max) });
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-bold transition-colors hover:bg-primary/20"
+                    >
+                      +
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

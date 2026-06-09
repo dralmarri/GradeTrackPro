@@ -161,7 +161,18 @@ export default function BonusTable({
                 >
                   −
                 </button>
-                <span className="w-8 text-center text-sm font-bold text-foreground">{currentBonus}</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={currentBonus === 0 ? "" : currentBonus}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const num = raw === "" || raw === "-" ? 0 : Number(raw);
+                    const v = clamp(num, maxBonus);
+                    onUpdateBonus(student.id, selectedLecture, v);
+                  }}
+                  className="w-12 rounded-lg border border-border bg-background px-1 py-1.5 text-center text-sm font-bold outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
                 <button
                   onClick={() => {
                     const v = clamp(currentBonus + 1, maxBonus);
@@ -222,18 +233,31 @@ export default function BonusTable({
                     </button>
                   </td>
                   <td className="px-3 py-1.5 text-center">
-                    <select
-                      value={currentBonus}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        onUpdateBonus(student.id, selectedLecture, v);
-                      }}
-                      className="w-20 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    >
-                      {Array.from({ length: maxBonus * 2 + 1 }, (_, i) => i - maxBonus).map((v) => (
-                        <option key={v} value={v}>{v}</option>
-                      ))}
-                    </select>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => onUpdateBonus(student.id, selectedLecture, clamp(currentBonus - 1, maxBonus))}
+                        className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/10 text-destructive font-bold transition-colors hover:bg-destructive/20"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={currentBonus === 0 ? "" : currentBonus}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          const num = raw === "" || raw === "-" ? 0 : Number(raw);
+                          onUpdateBonus(student.id, selectedLecture, clamp(num, maxBonus));
+                        }}
+                        className="w-16 rounded-md border border-border bg-background px-1 py-1.5 text-center text-sm font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      />
+                      <button
+                        onClick={() => onUpdateBonus(student.id, selectedLecture, clamp(currentBonus + 1, maxBonus))}
+                        className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-bold transition-colors hover:bg-primary/20"
+                      >
+                        +
+                      </button>
+                    </div>
                   </td>
                   <td className={`bg-accent/5 px-3 py-2.5 text-center font-display font-bold ${bonusTotal >= 0 ? "text-accent" : "text-destructive"}`}>
                     {bonusTotal}
