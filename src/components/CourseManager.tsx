@@ -134,27 +134,41 @@ export default function CourseManager({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                {[
-                  { label: "اختبار١", value: editMaxExam1, set: setEditMaxExam1 },
-                  { label: "اختبار٢", value: editMaxExam2, set: setEditMaxExam2 },
-                  { label: "نهائي", value: editMaxFinal, set: setEditMaxFinal },
-                  { label: "مشاركة", value: editMaxParticipation, set: setEditMaxParticipation },
-                  { label: "واجب", value: editMaxHomework, set: setEditMaxHomework },
-                  { label: "بونص", value: editMaxBonus, set: setEditMaxBonus },
-                ].map((field) => (
-                  <div key={field.label}>
-                    <label className="mb-1 block text-[10px] font-medium text-muted-foreground">{field.label}</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={field.value}
-                      onChange={(e) => field.set(Number(e.target.value))}
-                      className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-center text-sm outline-none focus:border-primary"
-                    />
-                  </div>
-                ))}
+              <div>
+                <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
+                  أسماء مكونات الدرجة ودرجاتها القصوى (يمكن تعديل الاسم والقيمة)
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {([
+                    { key: "exam1", value: editMaxExam1, set: setEditMaxExam1 },
+                    { key: "exam2", value: editMaxExam2, set: setEditMaxExam2 },
+                    { key: "finalExam", value: editMaxFinal, set: setEditMaxFinal },
+                    { key: "participation", value: editMaxParticipation, set: setEditMaxParticipation },
+                    { key: "homework", value: editMaxHomework, set: setEditMaxHomework },
+                    { key: "bonus", value: editMaxBonus, set: setEditMaxBonus },
+                  ] as const).map((field) => (
+                    <div key={field.key} className="rounded-lg border border-border bg-background/50 p-2">
+                      <input
+                        type="text"
+                        value={editLabels[field.key]}
+                        onChange={(e) =>
+                          setEditLabels((prev) => ({ ...prev, [field.key]: e.target.value }))
+                        }
+                        placeholder={DEFAULT_COMPONENT_LABELS[field.key]}
+                        className="mb-1 w-full rounded-md border border-input bg-background px-2 py-1 text-center text-xs outline-none focus:border-primary"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        value={field.value}
+                        onChange={(e) => field.set(Number(e.target.value))}
+                        className="w-full rounded-md border border-input bg-background px-2 py-1 text-center text-sm outline-none focus:border-primary"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
+
 
               {/* Schedule edit */}
               <div className="space-y-3 rounded-lg border border-dashed border-border p-3">
