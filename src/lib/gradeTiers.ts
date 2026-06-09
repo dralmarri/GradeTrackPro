@@ -12,7 +12,7 @@ export const DEFAULT_TIERS: GradeTier[] = [
   { emoji: "😠", minPercent: 0, color: "text-destructive" },
 ];
 
-const KEY = "gradeTiers.v1";
+const KEY = "gradeTiers.v2";
 
 export function loadGradeTiers(): GradeTier[] {
   try {
