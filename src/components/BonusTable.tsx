@@ -153,35 +153,14 @@ export default function BonusTable({
                 </p>
               </div>
               <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-
-                <button
-                  onClick={() => {
-                    const v = clamp(currentBonus - 1, maxBonus);
-                    onUpdateBonus(student.id, selectedLecture, v);
-                  }}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10 text-destructive font-bold text-lg transition-colors active:bg-destructive/20"
-                >
-                  −
-                </button>
                 <NumberInput
                   value={currentBonus}
                   onChange={(v) => onUpdateBonus(student.id, selectedLecture, v)}
-                  min={-maxBonus}
-                  max={maxBonus}
                   allowNegative
-                  className="w-14 px-1 py-1.5 text-sm font-bold"
+                  className="w-20 px-2 py-2 text-base font-bold"
                 />
-
-                <button
-                  onClick={() => {
-                    const v = clamp(currentBonus + 1, maxBonus);
-                    onUpdateBonus(student.id, selectedLecture, v);
-                  }}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-lg transition-colors active:bg-primary/20"
-                >
-                  +
-                </button>
               </div>
+
             </div>
           );
         })}
@@ -232,30 +211,16 @@ export default function BonusTable({
                     </button>
                   </td>
                   <td className="px-3 py-1.5 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => onUpdateBonus(student.id, selectedLecture, clamp(currentBonus - 1, maxBonus))}
-                        className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/10 text-destructive font-bold transition-colors hover:bg-destructive/20"
-                      >
-                        −
-                      </button>
+                    <div className="flex items-center justify-center">
                       <NumberInput
                         value={currentBonus}
                         onChange={(v) => onUpdateBonus(student.id, selectedLecture, v)}
-                        min={-maxBonus}
-                        max={maxBonus}
                         allowNegative
-                        className="w-16"
+                        className="w-20"
                       />
-
-                      <button
-                        onClick={() => onUpdateBonus(student.id, selectedLecture, clamp(currentBonus + 1, maxBonus))}
-                        className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-bold transition-colors hover:bg-primary/20"
-                      >
-                        +
-                      </button>
                     </div>
                   </td>
+
                   <td className={`bg-accent/5 px-3 py-2.5 text-center font-display font-bold ${bonusTotal >= 0 ? "text-accent" : "text-destructive"}`}>
                     {bonusTotal}
                   </td>
