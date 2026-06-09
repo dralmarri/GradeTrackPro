@@ -68,6 +68,74 @@ export default function SettingsPage() {
       {/* Add to Home Screen */}
       <AddToHomeScreen />
 
+      {/* Grade Tiers */}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Award className="text-primary" size={20} />
+            <h2 className="font-display text-lg font-bold">تقسيمات درجات المقرر</h2>
+          </div>
+          <button
+            onClick={resetTiers}
+            className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+          >
+            <RotateCcw size={12} />
+            افتراضي
+          </button>
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">
+          عدّل الإيموجي والحد الأدنى للنسبة المئوية (٠–١٠٠) لكل تقدير. يُحفظ تلقائياً.
+        </p>
+
+        <div className="space-y-2">
+          {tiers.map((t, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded-xl border border-border bg-background p-2"
+            >
+              <input
+                type="text"
+                value={t.emoji}
+                onChange={(e) => updateTier(i, { emoji: e.target.value })}
+                className="w-14 rounded-lg border border-input bg-background px-2 py-2 text-center text-xl outline-none focus:border-primary"
+              />
+              <div className="flex flex-1 items-center gap-2">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">من ≥</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={t.minPercent}
+                  onChange={(e) =>
+                    updateTier(i, {
+                      minPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                    })
+                  }
+                  className="w-20 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm outline-none focus:border-primary"
+                />
+                <span className="text-xs text-muted-foreground">%</span>
+              </div>
+              <button
+                onClick={() => removeTier(i)}
+                disabled={tiers.length <= 1}
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={addTier}
+          className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted"
+        >
+          <Plus size={14} />
+          إضافة تقدير
+        </button>
+      </div>
+
+
       {/* About */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
