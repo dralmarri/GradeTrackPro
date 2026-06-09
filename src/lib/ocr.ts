@@ -14,8 +14,28 @@ export function normalizeArabic(input: string): string {
     .toLowerCase();
 }
 
+function compactName(input: string): string {
+  return normalizeArabic(input).replace(/\s+/g, "");
+}
+
 function tokens(s: string): string[] {
   return normalizeArabic(s).split(" ").filter((t) => t.length >= 2);
+}
+
+function isHeaderLike(cell: string): boolean {
+  const n = normalizeArabic(cell);
+  return n.includes("اسم") || n.includes("اختبار") || n.includes("مشاركه") || n.includes("واجب") || n.includes("المجموع");
+}
+
+function parseScore(cell: string, maxScore: number, strictColumn: boolean): number | null {
+  const value = cell.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).trim();
+  const exact = value.match(/^-?\d+(?:[.,]\d+)?$/);
+  const loose = strictColumn ? value.match(/-?\d+(?:[.,]\d+)?/) : exact;
+  const match = exact || loose;
+  if (!match) return null;
+  const n = parseFloat(match[0].replace(",", "."));
+  if (Number.isNaN(n) || n < 0 || n > maxScore) return null;
+  return n;
 }
 
 export interface GradeMatch {
@@ -55,10 +75,37 @@ function headerMatchesExam(header: string, examKey?: string): boolean {
   return list.some((k) => h.includes(normalizeArabic(k)));
 }
 
+function findStudentMatch(
+  nameCell: string,
+  students: { id: string; name: string; toks: string[]; compact: string }[],
+  used: Set<string>,
+): { id: string; name: string } | null {
+  const nameCompact = compactName(nameCell);
+  const exact = students.find((s) => !used.has(s.id) && s.compact === nameCompact);
+  if (exact) return exact;
+
+  const cellToks = tokens(nameCell);
+  if (cellToks.length < 2) return null;
+
+  const candidates = students
+    .filter((s) => !used.has(s.id))
+    .map((s) => {
+      const overlap = s.toks.filter((t) => cellToks.some((ct) => ct === t || (t.length >= 4 && ct.length >= 4 && (ct.includes(t) || t.includes(ct))))).length;
+      const ratio = overlap / Math.max(1, s.toks.length);
+      const reverseRatio = overlap / Math.max(1, cellToks.length);
+      return { ...s, overlap, ratio, reverseRatio, score: ratio + reverseRatio + overlap / 10 };
+    })
+    .filter((s) => s.overlap >= 3 && s.ratio >= 0.75 && s.reverseRatio >= 0.6)
+    .sort((a, b) => b.score - a.score);
+
+  if (!candidates.length) return null;
+  if (candidates.length > 1 && candidates[0].score - candidates[1].score < 0.25) return null;
+  return candidates[0];
+}
+
 /**
- * Import grades from Excel/CSV. Reads only the first sheet.
- * Detects score column from header when possible; otherwise picks the largest valid
- * number in each row. Matches students by name (order-independent).
+ * Import grades from Excel/CSV. Reads only the first sheet and only the first
+ * contiguous student table after the detected header. Matches by name, never row order.
  */
 export async function importGradesFromExcel(
   file: File,
@@ -69,85 +116,68 @@ export async function importGradesFromExcel(
   const rows = await firstSheetRows(file);
   if (!rows.length) throw new Error("الملف فارغ أو لا يحتوي على بيانات");
 
-  // Detect header row, name column, and score column from first 3 rows
   let scoreCol = -1;
   let nameCol = -1;
   let headerRowIdx = -1;
-  for (let i = 0; i < Math.min(rows.length, 3); i++) {
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
     const r = rows[i];
     for (let c = 0; c < r.length; c++) {
       const cell = r[c];
       if (scoreCol === -1 && headerMatchesExam(cell, examKey)) {
         scoreCol = c;
-        if (headerRowIdx === -1) headerRowIdx = i;
+        headerRowIdx = Math.max(headerRowIdx, i);
       }
       if (nameCol === -1) {
         const n = normalizeArabic(cell);
         if (n.includes("اسم") || n === "name") {
           nameCol = c;
-          if (headerRowIdx === -1) headerRowIdx = i;
+          headerRowIdx = Math.max(headerRowIdx, i);
         }
       }
     }
   }
 
-  const dataRows = headerRowIdx >= 0 ? rows.slice(headerRowIdx + 1) : rows;
-  const studentTokens = students.map((s) => ({ id: s.id, name: s.name, toks: tokens(s.name) }));
+  const sourceRows = headerRowIdx >= 0 ? rows.slice(headerRowIdx + 1) : rows;
+  const studentTokens = students.map((s) => ({ id: s.id, name: s.name, toks: tokens(s.name), compact: compactName(s.name) }));
   const used = new Set<string>();
   const matches: GradeMatch[] = [];
   const unmatchedRows: { name: string; score: number }[] = [];
+  let plausibleNameRows = 0;
 
-  for (const row of dataRows) {
+  for (const row of sourceRows) {
+    const nameCell = (nameCol >= 0 && nameCol < row.length ? row[nameCol] : row.find((c) => tokens(c).length >= 2)) || "";
+    const nameToks = tokens(nameCell);
+
+    if (nameCol >= 0) {
+      if (!nameCell || isHeaderLike(nameCell)) {
+        if (plausibleNameRows > 0) break;
+        continue;
+      }
+      if (nameToks.length < 2) continue;
+      plausibleNameRows++;
+      if (plausibleNameRows > students.length + 10) break;
+    }
+
     let score: number | null = null;
     if (scoreCol >= 0 && scoreCol < row.length) {
-      const cell = row[scoreCol];
-      const m = cell.match(/^-?\d+(?:[.,]\d+)?$/);
-      if (m) {
-        const n = parseFloat(cell.replace(",", "."));
-        if (!isNaN(n) && n >= 0) score = n;
-      }
+      score = parseScore(row[scoreCol], maxScore, true);
     } else {
       const numCells: number[] = [];
       for (let i = 0; i < row.length; i++) {
         if (i === nameCol) continue;
-        const cell = row[i];
-        const m = cell.match(/^-?\d+(?:[.,]\d+)?$/);
-        if (m) {
-          const n = parseFloat(cell.replace(",", "."));
-          if (!isNaN(n) && n >= 0 && n <= maxScore) numCells.push(n);
-        }
+        const n = parseScore(row[i], maxScore, false);
+        if (n !== null) numCells.push(n);
       }
       if (numCells.length) score = Math.max(...numCells);
     }
     if (score === null) continue;
 
-    let bestRow: { id: string; name: string; overlap: number; ratio: number } | null = null;
-    const candidateCells = nameCol >= 0 && nameCol < row.length ? [row[nameCol]] : row;
-    for (const cell of candidateCells) {
-      const cellToks = tokens(cell);
-      if (cellToks.length < 1) continue;
-      for (const s of studentTokens) {
-        if (used.has(s.id)) continue;
-        let overlap = 0;
-        for (const t of s.toks) {
-          if (cellToks.some((lt) => lt === t || lt.includes(t) || t.includes(lt))) overlap++;
-        }
-        const ratio = overlap / Math.max(1, s.toks.length);
-        const minOverlap = s.toks.length === 1 ? 1 : 2;
-        if (overlap >= minOverlap && ratio >= 0.5) {
-          if (!bestRow || overlap > bestRow.overlap || (overlap === bestRow.overlap && ratio > bestRow.ratio)) {
-            bestRow = { id: s.id, name: s.name, overlap, ratio };
-          }
-        }
-      }
-    }
-
+    const bestRow = findStudentMatch(nameCell, studentTokens, used);
     if (bestRow) {
       matches.push({ studentId: bestRow.id, studentName: bestRow.name, score });
       used.add(bestRow.id);
-    } else {
-      const textCell = (nameCol >= 0 && nameCol < row.length ? row[nameCol] : row.find((c) => tokens(c).length >= 1)) || "";
-      if (textCell) unmatchedRows.push({ name: textCell, score });
+    } else if (nameCell) {
+      unmatchedRows.push({ name: nameCell, score });
     }
   }
 
