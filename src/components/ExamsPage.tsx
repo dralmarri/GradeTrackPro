@@ -222,7 +222,7 @@ export default function ExamsPage({
               <div>
                 <h3 className="font-display text-lg font-bold">مراجعة الدرجات قبل الحفظ</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {currentTab.label} — من {currentTab.max} درجة
+                  سيتم تحديث كل أعمدة الاختبارات الموجودة في الملف
                 </p>
               </div>
               <button
@@ -258,17 +258,30 @@ export default function ExamsPage({
                     <table className="w-full text-sm">
                       <tbody>
                         {preview.matches.map((m) => {
-                          const old = (students.find((s) => s.id === m.studentId)?.[currentTab.key] as number) || 0;
-                          const next = clamp(m.score, currentTab.max);
-                          const changed = old !== next;
+                          const student = students.find((s) => s.id === m.studentId);
+                          const entries = m.scores
+                            ? Object.entries(m.scores) as [ExamKey, number][]
+                            : [[currentTab.key, m.score] as [ExamKey, number]];
                           return (
                             <tr key={m.studentId} className="border-b border-border/50 last:border-0">
                               <td className="px-3 py-2 font-medium">{m.studentName}</td>
-                              <td className="px-3 py-2 text-center w-32">
-                                <span className={cn("text-xs", !changed && "text-muted-foreground")}>
-                                  {old} <span className="mx-1">←</span>{" "}
-                                  <span className={cn("font-bold", changed && "text-primary")}>{next}</span>
-                                </span>
+                              <td className="px-3 py-2 text-center w-52">
+                                <div className="space-y-1 text-xs">
+                                  {entries.map(([key, value]) => {
+                                    const old = (student?.[key] as number) || 0;
+                                    const next = clamp(value, maxByKey[key]);
+                                    const changed = old !== next;
+                                    return (
+                                      <div key={key} className={cn("flex items-center justify-between gap-2", !changed && "text-muted-foreground")}>
+                                        <span>{labelByKey[key]}</span>
+                                        <span>
+                                          {old} <span className="mx-1">←</span>{" "}
+                                          <span className={cn("font-bold", changed && "text-primary")}>{next}</span>
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </td>
                             </tr>
                           );
