@@ -5,14 +5,14 @@ export interface GradeTier {
 }
 
 export const DEFAULT_TIERS: GradeTier[] = [
-  { emoji: "🌟", minPercent: 90, color: "text-success" },
-  { emoji: "🏆", minPercent: 80, color: "text-primary" },
-  { emoji: "👍", minPercent: 70, color: "text-accent" },
-  { emoji: "✅", minPercent: 60, color: "text-warning" },
-  { emoji: "❌", minPercent: 0, color: "text-destructive" },
+  { emoji: "🤩", minPercent: 90, color: "text-success" },
+  { emoji: "😄", minPercent: 80, color: "text-primary" },
+  { emoji: "🙂", minPercent: 70, color: "text-accent" },
+  { emoji: "😐", minPercent: 60, color: "text-warning" },
+  { emoji: "😠", minPercent: 0, color: "text-destructive" },
 ];
 
-const KEY = "gradeTiers.v1";
+const KEY = "gradeTiers.v2";
 
 export function loadGradeTiers(): GradeTier[] {
   try {
