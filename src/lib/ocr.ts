@@ -62,7 +62,10 @@ export interface GradeMatch {
   studentId: string;
   studentName: string;
   score: number;
+  scores?: Partial<Record<ExcelGradeKey, number>>;
 }
+
+export type ExcelGradeKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
 export interface ExcelImportResult {
   matches: GradeMatch[];
@@ -79,7 +82,9 @@ async function firstSheetRows(file: File): Promise<string[][]> {
   return rows.map((r) => (r as unknown[]).map((c) => (c == null ? "" : String(c).trim())));
 }
 
-const EXAM_KEYWORDS: Record<string, string[]> = {
+const EXAM_KEYS: ExcelGradeKey[] = ["exam1", "exam2", "finalExam", "participation", "homework"];
+
+const EXAM_KEYWORDS: Record<ExcelGradeKey, string[]> = {
   exam1: ["اختبار اول", "اختبار 1", "اختبار١", "الاختبار الاول", "الاختبار الأول", "اول", "الأول"],
   exam2: ["اختبار ثاني", "اختبار 2", "اختبار٢", "الاختبار الثاني", "ثاني", "الثاني"],
   finalExam: ["نهائي", "النهائي", "اختبار نهائي", "final"],
@@ -87,7 +92,7 @@ const EXAM_KEYWORDS: Record<string, string[]> = {
   homework: ["واجب", "الواجب", "homework"],
 };
 
-const EXAM_LABELS: Record<string, string> = {
+const EXAM_LABELS: Record<ExcelGradeKey, string> = {
   exam1: "الاختبار الأول",
   exam2: "الاختبار الثاني",
   finalExam: "الاختبار النهائي",
