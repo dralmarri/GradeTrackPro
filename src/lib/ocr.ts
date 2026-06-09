@@ -39,12 +39,11 @@ export async function ocrImageToGrades(
     },
   });
 
-  const lines: string[] = (data.lines && data.lines.length
-    ? data.lines.map((l: any) => l.text)
-    : data.text.split(/\n/)
-  )
-    .map((l: string) => l.trim())
-    .filter(Boolean);
+  const anyData = data as any;
+  const rawLines: string[] = anyData.lines && anyData.lines.length
+    ? anyData.lines.map((l: any) => l.text as string)
+    : (data.text || "").split(/\n/);
+  const lines: string[] = rawLines.map((l) => l.trim()).filter(Boolean);
 
   // Precompute tokens for each student
   const studentTokens = students.map((s) => ({
