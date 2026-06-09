@@ -7,7 +7,7 @@ export function getBonusTotal(student: Student, maxBonus?: number): number {
 }
 
 export function getMaxTotal(course: Pick<Course, "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "maxBonus">): number {
-  return course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0) + (course.maxBonus || 0);
+  return course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0);
 }
 
 export function getPercentage(total: number, maxTotal: number): number {
