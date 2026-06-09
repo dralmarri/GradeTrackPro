@@ -135,24 +135,25 @@ export default function BonusTable({
           return (
             <div
               key={student.id}
-              className={cn("flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm", !isPresent ? "border-destructive/30 bg-destructive/5" : "border-border")}
+              onClick={() => onUpdateAttendance(student.id, selectedLecture, !isPresent)}
+              className={cn("flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm cursor-pointer select-none", !isPresent ? "border-destructive/30 bg-destructive/5" : "border-border")}
             >
-              <button
-                onClick={() => onUpdateAttendance(student.id, selectedLecture, !isPresent)}
+              <div
                 className={cn(
-                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors",
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors pointer-events-none",
                   isPresent ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"
                 )}
               >
                 {isPresent ? "✓" : "✗"}
-              </button>
-              <div className="flex-1 min-w-0">
+              </div>
+              <div className="flex-1 min-w-0 pointer-events-none">
                 <p className={cn("truncate text-sm font-medium", !isPresent ? "text-muted-foreground line-through" : "text-foreground")}>{student.name}</p>
                 <p className={cn("text-[11px] font-display font-bold", bonusTotal >= 0 ? "text-accent" : "text-destructive")}>
                   المجموع: {bonusTotal}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+
                 <button
                   onClick={() => {
                     const v = clamp(currentBonus - 1, maxBonus);
