@@ -3,7 +3,7 @@ import { Student, Course } from "@/types/student";
 import { getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
 import { User, TrendingUp, TrendingDown, Award, Search } from "lucide-react";
-import { GradeTier, loadGradeTiers, getTierFor } from "@/lib/gradeTiers";
+import { GradeTier, LetterTier, loadGradeTiers, loadLetterTiers, getTierFor, getLetterFor } from "@/lib/gradeTiers";
 
 interface StudentStatusProps {
   students: Student[];
@@ -13,9 +13,13 @@ interface StudentStatusProps {
 export default function StudentStatus({ students, course }: StudentStatusProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
+  const [letterTiers, setLetterTiers] = useState<LetterTier[]>(loadLetterTiers());
 
   useEffect(() => {
-    const handler = () => setTiers(loadGradeTiers());
+    const handler = () => {
+      setTiers(loadGradeTiers());
+      setLetterTiers(loadLetterTiers());
+    };
     window.addEventListener("gradeTiersChanged", handler);
     window.addEventListener("storage", handler);
     return () => {
@@ -26,7 +30,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
 
   const getGrade = (total: number, max: number) => {
     const pct = max > 0 ? (total / max) * 100 : 0;
-    return getTierFor(pct, tiers);
+    return { tier: getTierFor(pct, tiers), letter: getLetterFor(pct, letterTiers) };
   };
 
   if (students.length === 0) {
@@ -98,7 +102,10 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                   </div>
                   <h3 className="font-display text-sm font-bold text-foreground">{student.name}</h3>
                 </div>
-                <span className={`font-display text-xl ${grade.color}`}>{grade.emoji}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`font-display text-sm font-bold ${grade.letter.color}`} dir="ltr">{grade.letter.letter}</span>
+                  <span className={`font-display text-xl ${grade.tier.color}`}>{grade.tier.emoji}</span>
+                </div>
               </div>
 
               <div className="space-y-1.5 text-xs">

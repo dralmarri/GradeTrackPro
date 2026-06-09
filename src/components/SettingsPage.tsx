@@ -13,9 +13,13 @@ import {
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
   GradeTier,
+  LetterTier,
   loadGradeTiers,
   saveGradeTiers,
   DEFAULT_TIERS,
+  loadLetterTiers,
+  saveLetterTiers,
+  DEFAULT_LETTER_TIERS,
 } from "@/lib/gradeTiers";
 import { toast } from "sonner";
 
@@ -44,6 +48,31 @@ export default function SettingsPage() {
     saveGradeTiers(DEFAULT_TIERS);
     toast.success("تمت إعادة التقسيمات إلى الافتراضي");
   };
+
+  const [letterTiers, setLetterTiers] = useState<LetterTier[]>(loadLetterTiers());
+  const updateLetter = (i: number, patch: Partial<LetterTier>) => {
+    const next = letterTiers.map((t, idx) => (idx === i ? { ...t, ...patch } : t));
+    setLetterTiers(next);
+    saveLetterTiers(next);
+  };
+  const addLetter = () => {
+    const next = [...letterTiers, { letter: "?", minPercent: 50, color: "text-primary" }];
+    setLetterTiers(next);
+    saveLetterTiers(next);
+  };
+  const removeLetter = (i: number) => {
+    if (letterTiers.length <= 1) return;
+    const next = letterTiers.filter((_, idx) => idx !== i);
+    setLetterTiers(next);
+    saveLetterTiers(next);
+  };
+  const resetLetters = () => {
+    setLetterTiers(DEFAULT_LETTER_TIERS);
+    saveLetterTiers(DEFAULT_LETTER_TIERS);
+    toast.success("تمت إعادة سلم الحروف إلى الافتراضي");
+  };
+
+
 
 
   return (
@@ -134,6 +163,76 @@ export default function SettingsPage() {
           إضافة تقدير
         </button>
       </div>
+
+      {/* Letter Grade Scale */}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Award className="text-primary" size={20} />
+            <h2 className="font-display text-lg font-bold">سلم درجات الحروف</h2>
+          </div>
+          <button
+            onClick={resetLetters}
+            className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+          >
+            <RotateCcw size={12} />
+            افتراضي
+          </button>
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">
+          عدّل الحرف والحد الأدنى للنسبة المئوية حسب لائحة مؤسستك التعليمية (مثل A=95-100، B+=86-89...). يُحفظ تلقائياً.
+        </p>
+
+        <div className="space-y-2">
+          {letterTiers.map((t, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded-xl border border-border bg-background p-2"
+            >
+              <input
+                type="text"
+                value={t.letter}
+                onChange={(e) => updateLetter(i, { letter: e.target.value })}
+                dir="ltr"
+                className="w-14 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm font-bold outline-none focus:border-primary"
+              />
+              <div className="flex flex-1 items-center gap-2">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">من ≥</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={t.minPercent}
+                  onChange={(e) =>
+                    updateLetter(i, {
+                      minPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                    })
+                  }
+                  className="w-20 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm outline-none focus:border-primary"
+                />
+                <span className="text-xs text-muted-foreground">%</span>
+              </div>
+              <button
+                onClick={() => removeLetter(i)}
+                disabled={letterTiers.length <= 1}
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={addLetter}
+          className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted"
+        >
+          <Plus size={14} />
+          إضافة حرف
+        </button>
+      </div>
+
+
 
 
       {/* About */}
