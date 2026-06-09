@@ -50,7 +50,10 @@ export default function Auth() {
         }
         console.log("Signup result:", data);
         if (data.user && !data.session) {
-          toast.success("تم إنشاء الحساب! تحقق من بريدك الإلكتروني للتأكيد");
+          toast.success(
+            "تم إنشاء الحساب! تحقق من بريدك الإلكتروني للتأكيد. إذا لم تجد الرسالة في صندوق الوارد فابحث عنها في مجلد الرسائل غير المرغوب فيها (Junk / Spam).",
+            { duration: 10000 },
+          );
         } else {
           toast.success("تم إنشاء الحساب وتسجيل الدخول بنجاح");
         }
