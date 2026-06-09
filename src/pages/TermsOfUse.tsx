@@ -82,10 +82,13 @@ export default function TermsOfUse() {
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">التواصل</h2>
-          <p>لأي استفسارات حول شروط الاستخدام:</p>
-          <a href="mailto:dralmarri@gmail.com" className="font-medium text-primary hover:underline">
-            dralmarri@gmail.com
-          </a>
+          <p>
+            لأي استفسارات حول شروط الاستخدام، يرجى زيارة{" "}
+            <Link to="/contact" className="font-medium text-primary hover:underline">
+              صفحة تواصل معنا
+            </Link>
+            .
+          </p>
         </section>
       </main>
     </div>
