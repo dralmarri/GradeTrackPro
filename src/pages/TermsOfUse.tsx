@@ -19,7 +19,7 @@ export default function TermsOfUse() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8 space-y-6 text-sm leading-relaxed text-foreground" dir="rtl">
-        <p className="text-muted-foreground">آخر تحديث: مارس 2026</p>
+        <p className="text-muted-foreground">آخر تحديث: يونيو 2026</p>
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">القبول بالشروط</h2>
@@ -27,22 +27,33 @@ export default function TermsOfUse() {
         </section>
 
         <section className="space-y-2">
+          <h2 className="font-display text-lg font-bold">الحساب وتسجيل الدخول</h2>
+          <ul className="list-disc pr-6 space-y-1">
+            <li>يتطلب استخدام التطبيق إنشاء حساب وتسجيل الدخول ببريد إلكتروني وكلمة مرور</li>
+            <li>أنت مسؤول عن الحفاظ على سرية بيانات حسابك وعدم مشاركتها مع الآخرين</li>
+            <li>تتم مزامنة بياناتك تلقائياً عبر السحابة بين أجهزتك المختلفة</li>
+          </ul>
+        </section>
+
+        <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">وصف الخدمة</h2>
           <p>GradeTrackPro هو تطبيق لإدارة درجات الطلاب يتيح للمعلمين وأعضاء هيئة التدريس:</p>
           <ul className="list-disc pr-6 space-y-1">
-            <li>إنشاء وإدارة المقررات الدراسية</li>
-            <li>تسجيل حضور المحاضرات ودرجات البونص</li>
-            <li>إدخال درجات الاختبارات والمشاركة</li>
-            <li>تصدير النتائج واستيراد بيانات الطلاب</li>
-            <li>متابعة وضع كل طالب ونتائجه</li>
+            <li>إنشاء وإدارة المقررات الدراسية والشُعب وجداول المحاضرات</li>
+            <li>تسجيل حضور المحاضرات وإدارة درجات البونص</li>
+            <li>إدخال درجات الاختبارات والمشاركة والواجبات يدوياً أو عبر استيراد ملفات Excel</li>
+            <li>استيراد قوائم الطلاب من Excel ومطابقتها بالأسماء تلقائياً</li>
+            <li>تصدير النتائج كاملة بصيغة Excel</li>
+            <li>متابعة وضع كل طالب ونتائجه عبر جميع الأجهزة بشكل فوري</li>
           </ul>
         </section>
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">مسؤولية المستخدم</h2>
           <ul className="list-disc pr-6 space-y-1">
-            <li>أنت المسؤول الوحيد عن دقة البيانات المُدخلة</li>
-            <li>يُنصح بعمل نسخ احتياطية دورية من البيانات</li>
+            <li>أنت المسؤول الوحيد عن دقة البيانات المُدخلة ومراجعتها قبل اعتمادها</li>
+            <li>عند استيراد ملفات Excel، يجب التحقق من مطابقة الأسماء والدرجات قبل الحفظ</li>
+            <li>يُنصح بتصدير نسخ احتياطية دورية من بياناتك</li>
             <li>يجب استخدام التطبيق للأغراض التعليمية المشروعة فقط</li>
             <li>يجب الحفاظ على سرية بيانات الطلاب وعدم مشاركتها مع أطراف غير مخوّلة</li>
           </ul>
@@ -52,10 +63,12 @@ export default function TermsOfUse() {
           <h2 className="font-display text-lg font-bold">إخلاء المسؤولية</h2>
           <ul className="list-disc pr-6 space-y-1">
             <li>التطبيق مُقدّم "كما هو" دون أي ضمانات صريحة أو ضمنية</li>
-            <li>لا نتحمل مسؤولية فقدان البيانات الناتج عن سوء الاستخدام أو أعطال الجهاز</li>
-            <li>لا نتحمل مسؤولية أي أخطاء في احتساب الدرجات ناتجة عن إدخال بيانات خاطئة</li>
+            <li>لا نضمن توفر الخدمة بشكل متواصل دون انقطاع أو خلوها من الأخطاء</li>
+            <li>لا نتحمل مسؤولية فقدان البيانات الناتج عن سوء الاستخدام أو أعطال الخدمة السحابية أو الجهاز</li>
+            <li>لا نتحمل مسؤولية أي أخطاء في احتساب الدرجات ناتجة عن إدخال بيانات خاطئة أو ملف Excel غير صحيح</li>
           </ul>
         </section>
+
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">الملكية الفكرية</h2>
