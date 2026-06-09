@@ -11,11 +11,17 @@ export interface LetterTier {
 }
 
 export const DEFAULT_TIERS: GradeTier[] = [
-  { emoji: "🤩", minPercent: 90, color: "text-success" },
-  { emoji: "😄", minPercent: 80, color: "text-primary" },
-  { emoji: "🙂", minPercent: 70, color: "text-accent" },
-  { emoji: "😐", minPercent: 60, color: "text-warning" },
-  { emoji: "😠", minPercent: 0, color: "text-destructive" },
+  { emoji: "🤩", minPercent: 95, color: "text-success" },
+  { emoji: "😍", minPercent: 90, color: "text-success" },
+  { emoji: "😄", minPercent: 86, color: "text-primary" },
+  { emoji: "😊", minPercent: 83, color: "text-primary" },
+  { emoji: "🙂", minPercent: 80, color: "text-primary" },
+  { emoji: "😌", minPercent: 75, color: "text-accent" },
+  { emoji: "😐", minPercent: 70, color: "text-accent" },
+  { emoji: "😕", minPercent: 66, color: "text-accent" },
+  { emoji: "😟", minPercent: 63, color: "text-warning" },
+  { emoji: "😣", minPercent: 60, color: "text-warning" },
+  { emoji: "😢", minPercent: 0, color: "text-destructive" },
 ];
 
 // سلم درجات الحروف (جامعة الكويت — الفصل الأول 2006-2007 وما بعده)
@@ -33,7 +39,7 @@ export const DEFAULT_LETTER_TIERS: LetterTier[] = [
   { letter: "F", minPercent: 0, color: "text-destructive" },
 ];
 
-const KEY = "gradeTiers.v2";
+const KEY = "gradeTiers.v3";
 const LETTER_KEY = "letterTiers.v1";
 
 export function loadGradeTiers(): GradeTier[] {
