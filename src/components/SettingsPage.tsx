@@ -9,6 +9,8 @@ import {
   Plus,
   Trash2,
   RotateCcw,
+  ChevronDown,
+
 } from "lucide-react";
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
@@ -72,7 +74,8 @@ export default function SettingsPage() {
     toast.success("تمت إعادة سلم الحروف إلى الافتراضي");
   };
 
-
+  const [tiersOpen, setTiersOpen] = useState(false);
+  const [lettersOpen, setLettersOpen] = useState(false);
 
 
   return (
@@ -98,12 +101,24 @@ export default function SettingsPage() {
       <AddToHomeScreen />
 
       {/* Grade Tiers */}
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="rounded-2xl border border-border bg-card shadow-sm">
+        <button
+          type="button"
+          onClick={() => setTiersOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 p-6 text-right"
+        >
           <div className="flex items-center gap-2">
             <Award className="text-primary" size={20} />
             <h2 className="font-display text-lg font-bold">تقسيمات درجات المقرر</h2>
           </div>
+          <ChevronDown
+            size={18}
+            className={`text-muted-foreground transition-transform ${tiersOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+        {tiersOpen && (
+        <div className="px-6 pb-6">
+        <div className="mb-3 flex items-center justify-end">
           <button
             onClick={resetTiers}
             className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
@@ -115,6 +130,7 @@ export default function SettingsPage() {
         <p className="mb-4 text-xs text-muted-foreground">
           عدّل الإيموجي والحد الأدنى للنسبة المئوية (٠–١٠٠) لكل تقدير. يُحفظ تلقائياً.
         </p>
+
 
         <div className="space-y-2">
           {tiers.map((t, i) => (
@@ -162,15 +178,29 @@ export default function SettingsPage() {
           <Plus size={14} />
           إضافة تقدير
         </button>
+        </div>
+        )}
       </div>
 
       {/* Letter Grade Scale */}
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="rounded-2xl border border-border bg-card shadow-sm">
+        <button
+          type="button"
+          onClick={() => setLettersOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 p-6 text-right"
+        >
           <div className="flex items-center gap-2">
             <Award className="text-primary" size={20} />
             <h2 className="font-display text-lg font-bold">سلم درجات الحروف</h2>
           </div>
+          <ChevronDown
+            size={18}
+            className={`text-muted-foreground transition-transform ${lettersOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+        {lettersOpen && (
+        <div className="px-6 pb-6">
+        <div className="mb-3 flex items-center justify-end">
           <button
             onClick={resetLetters}
             className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
@@ -182,6 +212,7 @@ export default function SettingsPage() {
         <p className="mb-4 text-xs text-muted-foreground">
           عدّل الحرف والحد الأدنى للنسبة المئوية حسب لائحة مؤسستك التعليمية (مثل A=95-100، B+=86-89...). يُحفظ تلقائياً.
         </p>
+
 
         <div className="space-y-2">
           {letterTiers.map((t, i) => (
@@ -230,6 +261,8 @@ export default function SettingsPage() {
           <Plus size={14} />
           إضافة حرف
         </button>
+        </div>
+        )}
       </div>
 
 
