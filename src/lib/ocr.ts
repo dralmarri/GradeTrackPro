@@ -245,14 +245,12 @@ export async function importGradesFromExcel(
   return best || { matches: [], unmatchedRows: [], missingStudents: students };
 }
 
-export async function importAllGradesFromExcel(
-  file: File,
+function importAllGradesFromSheet(
+  rows: string[][],
   students: { id: string; name: string }[],
+  studentTokens: { id: string; name: string; toks: string[]; compact: string }[],
   maxScores: Record<ExcelGradeKey, number>,
-): Promise<ExcelImportResult> {
-  const rows = await firstSheetRows(file);
-  if (!rows.length) throw new Error("الملف فارغ أو لا يحتوي على بيانات");
-
+): { perStudent: Map<string, Partial<Record<ExcelGradeKey, number>>>; unmatchedRows: { name: string; score: number }[]; foundKeys: Set<ExcelGradeKey> } {
   const scoreCols: Partial<Record<ExcelGradeKey, number>> = {};
   let nameCol = -1;
   let headerRowIdx = -1;
@@ -273,15 +271,13 @@ export async function importAllGradesFromExcel(
     }
   }
 
-  if (!Object.keys(scoreCols).length) {
-    throw new Error("لم أجد أعمدة الاختبارات في الملف. تأكد من وجود عناوين مثل: اختبار أول، اختبار ثاني، نهائي، مشاركة، واجب.");
-  }
+  const perStudent = new Map<string, Partial<Record<ExcelGradeKey, number>>>();
+  const unmatchedRows: { name: string; score: number }[] = [];
+  const foundKeys = new Set<ExcelGradeKey>(Object.keys(scoreCols) as ExcelGradeKey[]);
+  if (!foundKeys.size) return { perStudent, unmatchedRows, foundKeys };
 
   const sourceRows = headerRowIdx >= 0 ? rows.slice(headerRowIdx + 1) : rows;
-  const studentTokens = students.map((s) => ({ id: s.id, name: s.name, toks: tokens(s.name), compact: compactName(s.name) }));
   const used = new Set<string>();
-  const matches: GradeMatch[] = [];
-  const unmatchedRows: { name: string; score: number }[] = [];
   let plausibleNameRows = 0;
 
   for (const row of sourceRows) {
@@ -310,13 +306,56 @@ export async function importAllGradesFromExcel(
 
     const bestRow = findStudentMatch(nameCell, studentTokens, used);
     if (bestRow) {
-      matches.push({ studentId: bestRow.id, studentName: bestRow.name, score: firstScore, scores });
+      perStudent.set(bestRow.id, scores);
       used.add(bestRow.id);
     } else if (nameCell) {
       unmatchedRows.push({ name: nameCell, score: firstScore });
     }
   }
 
-  const missingStudents = students.filter((s) => !used.has(s.id));
-  return { matches, unmatchedRows, missingStudents };
+  return { perStudent, unmatchedRows, foundKeys };
+}
+
+export async function importAllGradesFromExcel(
+  file: File,
+  students: { id: string; name: string }[],
+  maxScores: Record<ExcelGradeKey, number>,
+): Promise<ExcelImportResult> {
+  const sheets = await allSheetsRows(file);
+  if (!sheets.length || sheets.every((s) => !s.length)) {
+    throw new Error("الملف فارغ أو لا يحتوي على بيانات");
+  }
+  const studentTokens = students.map((s) => ({ id: s.id, name: s.name, toks: tokens(s.name), compact: compactName(s.name) }));
+
+  const merged = new Map<string, Partial<Record<ExcelGradeKey, number>>>();
+  const allUnmatched: { name: string; score: number }[] = [];
+  const allFoundKeys = new Set<ExcelGradeKey>();
+
+  for (const rows of sheets) {
+    if (!rows.length) continue;
+    const { perStudent, unmatchedRows, foundKeys } = importAllGradesFromSheet(rows, students, studentTokens, maxScores);
+    foundKeys.forEach((k) => allFoundKeys.add(k));
+    for (const [sid, scores] of perStudent) {
+      const existing = merged.get(sid) || {};
+      for (const k of Object.keys(scores) as ExcelGradeKey[]) {
+        if (existing[k] === undefined) existing[k] = scores[k];
+      }
+      merged.set(sid, existing);
+    }
+    allUnmatched.push(...unmatchedRows);
+  }
+
+  if (!allFoundKeys.size) {
+    throw new Error("لم أجد أعمدة الاختبارات في الملف. تأكد من وجود عناوين مثل: اختبار أول، اختبار ثاني، نهائي، مشاركة، واجب.");
+  }
+
+  const matches: GradeMatch[] = [];
+  for (const s of students) {
+    const scores = merged.get(s.id);
+    if (!scores || Object.keys(scores).length === 0) continue;
+    const firstScore = Object.values(scores)[0] as number;
+    matches.push({ studentId: s.id, studentName: s.name, score: firstScore, scores });
+  }
+  const missingStudents = students.filter((s) => !merged.has(s.id));
+  return { matches, unmatchedRows: allUnmatched, missingStudents };
 }
