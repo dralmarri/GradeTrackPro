@@ -1,6 +1,7 @@
 import { Student, LectureInfo } from "@/types/student";
 import { getTotal } from "@/lib/excel";
 import { Trash2 } from "lucide-react";
+import NumberInput from "@/components/NumberInput";
 
 interface GradeTableProps {
   students: Student[];
