@@ -454,13 +454,13 @@ export default function Index() {
           )}
 
           <div className="mt-10 flex justify-center">
-            <a
-              href="mailto:dralmarri@gmail.com?subject=GradeTrackPro%20Feedback"
+            <Link
+              to="/contact"
               className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-5 py-2.5 font-display text-sm font-semibold text-primary shadow-sm transition-all hover:bg-primary/20 hover:shadow-md active:scale-[0.98]"
             >
               <MessageCircle size={16} />
               Share Your Feedback
-            </a>
+            </Link>
           </div>
 
           <footer className="mt-8 border-t border-border pt-6 text-center">
