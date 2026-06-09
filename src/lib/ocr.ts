@@ -137,19 +137,13 @@ function findStudentMatch(
   return candidates[0];
 }
 
-/**
- * Import grades from Excel/CSV. Reads only the first sheet and only the first
- * contiguous student table after the detected header. Matches by name, never row order.
- */
-export async function importGradesFromExcel(
-  file: File,
+function importGradesFromSheet(
+  rows: string[][],
   students: { id: string; name: string }[],
+  studentTokens: { id: string; name: string; toks: string[]; compact: string }[],
   maxScore: number,
-  examKey?: string,
-): Promise<ExcelImportResult> {
-  const rows = await firstSheetRows(file);
-  if (!rows.length) throw new Error("الملف فارغ أو لا يحتوي على بيانات");
-
+  examKey: string | undefined,
+): { result: ExcelImportResult; scoreColFound: boolean } {
   let scoreCol = -1;
   let nameCol = -1;
   let headerRowIdx = -1;
@@ -161,24 +155,22 @@ export async function importGradesFromExcel(
         scoreCol = c;
         headerRowIdx = Math.max(headerRowIdx, i);
       }
-      if (nameCol === -1) {
-        if (isNameHeader(cell)) {
-          nameCol = c;
-          headerRowIdx = Math.max(headerRowIdx, i);
-        }
+      if (nameCol === -1 && isNameHeader(cell)) {
+        nameCol = c;
+        headerRowIdx = Math.max(headerRowIdx, i);
       }
     }
   }
 
-  if (examKey && scoreCol === -1) {
-    throw new Error(`لم أجد عمود "${EXAM_LABELS[examKey] || "الدرجة"}" في الملف. تأكد من عنوان العمود ثم أعد الاستيراد.`);
-  }
-
-  const sourceRows = headerRowIdx >= 0 ? rows.slice(headerRowIdx + 1) : rows;
-  const studentTokens = students.map((s) => ({ id: s.id, name: s.name, toks: tokens(s.name), compact: compactName(s.name) }));
   const used = new Set<string>();
   const matches: GradeMatch[] = [];
   const unmatchedRows: { name: string; score: number }[] = [];
+
+  if (examKey && scoreCol === -1) {
+    return { result: { matches, unmatchedRows, missingStudents: students }, scoreColFound: false };
+  }
+
+  const sourceRows = headerRowIdx >= 0 ? rows.slice(headerRowIdx + 1) : rows;
   let plausibleNameRows = 0;
 
   for (const row of sourceRows) {
@@ -219,7 +211,38 @@ export async function importGradesFromExcel(
   }
 
   const missingStudents = students.filter((s) => !used.has(s.id));
-  return { matches, unmatchedRows, missingStudents };
+  return { result: { matches, unmatchedRows, missingStudents }, scoreColFound: scoreCol !== -1 };
+}
+
+/**
+ * Import grades from Excel/CSV. Scans all sheets and picks the one with the
+ * most matched students for the requested exam column.
+ */
+export async function importGradesFromExcel(
+  file: File,
+  students: { id: string; name: string }[],
+  maxScore: number,
+  examKey?: string,
+): Promise<ExcelImportResult> {
+  const sheets = await allSheetsRows(file);
+  if (!sheets.length || sheets.every((s) => !s.length)) {
+    throw new Error("الملف فارغ أو لا يحتوي على بيانات");
+  }
+  const studentTokens = students.map((s) => ({ id: s.id, name: s.name, toks: tokens(s.name), compact: compactName(s.name) }));
+
+  let best: ExcelImportResult | null = null;
+  let anyScoreCol = false;
+  for (const rows of sheets) {
+    if (!rows.length) continue;
+    const { result, scoreColFound } = importGradesFromSheet(rows, students, studentTokens, maxScore, examKey);
+    if (scoreColFound) anyScoreCol = true;
+    if (!best || result.matches.length > best.matches.length) best = result;
+  }
+
+  if (examKey && !anyScoreCol) {
+    throw new Error(`لم أجد عمود "${EXAM_LABELS[examKey] || "الدرجة"}" في أي ورقة من الملف. تأكد من عنوان العمود ثم أعد الاستيراد.`);
+  }
+  return best || { matches: [], unmatchedRows: [], missingStudents: students };
 }
 
 export async function importAllGradesFromExcel(
