@@ -1,10 +1,11 @@
 import Tesseract from "tesseract.js";
 import * as pdfjsLib from "pdfjs-dist";
+// Bundle the worker via Vite so versions always match and it works offline
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import * as XLSX from "xlsx";
 
-// Configure pdf.js worker (served from CDN — same major version as the package)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(pdfjsLib as any).GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 // Normalize Arabic text: unify alef/yaa/taa-marbuta, strip diacritics & tatweel
 export function normalizeArabic(input: string): string {
