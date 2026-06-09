@@ -21,6 +21,30 @@ import { toast } from "sonner";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
+
+  const updateTier = (i: number, patch: Partial<GradeTier>) => {
+    const next = tiers.map((t, idx) => (idx === i ? { ...t, ...patch } : t));
+    setTiers(next);
+    saveGradeTiers(next);
+  };
+  const addTier = () => {
+    const next = [...tiers, { emoji: "⭐", minPercent: 50, color: "text-primary" }];
+    setTiers(next);
+    saveGradeTiers(next);
+  };
+  const removeTier = (i: number) => {
+    if (tiers.length <= 1) return;
+    const next = tiers.filter((_, idx) => idx !== i);
+    setTiers(next);
+    saveGradeTiers(next);
+  };
+  const resetTiers = () => {
+    setTiers(DEFAULT_TIERS);
+    saveGradeTiers(DEFAULT_TIERS);
+    toast.success("تمت إعادة التقسيمات إلى الافتراضي");
+  };
+
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
