@@ -73,13 +73,14 @@ export interface ExcelImportResult {
   missingStudents: { id: string; name: string }[];
 }
 
-async function firstSheetRows(file: File): Promise<string[][]> {
+async function allSheetsRows(file: File): Promise<string[][][]> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
-  if (!wb.SheetNames.length) return [];
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false, defval: "" });
-  return rows.map((r) => (r as unknown[]).map((c) => (c == null ? "" : String(c).trim())));
+  return wb.SheetNames.map((name) => {
+    const sheet = wb.Sheets[name];
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false, defval: "" });
+    return rows.map((r) => (r as unknown[]).map((c) => (c == null ? "" : String(c).trim())));
+  });
 }
 
 const EXAM_KEYS: ExcelGradeKey[] = ["exam1", "exam2", "finalExam", "participation", "homework"];
