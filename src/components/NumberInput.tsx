@@ -68,8 +68,21 @@ export default function NumberInput({
       pattern="[0-9]*"
       placeholder={placeholder}
       value={text}
-      onFocus={() => {
+      onFocus={(e) => {
         focusedRef.current = true;
+        // Select all so user can immediately overwrite the existing value
+        const el = e.currentTarget;
+        requestAnimationFrame(() => {
+          try { el.select(); } catch { /* noop */ }
+        });
+      }}
+      onClick={(e) => {
+        const el = e.currentTarget;
+        if (document.activeElement !== el) return;
+        // If nothing selected yet, select all on click too
+        if (el.selectionStart === el.selectionEnd) {
+          try { el.select(); } catch { /* noop */ }
+        }
       }}
       onChange={(e) => {
         const next = sanitize(e.target.value);
