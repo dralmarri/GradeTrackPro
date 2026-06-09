@@ -256,11 +256,11 @@ export default function CourseManager({
               </div>
 
               <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                <span className="rounded-md bg-muted px-2 py-0.5">اختبار١: {course.maxExam1}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">اختبار٢: {course.maxExam2}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">نهائي: {course.maxFinal}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">مشاركة: {course.maxParticipation}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">واجب: {course.maxHomework ?? 10}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "exam1")}: {course.maxExam1}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "exam2")}: {course.maxExam2}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "finalExam")}: {course.maxFinal}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "participation")}: {course.maxParticipation}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "homework")}: {course.maxHomework ?? 10}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">محاضرات: {course.lectureCount}</span>
               </div>
 
