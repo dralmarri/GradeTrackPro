@@ -26,7 +26,7 @@ export const DEFAULT_TIERS: GradeTier[] = [
 ];
 
 
-// سلم درجات الحروف (جامعة الكويت — الفصل الأول 2006-2007 وما بعده)
+// سلم درجات الحروف الصحيح (الفصل الأول 2006-2007 وما بعده)
 export const DEFAULT_LETTER_TIERS: LetterTier[] = [
   { letter: "A", minPercent: 95, color: "text-success" },
   { letter: "A-", minPercent: 90, color: "text-success" },
@@ -41,8 +41,8 @@ export const DEFAULT_LETTER_TIERS: LetterTier[] = [
   { letter: "F", minPercent: 0, color: "text-destructive" },
 ];
 
-const KEY = "gradeTiers.v3";
-const LETTER_KEY = "letterTiers.v1";
+const KEY = "gradeTiers.v4";
+const LETTER_KEY = "letterTiers.v2";
 
 export function loadGradeTiers(): GradeTier[] {
   try {
@@ -79,13 +79,15 @@ export function saveLetterTiers(tiers: LetterTier[]) {
 }
 
 export function getTierFor(pct: number, tiers: GradeTier[] = loadGradeTiers()): GradeTier {
+  const safePct = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
   const sorted = [...tiers].sort((a, b) => b.minPercent - a.minPercent);
-  for (const t of sorted) if (pct >= t.minPercent) return t;
+  for (const t of sorted) if (safePct >= t.minPercent) return t;
   return sorted[sorted.length - 1];
 }
 
 export function getLetterFor(pct: number, tiers: LetterTier[] = loadLetterTiers()): LetterTier {
+  const safePct = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
   const sorted = [...tiers].sort((a, b) => b.minPercent - a.minPercent);
-  for (const t of sorted) if (pct >= t.minPercent) return t;
+  for (const t of sorted) if (safePct >= t.minPercent) return t;
   return sorted[sorted.length - 1];
 }
