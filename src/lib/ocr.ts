@@ -144,21 +144,75 @@ async function pdfToLines(
   return allLines;
 }
 
-/** Parse Excel / CSV — combine every row into a "name ... number" text line. */
-async function spreadsheetToLines(file: File): Promise<string[]> {
+/** Parse Excel / CSV → rows of raw cell values. */
+async function spreadsheetToRows(file: File): Promise<string[][]> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
-  const lines: string[] = [];
+  const all: string[][] = [];
   for (const sheetName of wb.SheetNames) {
     const sheet = wb.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false });
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false, defval: "" });
     for (const row of rows) {
-      if (!row || !row.length) continue;
-      const parts = (row as unknown[]).map((c) => (c == null ? "" : String(c).trim())).filter(Boolean);
-      if (parts.length) lines.push(parts.join(" "));
+      if (!row) continue;
+      all.push((row as unknown[]).map((c) => (c == null ? "" : String(c).trim())));
     }
   }
-  return lines;
+  return all;
+}
+
+/** Column-aware matching: pick the name cell + numeric cell on each row. */
+function matchRowsToGrades(
+  rows: string[][],
+  students: { id: string; name: string }[],
+  maxScore: number,
+): OcrMatch[] {
+  const studentTokens = students.map((s) => ({ id: s.id, name: s.name, toks: tokens(s.name) }));
+  const used = new Set<string>();
+  const matches: OcrMatch[] = [];
+
+  for (const row of rows) {
+    // Find best name cell (one with most Arabic/Latin letters that matches a student)
+    let bestRow: { id: string; score: number; overlap: number; ratio: number } | null = null;
+
+    // Collect numeric candidates (cells that are pure numbers in range)
+    const numCells: number[] = [];
+    for (const cell of row) {
+      const m = cell.match(/^-?\d+(?:[.,]\d+)?$/);
+      if (m) {
+        const n = parseFloat(cell.replace(",", "."));
+        if (!isNaN(n) && n >= 0 && n <= maxScore) numCells.push(n);
+      }
+    }
+    if (!numCells.length) continue;
+
+    // Try each cell as the "name" cell
+    for (const cell of row) {
+      const cellToks = tokens(cell);
+      if (cellToks.length < 1) continue;
+      for (const s of studentTokens) {
+        if (used.has(s.id)) continue;
+        let overlap = 0;
+        for (const t of s.toks) {
+          if (cellToks.some((lt) => lt === t || lt.includes(t) || t.includes(lt))) overlap++;
+        }
+        const ratio = overlap / Math.max(1, s.toks.length);
+        const minOverlap = s.toks.length === 1 ? 1 : 2;
+        if (overlap >= minOverlap && ratio >= 0.4) {
+          if (!bestRow || overlap > bestRow.overlap || (overlap === bestRow.overlap && ratio > bestRow.ratio)) {
+            // Pick the largest valid number on the row (likely the grade, not an index)
+            const score = Math.max(...numCells);
+            bestRow = { id: s.id, score, overlap, ratio };
+          }
+        }
+      }
+    }
+
+    if (bestRow) {
+      matches.push({ studentId: bestRow.id, score: Math.max(0, Math.min(bestRow.score, maxScore)) });
+      used.add(bestRow.id);
+    }
+  }
+  return matches;
 }
 
 /**
@@ -173,25 +227,33 @@ export async function extractGradesFromFile(
   const name = file.name.toLowerCase();
   const type = file.type;
 
-  let lines: string[];
-  if (type.startsWith("image/")) {
-    lines = await ocrImageToLines(file, onProgress);
-  } else if (type === "application/pdf" || name.endsWith(".pdf")) {
-    lines = await pdfToLines(file, onProgress);
-  } else if (
+  // Spreadsheets: column-aware path (much more reliable)
+  if (
     name.endsWith(".csv") ||
     name.endsWith(".xlsx") ||
     name.endsWith(".xls") ||
     type.includes("spreadsheet") ||
     type === "text/csv"
   ) {
-    onProgress?.(50);
-    lines = await spreadsheetToLines(file);
+    onProgress?.(40);
+    const rows = await spreadsheetToRows(file);
+    onProgress?.(90);
+    if (!rows.length) throw new Error("الملف فارغ أو لا يحتوي على بيانات قابلة للقراءة");
+    const res = matchRowsToGrades(rows, students, maxScore);
     onProgress?.(100);
+    return res;
+  }
+
+  let lines: string[];
+  if (type.startsWith("image/")) {
+    lines = await ocrImageToLines(file, onProgress);
+  } else if (type === "application/pdf" || name.endsWith(".pdf")) {
+    lines = await pdfToLines(file, onProgress);
   } else {
     throw new Error("صيغة الملف غير مدعومة. الصيغ المدعومة: صورة، PDF، Excel، CSV");
   }
 
+  if (!lines.length) throw new Error("لم يتم استخراج أي نص من الملف");
   return matchLinesToGrades(lines, students, maxScore);
 }
 
