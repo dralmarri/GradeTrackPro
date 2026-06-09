@@ -6,6 +6,7 @@ import { Course, ComponentLabels, DEFAULT_COMPONENT_LABELS } from "@/types/stude
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
+import NumberInput from "@/components/NumberInput";
 
 interface Props {
   open: boolean;
