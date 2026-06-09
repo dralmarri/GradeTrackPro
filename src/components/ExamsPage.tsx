@@ -68,8 +68,18 @@ export default function ExamsPage({
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("الرجاء رفع صورة (JPG/PNG). دعم PDF قريباً.");
+    const name = file.name.toLowerCase();
+    const isSupported =
+      file.type.startsWith("image/") ||
+      file.type === "application/pdf" ||
+      file.type.includes("spreadsheet") ||
+      file.type === "text/csv" ||
+      name.endsWith(".pdf") ||
+      name.endsWith(".csv") ||
+      name.endsWith(".xlsx") ||
+      name.endsWith(".xls");
+    if (!isSupported) {
+      toast.error("صيغة غير مدعومة. ارفع صورة أو PDF أو Excel أو CSV");
       return;
     }
 
@@ -171,7 +181,7 @@ export default function ExamsPage({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,.pdf,.jpg,.jpeg,.png"
+          accept="image/*,application/pdf,.pdf,.xlsx,.xls,.csv"
           className="hidden"
           onChange={handleOcrUpload}
         />
@@ -181,10 +191,10 @@ export default function ExamsPage({
           className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-display text-sm font-semibold text-accent-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
         >
           {ocrLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-          قراءة بالذكاء الاصطناعي (OCR)
+          استيراد الدرجات (صورة / PDF / Excel)
         </button>
         <p className="hidden sm:block text-xs text-muted-foreground">
-          ارفع صورة أو PDF للنتائج وسيتم استخراج الدرجات تلقائياً
+          ارفع صورة، PDF، Excel، أو CSV وسيتم استخراج الدرجات تلقائياً
         </p>
       </div>
 
