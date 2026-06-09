@@ -1,5 +1,6 @@
 export interface GradeTier {
   emoji: string;
+  label?: string;
   minPercent: number;
   color: string;
 }
@@ -11,18 +12,19 @@ export interface LetterTier {
 }
 
 export const DEFAULT_TIERS: GradeTier[] = [
-  { emoji: "🤩", minPercent: 95, color: "text-success" },
-  { emoji: "😍", minPercent: 90, color: "text-success" },
-  { emoji: "😄", minPercent: 86, color: "text-primary" },
-  { emoji: "😊", minPercent: 83, color: "text-primary" },
-  { emoji: "🙂", minPercent: 80, color: "text-primary" },
-  { emoji: "😌", minPercent: 75, color: "text-accent" },
-  { emoji: "😐", minPercent: 70, color: "text-accent" },
-  { emoji: "😕", minPercent: 66, color: "text-accent" },
-  { emoji: "😟", minPercent: 63, color: "text-warning" },
-  { emoji: "😣", minPercent: 60, color: "text-warning" },
-  { emoji: "😢", minPercent: 0, color: "text-destructive" },
+  { emoji: "🤩", label: "ممتاز مرتفع", minPercent: 95, color: "text-success" },
+  { emoji: "😍", label: "ممتاز", minPercent: 90, color: "text-success" },
+  { emoji: "😄", label: "جيد جداً مرتفع", minPercent: 86, color: "text-primary" },
+  { emoji: "😊", label: "جيد جداً", minPercent: 83, color: "text-primary" },
+  { emoji: "🙂", label: "جيد جداً منخفض", minPercent: 80, color: "text-primary" },
+  { emoji: "😌", label: "جيد مرتفع", minPercent: 75, color: "text-accent" },
+  { emoji: "😐", label: "جيد", minPercent: 70, color: "text-accent" },
+  { emoji: "😕", label: "جيد منخفض", minPercent: 66, color: "text-accent" },
+  { emoji: "😟", label: "مقبول مرتفع", minPercent: 63, color: "text-warning" },
+  { emoji: "😣", label: "مقبول", minPercent: 60, color: "text-warning" },
+  { emoji: "😢", label: "راسب", minPercent: 0, color: "text-destructive" },
 ];
+
 
 // سلم درجات الحروف (جامعة الكويت — الفصل الأول 2006-2007 وما بعده)
 export const DEFAULT_LETTER_TIERS: LetterTier[] = [

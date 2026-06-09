@@ -144,6 +144,13 @@ export default function SettingsPage() {
                 onChange={(e) => updateTier(i, { emoji: e.target.value })}
                 className="w-14 rounded-lg border border-input bg-background px-2 py-2 text-center text-xl outline-none focus:border-primary"
               />
+              <input
+                type="text"
+                value={t.label || ""}
+                placeholder="اسم التقدير"
+                onChange={(e) => updateTier(i, { label: e.target.value })}
+                className="w-28 flex-shrink-0 rounded-lg border border-input bg-background px-2 py-2 text-center text-xs outline-none focus:border-primary"
+              />
               <div className="flex flex-1 items-center gap-2">
                 <span className="text-xs text-muted-foreground whitespace-nowrap">من ≥</span>
                 <input
@@ -160,6 +167,7 @@ export default function SettingsPage() {
                 />
                 <span className="text-xs text-muted-foreground">%</span>
               </div>
+
               <button
                 onClick={() => removeTier(i)}
                 disabled={tiers.length <= 1}
