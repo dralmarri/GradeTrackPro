@@ -1,5 +1,5 @@
 import { ChevronLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function PrivacyPolicy() {
   const navigate = useNavigate();
@@ -77,11 +77,15 @@ export default function PrivacyPolicy() {
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">التواصل</h2>
-          <p>لأي استفسارات أو ملاحظات حول سياسة الخصوصية، يرجى التواصل عبر البريد الإلكتروني:</p>
-          <a href="mailto:dralmarri@gmail.com" className="font-medium text-primary hover:underline">
-            dralmarri@gmail.com
-          </a>
+          <p>
+            لأي استفسارات أو ملاحظات حول سياسة الخصوصية، يرجى التواصل عبر{" "}
+            <Link to="/contact" className="font-medium text-primary hover:underline">
+              صفحة تواصل معنا
+            </Link>
+            .
+          </p>
         </section>
+
 
         <section className="space-y-2">
           <h2 className="font-display text-lg font-bold">تحديثات السياسة</h2>
