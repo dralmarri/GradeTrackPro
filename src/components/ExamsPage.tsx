@@ -4,6 +4,7 @@ import { FileSpreadsheet, Loader2, ChevronLeft, ChevronRight, Search, X, AlertCi
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { importAllGradesFromExcel, type GradeMatch } from "@/lib/ocr";
+import NumberInput from "@/components/NumberInput";
 
 type ExamKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
