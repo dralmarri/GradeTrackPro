@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Student } from "@/types/student";
+import { Student, ComponentLabels, DEFAULT_COMPONENT_LABELS } from "@/types/student";
 import { FileSpreadsheet, Loader2, ChevronLeft, ChevronRight, Search, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ interface ExamsPageProps {
   maxFinal: number;
   maxParticipation: number;
   maxHomework: number;
+  componentLabels?: ComponentLabels;
   onUpdateStudent: (studentId: string, updates: Partial<Student>) => void;
 }
 
@@ -35,6 +36,7 @@ export default function ExamsPage({
   maxFinal,
   maxParticipation,
   maxHomework,
+  componentLabels,
   onUpdateStudent,
 }: ExamsPageProps) {
   const [activeTab, setActiveTab] = useState<ExamKey>("exam1");
@@ -47,12 +49,13 @@ export default function ExamsPage({
     missing: { id: string; name: string }[];
   }>(null);
 
+  const L = { ...DEFAULT_COMPONENT_LABELS, ...(componentLabels || {}) };
   const tabs: ExamTabConfig[] = [
-    { key: "exam1", label: "الاختبار الأول", max: maxExam1 },
-    { key: "exam2", label: "الاختبار الثاني", max: maxExam2 },
-    { key: "finalExam", label: "الاختبار النهائي", max: maxFinal },
-    { key: "participation", label: "المشاركة", max: maxParticipation },
-    { key: "homework", label: "الواجب", max: maxHomework },
+    { key: "exam1", label: L.exam1, max: maxExam1 },
+    { key: "exam2", label: L.exam2, max: maxExam2 },
+    { key: "finalExam", label: L.finalExam, max: maxFinal },
+    { key: "participation", label: L.participation, max: maxParticipation },
+    { key: "homework", label: L.homework, max: maxHomework },
   ];
 
   const currentTab = tabs.find((t) => t.key === activeTab)!;
