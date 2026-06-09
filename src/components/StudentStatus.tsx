@@ -121,13 +121,11 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                   <h3 className="font-display text-sm font-bold text-foreground">{student.name}</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`rounded-md bg-muted px-2 py-0.5 font-display text-[11px] font-semibold ${grade.letter.color}`}>
-                    {getTaqdeer(grade.letter.letter)}
-                  </span>
                   <span className={`font-display text-sm font-bold ${grade.letter.color}`} dir="ltr">{grade.letter.letter}</span>
                   <span className={`font-display text-xl ${grade.tier.color}`}>{grade.tier.emoji}</span>
                 </div>
               </div>
+
 
 
               <div className="space-y-1.5 text-xs">
