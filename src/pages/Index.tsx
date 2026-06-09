@@ -14,6 +14,7 @@ import StudentStatus from "@/components/StudentStatus";
 import AttendanceSummary from "@/components/AttendanceSummary";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
+import CourseStudentsDialog from "@/components/CourseStudentsDialog";
 
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Calendar } from "@/components/ui/calendar";
@@ -36,6 +37,7 @@ import {
   Settings,
   HelpCircle,
   MessageCircle,
+  Users,
 } from "lucide-react";
 import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -76,6 +78,7 @@ export default function Index() {
   const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
   const [mainView, setMainView] = useState<MainView>("courses");
   const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
+  const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
 
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
@@ -520,6 +523,14 @@ export default function Index() {
                 تصدير النتائج
               </button>
             )}
+            <button
+              onClick={() => setStudentsDialogOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
+              title="إدارة الطلبة والدرجات"
+            >
+              <Users size={14} />
+              <span className="hidden sm:inline">إدارة الطلبة</span>
+            </button>
           </div>
         </div>
 
@@ -584,6 +595,15 @@ export default function Index() {
           />
         )}
       </main>
+
+      <CourseStudentsDialog
+        open={studentsDialogOpen}
+        onOpenChange={setStudentsDialogOpen}
+        course={activeCourse}
+        onAddStudents={(names) => addStudentsToCourse(activeCourse.id, names)}
+        onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
+        onUpdateCourse={(u) => updateCourse(activeCourse.id, u)}
+      />
     </div>
   );
 }
