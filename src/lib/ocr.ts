@@ -220,3 +220,79 @@ export async function importGradesFromExcel(
   const missingStudents = students.filter((s) => !used.has(s.id));
   return { matches, unmatchedRows, missingStudents };
 }
+
+export async function importAllGradesFromExcel(
+  file: File,
+  students: { id: string; name: string }[],
+  maxScores: Record<ExcelGradeKey, number>,
+): Promise<ExcelImportResult> {
+  const rows = await firstSheetRows(file);
+  if (!rows.length) throw new Error("الملف فارغ أو لا يحتوي على بيانات");
+
+  const scoreCols: Partial<Record<ExcelGradeKey, number>> = {};
+  let nameCol = -1;
+  let headerRowIdx = -1;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const r = rows[i];
+    for (let c = 0; c < r.length; c++) {
+      const cell = r[c];
+      for (const key of EXAM_KEYS) {
+        if (scoreCols[key] === undefined && headerMatchesExam(cell, key)) {
+          scoreCols[key] = c;
+          headerRowIdx = Math.max(headerRowIdx, i);
+        }
+      }
+      if (nameCol === -1 && isNameHeader(cell)) {
+        nameCol = c;
+        headerRowIdx = Math.max(headerRowIdx, i);
+      }
+    }
+  }
+
+  if (!Object.keys(scoreCols).length) {
+    throw new Error("لم أجد أعمدة الاختبارات في الملف. تأكد من وجود عناوين مثل: اختبار أول، اختبار ثاني، نهائي، مشاركة، واجب.");
+  }
+
+  const sourceRows = headerRowIdx >= 0 ? rows.slice(headerRowIdx + 1) : rows;
+  const studentTokens = students.map((s) => ({ id: s.id, name: s.name, toks: tokens(s.name), compact: compactName(s.name) }));
+  const used = new Set<string>();
+  const matches: GradeMatch[] = [];
+  const unmatchedRows: { name: string; score: number }[] = [];
+  let plausibleNameRows = 0;
+
+  for (const row of sourceRows) {
+    const nameCell = (nameCol >= 0 && nameCol < row.length ? row[nameCol] : row.find((c) => tokens(c).length >= 2)) || "";
+    const nameToks = tokens(nameCell);
+
+    if (nameCol >= 0) {
+      if (!nameCell || isHeaderLike(nameCell)) {
+        if (plausibleNameRows > 0) break;
+        continue;
+      }
+      if (nameToks.length < 2) continue;
+      plausibleNameRows++;
+      if (plausibleNameRows > students.length + 10) break;
+    }
+
+    const scores: Partial<Record<ExcelGradeKey, number>> = {};
+    for (const key of EXAM_KEYS) {
+      const col = scoreCols[key];
+      if (col === undefined || col >= row.length) continue;
+      const score = parseScore(row[col], maxScores[key], true);
+      if (score !== null) scores[key] = score;
+    }
+    const firstScore = Object.values(scores)[0];
+    if (firstScore === undefined) continue;
+
+    const bestRow = findStudentMatch(nameCell, studentTokens, used);
+    if (bestRow) {
+      matches.push({ studentId: bestRow.id, studentName: bestRow.name, score: firstScore, scores });
+      used.add(bestRow.id);
+    } else if (nameCell) {
+      unmatchedRows.push({ name: nameCell, score: firstScore });
+    }
+  }
+
+  const missingStudents = students.filter((s) => !used.has(s.id));
+  return { matches, unmatchedRows, missingStudents };
+}
