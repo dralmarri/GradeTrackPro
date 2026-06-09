@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Student, Course } from "@/types/student";
+import { Student, Course, getLabel } from "@/types/student";
 import { getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
 import { User, TrendingUp, TrendingDown, Award, Search } from "lucide-react";
@@ -110,27 +110,27 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
 
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">بونص المحاضرات</span>
+                  <span className="text-muted-foreground">{getLabel(course, "bonus")} (المحاضرات)</span>
                   <span className="font-medium">{bonusTotal}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">اختبار أول ({course.maxExam1})</span>
+                  <span className="text-muted-foreground">{getLabel(course, "exam1")} ({course.maxExam1})</span>
                   <span className="font-medium">{student.exam1}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">اختبار ثاني ({course.maxExam2})</span>
+                  <span className="text-muted-foreground">{getLabel(course, "exam2")} ({course.maxExam2})</span>
                   <span className="font-medium">{student.exam2}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">نهائي ({course.maxFinal})</span>
+                  <span className="text-muted-foreground">{getLabel(course, "finalExam")} ({course.maxFinal})</span>
                   <span className="font-medium">{student.finalExam}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">مشاركة ({course.maxParticipation})</span>
+                  <span className="text-muted-foreground">{getLabel(course, "participation")} ({course.maxParticipation})</span>
                   <span className="font-medium">{student.participation}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">واجب ({course.maxHomework ?? 10})</span>
+                  <span className="text-muted-foreground">{getLabel(course, "homework")} ({course.maxHomework ?? 10})</span>
                   <span className="font-medium">{student.homework || 0}</span>
                 </div>
                 <div className="border-t border-border pt-1.5">

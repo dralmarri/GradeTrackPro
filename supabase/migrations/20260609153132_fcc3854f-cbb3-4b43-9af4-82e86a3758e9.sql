@@ -1,0 +1,1 @@
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS component_labels jsonb DEFAULT '{}'::jsonb;
