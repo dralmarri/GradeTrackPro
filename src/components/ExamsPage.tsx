@@ -3,6 +3,7 @@ import { Student } from "@/types/student";
 import { FileText, Loader2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 type ExamKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
@@ -64,14 +65,68 @@ export default function ExamsPage({
 
   const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    setOcrLoading(true);
-    toast.info("جارٍ قراءة الملف بالذكاء الاصطناعي...");
-    setTimeout(() => {
-      setOcrLoading(false);
-      toast.error("يجب تفعيل Lovable Cloud لاستخدام ميزة OCR بالذكاء الاصطناعي");
-    }, 1500);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("الرجاء رفع صورة (JPG/PNG). دعم PDF قريباً.");
+      return;
+    }
+
+    setOcrLoading(true);
+    const tId = toast.loading("جارٍ قراءة الصورة بالذكاء الاصطناعي...");
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke("ocr-exam-grades", {
+        body: {
+          imageBase64: base64,
+          mimeType: file.type,
+          studentNames: students.map((s) => s.name),
+          maxScore: currentTab.max,
+          examLabel: currentTab.label,
+        },
+      });
+
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      const grades: { name: string; score: number }[] = (data as any)?.grades ?? [];
+      if (!grades.length) {
+        toast.dismiss(tId);
+        toast.error("لم يتم استخراج أي درجات من الصورة");
+        return;
+      }
+
+      // Match by exact name, then by best inclusion overlap
+      const normalize = (s: string) => s.replace(/\s+/g, " ").trim();
+      let matched = 0;
+      for (const g of grades) {
+        const target = normalize(g.name);
+        let student =
+          students.find((s) => normalize(s.name) === target) ||
+          students.find((s) => normalize(s.name).includes(target) || target.includes(normalize(s.name)));
+        if (student) {
+          const v = clamp(Number(g.score) || 0, currentTab.max);
+          onUpdateStudent(student.id, { [currentTab.key]: v });
+          matched++;
+        }
+      }
+
+      toast.dismiss(tId);
+      if (matched > 0) toast.success(`تم استخراج ${matched} درجة بنجاح ✅`);
+      else toast.error("تعذّر مطابقة الأسماء المستخرجة مع قائمة الطلاب");
+    } catch (err: any) {
+      toast.dismiss(tId);
+      toast.error(err?.message || "فشل في قراءة الصورة");
+    } finally {
+      setOcrLoading(false);
+    }
   };
 
   if (students.length === 0) {
