@@ -92,9 +92,14 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-export function getTotal(student: Student, course?: Pick<Course, "maxBonus">): number {
+export function getTotal(student: Student, course?: Pick<Course, "maxBonus" | "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework">): number {
   const bonusTotal = getBonusTotal(student, course?.maxBonus);
-  return bonusTotal + student.exam1 + student.exam2 + student.finalExam + student.participation + (student.homework || 0);
+  const base = student.exam1 + student.exam2 + student.finalExam + student.participation + (student.homework || 0);
+  if (course && "maxExam1" in course) {
+    const maxTotal = getMaxTotal(course);
+    return Math.min(maxTotal, base + bonusTotal);
+  }
+  return base + bonusTotal;
 }
 
 export function createStudent(name: string, lectureCount: number): Student {
