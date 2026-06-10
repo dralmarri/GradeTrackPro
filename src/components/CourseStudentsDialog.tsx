@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, X, Save } from "lucide-react";
+import { Users, X, Save, Award } from "lucide-react";
 import { toast } from "sonner";
 import { Course, ComponentLabels, DEFAULT_COMPONENT_LABELS } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
@@ -8,6 +8,7 @@ import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
 import NumberInput from "@/components/NumberInput";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useBonusEnabled } from "@/hooks/useBonusEnabled";
 
 interface Props {
   open: boolean;
