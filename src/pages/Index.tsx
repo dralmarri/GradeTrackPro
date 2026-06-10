@@ -45,6 +45,7 @@ import {
 import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useBonusEnabled } from "@/hooks/useBonusEnabled";
 import { tf } from "@/lib/translations";
 
 type CourseTab = "attendance" | "exams" | "status";
