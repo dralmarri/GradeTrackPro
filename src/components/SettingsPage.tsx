@@ -10,7 +10,8 @@ import {
   Trash2,
   RotateCcw,
   ChevronDown,
-
+  UserX,
+  Loader2,
 } from "lucide-react";
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
@@ -24,6 +25,18 @@ import {
   DEFAULT_LETTER_TIERS,
 } from "@/lib/gradeTiers";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -76,6 +89,23 @@ export default function SettingsPage() {
 
   const [tiersOpen, setTiersOpen] = useState(false);
   const [lettersOpen, setLettersOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
+      toast.success("تم حذف حسابك وجميع بياناتك");
+      await supabase.auth.signOut();
+      navigate("/auth", { replace: true });
+    } catch (e: any) {
+      toast.error(e.message || "تعذّر حذف الحساب");
+      setDeleting(false);
+    }
+  };
+
+
 
 
   return (
@@ -324,6 +354,45 @@ export default function SettingsPage() {
             Version <strong>v1.0.0</strong>
           </p>
         </div>
+      </div>
+
+      {/* Danger zone: Delete account */}
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <UserX className="text-destructive" size={20} />
+          <h2 className="font-display text-lg font-bold text-destructive">حذف الحساب</h2>
+        </div>
+        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+          سيؤدي حذف حسابك إلى إزالة جميع بياناتك نهائياً (المقررات، الطلاب، الحضور، الدرجات) من خوادمنا. لا يمكن التراجع عن هذه العملية.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              disabled={deleting}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
+            >
+              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              حذف حسابي نهائياً
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>هل أنت متأكد من حذف حسابك؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                سيتم حذف حسابك وجميع بياناتك (المقررات، الطلاب، الدرجات، الحضور) بشكل دائم ولا يمكن استعادتها.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                نعم، احذف حسابي
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
