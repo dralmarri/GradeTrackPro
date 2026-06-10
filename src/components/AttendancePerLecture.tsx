@@ -62,11 +62,9 @@ export default function AttendancePerLecture({ students, lectures, onUpdateAtten
   const goNext = () => selectedLecture < safeLectures.length - 1 && setSelectedLecture(selectedLecture + 1);
   const goPrev = () => selectedLecture > 0 && setSelectedLecture(selectedLecture - 1);
 
-  // Date subtitle (e.g. "الثلاثاء 26 ربيع الأول") — derive from existing label or date
+  // Date subtitle — Gregorian only (e.g. "الأربعاء، 10 يونيو 2026")
   const dateObj = new Date(current.date);
-  const subtitle = current.label.includes("•")
-    ? current.label.split("•").slice(1).join("•").trim()
-    : dateObj.toLocaleDateString("ar-SA-u-ca-islamic", { weekday: "long", day: "numeric", month: "long" });
+  const subtitle = dateObj.toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const title = `المحاضرة ${selectedLecture + 1}`;
 
   return (
