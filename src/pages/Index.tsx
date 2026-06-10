@@ -13,6 +13,7 @@ import BonusTable from "@/components/BonusTable";
 import ExamsPage from "@/components/ExamsPage";
 import StudentStatus from "@/components/StudentStatus";
 import AttendanceSummary from "@/components/AttendanceSummary";
+import AttendancePerLecture from "@/components/AttendancePerLecture";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
 import CourseStudentsDialog from "@/components/CourseStudentsDialog";
