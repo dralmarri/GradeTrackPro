@@ -13,8 +13,11 @@ import {
   UserX,
   Loader2,
   Languages,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useTheme } from "@/hooks/useTheme";
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
   GradeTier,
@@ -43,6 +46,7 @@ import {
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
 
   const updateTier = (i: number, patch: Partial<GradeTier>) => {
@@ -161,8 +165,48 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Theme (Dark mode) */}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          {theme === "dark" ? <Moon className="text-primary" size={20} /> : <Sun className="text-primary" size={20} />}
+          <h2 className="font-display text-lg font-bold">
+            {lang === "ar" ? "مظهر التطبيق" : "Appearance"}
+          </h2>
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">
+          {lang === "ar"
+            ? "اختر بين الوضع النهاري والوضع الليلي. يُحفظ تلقائياً."
+            : "Choose between light and dark mode. Saved automatically."}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setTheme("light")}
+            className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+              theme === "light"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-foreground hover:bg-muted"
+            }`}
+          >
+            <Sun size={16} />
+            {t("lightMode")}
+          </button>
+          <button
+            onClick={() => setTheme("dark")}
+            className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+              theme === "dark"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-foreground hover:bg-muted"
+            }`}
+          >
+            <Moon size={16} />
+            {t("darkMode")}
+          </button>
+        </div>
+      </div>
+
       {/* Add to Home Screen */}
       <AddToHomeScreen />
+
 
       {/* Grade Tiers */}
       <div className="rounded-2xl border border-border bg-card shadow-sm">
@@ -340,6 +384,45 @@ export default function SettingsPage() {
 
 
 
+      {/* Danger zone: Delete account */}
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <UserX className="text-destructive" size={20} />
+          <h2 className="font-display text-lg font-bold text-destructive">حذف الحساب</h2>
+        </div>
+        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+          سيؤدي حذف حسابك إلى إزالة جميع بياناتك نهائياً (المقررات، الطلاب، الحضور، الدرجات) من خوادمنا. لا يمكن التراجع عن هذه العملية.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              disabled={deleting}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
+            >
+              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              حذف حسابي نهائياً
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>هل أنت متأكد من حذف حسابك؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                سيتم حذف حسابك وجميع بياناتك (المقررات، الطلاب، الدرجات، الحضور) بشكل دائم ولا يمكن استعادتها.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                نعم، احذف حسابي
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
       {/* About */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
@@ -390,44 +473,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Danger zone: Delete account */}
-      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
-        <div className="mb-3 flex items-center gap-2">
-          <UserX className="text-destructive" size={20} />
-          <h2 className="font-display text-lg font-bold text-destructive">حذف الحساب</h2>
-        </div>
-        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
-          سيؤدي حذف حسابك إلى إزالة جميع بياناتك نهائياً (المقررات، الطلاب، الحضور، الدرجات) من خوادمنا. لا يمكن التراجع عن هذه العملية.
-        </p>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              disabled={deleting}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
-            >
-              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              حذف حسابي نهائياً
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent dir="rtl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>هل أنت متأكد من حذف حسابك؟</AlertDialogTitle>
-              <AlertDialogDescription>
-                سيتم حذف حسابك وجميع بياناتك (المقررات، الطلاب، الدرجات، الحضور) بشكل دائم ولا يمكن استعادتها.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteAccount}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                نعم، احذف حسابي
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
     </div>
   );
 }

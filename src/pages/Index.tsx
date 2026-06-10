@@ -42,6 +42,7 @@ import {
   Moon,
   Sun,
   Languages,
+  ChevronDown,
 } from "lucide-react";
 import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -88,6 +89,7 @@ export default function Index() {
   const [mainView, setMainView] = useState<MainView>("courses");
   const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
   const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
+  const [coursesManageOpen, setCoursesManageOpen] = useState(false);
 
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
@@ -165,26 +167,39 @@ export default function Index() {
           </div>
         </header>
 
-        <SettingsPage />
-
-
-        {/* Course Manager */}
-        <div className="mx-auto max-w-3xl px-4 pb-8">
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <div className="mb-5 flex items-center gap-2">
-              <BookOpen className="text-primary" size={20} />
-              <h2 className="font-display text-lg font-bold">{t("coursesManage")}</h2>
-            </div>
-            <CourseManager
-              courses={courses}
-              onDeleteCourse={deleteCourse}
-              onUpdateCourse={updateCourse}
-              onAddStudents={addStudentsToCourse}
-              onDeleteStudent={deleteStudent}
-              onSelectCourse={(id) => { setActiveCourseId(id); setMainView("courses"); }}
-            />
+        {/* Course Manager (collapsible) */}
+        <div className="mx-auto max-w-3xl px-4 pt-6">
+          <div className="rounded-2xl border border-border bg-card shadow-sm">
+            <button
+              type="button"
+              onClick={() => setCoursesManageOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 p-6"
+            >
+              <div className="flex items-center gap-2">
+                <BookOpen className="text-primary" size={20} />
+                <h2 className="font-display text-lg font-bold">{t("coursesManage")}</h2>
+              </div>
+              <ChevronDown
+                size={18}
+                className={`text-muted-foreground transition-transform ${coursesManageOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {coursesManageOpen && (
+              <div className="px-6 pb-6">
+                <CourseManager
+                  courses={courses}
+                  onDeleteCourse={deleteCourse}
+                  onUpdateCourse={updateCourse}
+                  onAddStudents={addStudentsToCourse}
+                  onDeleteStudent={deleteStudent}
+                  onSelectCourse={(id) => { setActiveCourseId(id); setMainView("courses"); }}
+                />
+              </div>
+            )}
           </div>
         </div>
+
+        <SettingsPage />
       </div>
     );
   }
