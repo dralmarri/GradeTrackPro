@@ -264,6 +264,7 @@ export default function CourseManager({
                 <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "finalExam")}: {course.maxFinal}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "participation")}: {course.maxParticipation}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "homework")}: {course.maxHomework ?? 10}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "bonus")}: {course.maxBonus}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">{t("lectures")}: {course.lectureCount}</span>
               </div>
 
