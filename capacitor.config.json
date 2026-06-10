@@ -1,5 +1,19 @@
 {
-  "appId": "app.lovable.grademanager",
-  "appName": "grade-manager",
-  "webDir": "dist"
+  "appId": "com.gradetrackpro.app",
+  "appName": "GradeTrackPro",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "always",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#0ea5e9",
+      "showSpinner": false
+    }
+  }
 }
