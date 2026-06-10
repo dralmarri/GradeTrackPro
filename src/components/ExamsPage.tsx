@@ -147,45 +147,36 @@ export default function ExamsPage({
 
   return (
     <div className="space-y-4">
-      {/* Tab navigation - mobile friendly */}
-      <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card p-3 shadow-sm sm:hidden">
-        <button
-          onClick={goPrevTab}
-          disabled={currentTabIndex === 0}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border transition-colors hover:bg-muted disabled:opacity-30"
-        >
-          <ChevronRight size={18} />
-        </button>
-        <div className="flex-1 text-center">
-          <p className="font-display text-sm font-bold text-foreground">{currentTab.label}</p>
-          <p className="text-[11px] text-muted-foreground">{tf(t("ofMaxGrade"), { max: currentTab.max })}</p>
-        </div>
-        <button
-          onClick={goNextTab}
-          disabled={currentTabIndex === tabs.length - 1}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border transition-colors hover:bg-muted disabled:opacity-30"
-        >
-          <ChevronLeft size={18} />
-        </button>
+      {/* Pill tab cards (mockup-style) */}
+      <div className={cn(
+        "grid gap-2",
+        tabs.length === 3 ? "grid-cols-3" : tabs.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-5"
+      )}>
+        {tabs.map((tab) => {
+          const active = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                "rounded-2xl border-2 px-3 py-3 sm:py-4 text-center transition-all",
+                active
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-border bg-card hover:border-primary/30"
+              )}
+            >
+              <p className={cn(
+                "font-display text-sm sm:text-base font-bold",
+                active ? "text-primary" : "text-foreground"
+              )}>{tab.label}</p>
+              <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground">
+                {tf(t("ofMaxGrade"), { max: tab.max })}
+              </p>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Desktop tabs */}
-      <div className="hidden sm:flex flex-wrap gap-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-              activeTab === tab.key
-                ? "bg-primary text-primary-foreground shadow-md"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            }`}
-          >
-            {tab.label}
-            <span className="mr-1.5 text-xs opacity-70">({tab.max})</span>
-          </button>
-        ))}
-      </div>
 
       {/* Search */}
       <div className="relative">
