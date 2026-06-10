@@ -414,7 +414,7 @@ export default function ExamsPage({
                 {currentTab.label}
                 <br />
                 <span className="text-[10px] font-normal text-muted-foreground">
-                  (من {currentTab.max})
+                  {tf(t("ofMaxGrade"), { max: currentTab.max })}
                 </span>
               </th>
             </tr>
