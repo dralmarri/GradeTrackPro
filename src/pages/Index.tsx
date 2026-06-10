@@ -42,6 +42,7 @@ import {
   Moon,
   Sun,
   Languages,
+  ChevronDown,
 } from "lucide-react";
 import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -88,6 +89,7 @@ export default function Index() {
   const [mainView, setMainView] = useState<MainView>("courses");
   const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
   const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
+  const [coursesManageOpen, setCoursesManageOpen] = useState(false);
 
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
