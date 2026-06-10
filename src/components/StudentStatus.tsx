@@ -226,9 +226,9 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                     key={cell.key}
                     className={`rounded-xl px-2 py-2 text-center ${cell.highlight}`}
                   >
-                    <p className="mb-0.5 text-[10px] opacity-70 truncate">{cell.label}</p>
-                    <p className="font-display text-sm font-bold leading-none">{cell.value}</p>
-                    <p className="mt-0.5 text-[9px] opacity-50">من {cell.max}</p>
+                    <p className="mb-1 text-[10px] opacity-70 truncate">{cell.label}</p>
+                    <p className="font-display text-xl font-extrabold leading-none">{cell.value}</p>
+                    <p className="mt-1 text-[9px] opacity-50">من {cell.max}</p>
                   </div>
                 ))}
               </div>
