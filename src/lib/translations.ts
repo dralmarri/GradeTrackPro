@@ -366,6 +366,13 @@ const dict = {
     contactDesc: "Send a suggestion or note",
     languageSection: "App language",
     languageSectionDesc: "Choose the interface language. Saved automatically.",
+    attendanceRate: "Attendance",
+    presentLabel: "Present",
+    absentLabel: "Absent",
+    accountSection: "Account",
+    appearanceLanguageSection: "Appearance & Language",
+    dataSection: "Data",
+    signedInLabel: "Signed in",
   },
 } as const;
 
