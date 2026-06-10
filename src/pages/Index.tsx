@@ -47,7 +47,7 @@ import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 import { tf } from "@/lib/translations";
 
-type CourseTab = "bonus" | "exams" | "status" | "attendance";
+type CourseTab = "attendance" | "exams" | "status";
 type MainView = "courses" | "settings";
 
 export default function Index() {
@@ -81,7 +81,7 @@ export default function Index() {
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [lectureTime, setLectureTime] = useState("");
   const [pendingStudentNames, setPendingStudentNames] = useState<string[]>([]);
-  const [courseTab, setCourseTab] = useState<CourseTab>("bonus");
+  const [courseTab, setCourseTab] = useState<CourseTab>("attendance");
   const [mainView, setMainView] = useState<MainView>("courses");
   const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
   const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
@@ -516,7 +516,7 @@ export default function Index() {
       <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4">
           <button
-            onClick={() => { setActiveCourseId(null); setCourseTab("bonus"); }}
+            onClick={() => { setActiveCourseId(null); setCourseTab("attendance"); }}
             className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted"
           >
             <ChevronLeft size={20} className="rotate-180" />
@@ -554,11 +554,10 @@ export default function Index() {
         </div>
 
         {/* Sub-tabs */}
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-4 pb-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-3 gap-1 px-4 pb-2">
           {[
-            { key: "bonus" as const, label: t("tabLectures"), icon: Star },
-            { key: "exams" as const, label: t("tabExams"), icon: ClipboardList },
             { key: "attendance" as const, label: t("tabAttendance"), icon: UserCheck },
+            { key: "exams" as const, label: t("tabExams"), icon: ClipboardList },
             { key: "status" as const, label: t("tabStatus"), icon: BarChart3 },
           ].map((tab) => (
             <button
@@ -579,15 +578,7 @@ export default function Index() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6">
-        {courseTab === "bonus" && (
-          <BonusTable
-            students={activeCourse.students}
-            lectures={activeCourse.lectures}
-            maxBonus={activeCourse.maxBonus}
-            onUpdateBonus={(sid, li, v) => updateLectureBonus(activeCourse.id, sid, li, v)}
-            onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
-          />
-        )}
+
         {courseTab === "exams" && (
           <ExamsPage
             students={activeCourse.students}
