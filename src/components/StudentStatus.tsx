@@ -124,32 +124,50 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
 
           const miniCells = [
             {
-              key: "bonus",
-              label: getLabel(course, "bonus"),
-              value: isPositiveBonus ? `+${bonusTotal}` : `${bonusTotal}`,
-              highlight: isPositiveBonus
-                ? "bg-success/10 text-success"
-                : isNegativeBonus
-                ? "bg-destructive/10 text-destructive"
-                : "bg-muted/50 text-foreground",
-            },
-            {
               key: "exam1",
               label: getLabel(course, "exam1"),
               value: `${student.exam1}`,
+              max: course.maxExam1,
               highlight: "bg-muted/50 text-foreground",
             },
             {
               key: "exam2",
               label: getLabel(course, "exam2"),
               value: `${student.exam2}`,
+              max: course.maxExam2,
               highlight: "bg-muted/50 text-foreground",
             },
             {
               key: "final",
               label: getLabel(course, "finalExam"),
               value: `${student.finalExam}`,
+              max: course.maxFinal,
               highlight: "bg-muted/50 text-foreground",
+            },
+            {
+              key: "participation",
+              label: getLabel(course, "participation"),
+              value: `${student.participation}`,
+              max: course.maxParticipation,
+              highlight: "bg-muted/50 text-foreground",
+            },
+            {
+              key: "homework",
+              label: getLabel(course, "homework"),
+              value: `${student.homework || 0}`,
+              max: course.maxHomework ?? 10,
+              highlight: "bg-muted/50 text-foreground",
+            },
+            {
+              key: "bonus",
+              label: getLabel(course, "bonus"),
+              value: isPositiveBonus ? `+${bonusTotal}` : `${bonusTotal}`,
+              max: course.maxBonus,
+              highlight: isPositiveBonus
+                ? "bg-success/10 text-success"
+                : isNegativeBonus
+                ? "bg-destructive/10 text-destructive"
+                : "bg-muted/50 text-foreground",
             },
           ];
 
@@ -178,15 +196,16 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                 </div>
               </div>
 
-              {/* Mini metric cards */}
-              <div className="grid grid-cols-4 gap-2">
+              {/* Mini metric cards — matches Exams tabs order */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {miniCells.map((cell) => (
                   <div
                     key={cell.key}
-                    className={`rounded-xl px-2 py-2.5 text-center ${cell.highlight}`}
+                    className={`rounded-xl px-2 py-2 text-center ${cell.highlight}`}
                   >
-                    <p className="mb-0.5 text-[10px] opacity-70">{cell.label}</p>
-                    <p className="font-display text-base font-bold leading-none">{cell.value}</p>
+                    <p className="mb-0.5 text-[10px] opacity-70 truncate">{cell.label}</p>
+                    <p className="font-display text-sm font-bold leading-none">{cell.value}</p>
+                    <p className="mt-0.5 text-[9px] opacity-50">من {cell.max}</p>
                   </div>
                 ))}
               </div>
