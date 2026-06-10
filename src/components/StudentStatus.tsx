@@ -171,6 +171,24 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             },
           ];
 
+          // Absences
+          const absenceIndices: number[] = [];
+          (student.attendance || []).forEach((present, i) => {
+            if (present === false) absenceIndices.push(i);
+          });
+          const absenceCount = absenceIndices.length;
+          const absenceDates = absenceIndices
+            .map((i) => course.lectures?.[i]?.date)
+            .filter(Boolean) as string[];
+          const fmtDate = (d: string) => {
+            try {
+              return new Date(d).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+            } catch {
+              return d;
+            }
+          };
+
+
           return (
             <motion.div
               key={student.id}
@@ -209,6 +227,42 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                   </div>
                 ))}
               </div>
+
+              {/* Absences */}
+              <div className="mt-3 border-t border-border pt-3">
+                {absenceCount === 0 ? (
+                  <div className="flex items-center gap-2 text-xs text-success">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
+                    <span>لا توجد غيابات</span>
+                  </div>
+                ) : (
+                  <details className="group">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs">
+                      <span className="flex items-center gap-2 text-destructive">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-destructive" />
+                        <span className="font-medium">
+                          الغيابات: <span className="font-display font-bold">{absenceCount}</span>
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground group-open:hidden">عرض التواريخ</span>
+                      <span className="hidden text-muted-foreground group-open:inline">إخفاء</span>
+                    </summary>
+                    {absenceDates.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {absenceDates.map((d, i) => (
+                          <span
+                            key={i}
+                            className="rounded-md bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"
+                          >
+                            {fmtDate(d)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </details>
+                )}
+              </div>
+
             </motion.div>
           );
         })}
