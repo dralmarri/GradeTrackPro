@@ -171,6 +171,24 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             },
           ];
 
+          // Absences
+          const absenceIndices: number[] = [];
+          (student.attendance || []).forEach((present, i) => {
+            if (present === false) absenceIndices.push(i);
+          });
+          const absenceCount = absenceIndices.length;
+          const absenceDates = absenceIndices
+            .map((i) => course.lectures?.[i]?.date)
+            .filter(Boolean) as string[];
+          const fmtDate = (d: string) => {
+            try {
+              return new Date(d).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+            } catch {
+              return d;
+            }
+          };
+
+
           return (
             <motion.div
               key={student.id}
