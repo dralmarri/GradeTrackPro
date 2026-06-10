@@ -163,18 +163,18 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             >
               {/* Header row: name + letter badge on right, total on left */}
               <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="flex items-baseline gap-2 font-display">
-                  <span className="text-2xl font-bold text-primary">{total}</span>
-                  <span className="text-xs text-muted-foreground">/ {maxTotal}</span>
-                </div>
                 <div className="flex items-center gap-2 min-w-0">
-                  <h3 className="font-display text-base font-bold text-foreground truncate">{student.name}</h3>
                   <span
                     className={`shrink-0 rounded-md px-2 py-0.5 font-display text-xs font-bold ${letterBadgeClass}`}
                     dir="ltr"
                   >
                     {letter}
                   </span>
+                  <h3 className="font-display text-base font-bold text-foreground truncate">{student.name}</h3>
+                </div>
+                <div className="flex items-baseline gap-2 font-display">
+                  <span className="text-2xl font-bold text-primary">{total}</span>
+                  <span className="text-xs text-muted-foreground">/ {maxTotal}</span>
                 </div>
               </div>
 
