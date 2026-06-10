@@ -15,6 +15,8 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
+import { tf } from "@/lib/translations";
 
 const DAYS_AR: Record<number, string> = {
   0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء",
@@ -38,6 +40,7 @@ export default function CourseManager({
   onDeleteStudent,
   onSelectCourse,
 }: CourseManagerProps) {
+  const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editSection, setEditSection] = useState("");
@@ -93,14 +96,14 @@ export default function CourseManager({
       componentLabels: editLabels,
     } as any);
     setEditingId(null);
-    toast.success("تم تحديث بيانات المقرر");
+    toast.success(t("courseUpdated"));
   };
 
   if (courses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
         <BookOpen size={32} className="mb-3" />
-        <p className="font-display text-lg">لا توجد مقررات بعد</p>
+        <p className="font-display text-lg">{t("noCoursesManage")}</p>
       </div>
     );
   }
@@ -117,7 +120,7 @@ export default function CourseManager({
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">اسم المقرر</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("courseNameLabel")}</label>
                   <input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
@@ -125,18 +128,18 @@ export default function CourseManager({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">الشعبة</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("sectionLabel")}</label>
                   <input
                     value={editSection}
                     onChange={(e) => setEditSection(e.target.value)}
-                    placeholder="مثال: الساعة 11"
+                    placeholder={t("sectionPh")}
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
               <div>
                 <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
-                  أسماء مكونات الدرجة ودرجاتها القصوى (يمكن تعديل الاسم والقيمة)
+                  {t("componentsHint")}
                 </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {([
@@ -173,7 +176,7 @@ export default function CourseManager({
               {/* Schedule edit */}
               <div className="space-y-3 rounded-lg border border-dashed border-border p-3">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">أيام المحاضرات</label>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t("lectureDays")}</label>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(DAYS_AR).map(([d, label]) => {
                       const day = Number(d);
@@ -197,7 +200,7 @@ export default function CourseManager({
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">وقت المحاضرة</label>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("lectureTime")}</label>
                     <input
                       type="time"
                       value={editLectureTime}
@@ -206,7 +209,7 @@ export default function CourseManager({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">بداية الفصل</label>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("semesterStart")}</label>
                     <input
                       type="date"
                       value={editSemesterStart}
@@ -215,7 +218,7 @@ export default function CourseManager({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">نهاية الفصل</label>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("semesterEnd")}</label>
                     <input
                       type="date"
                       value={editSemesterEnd}
@@ -232,14 +235,14 @@ export default function CourseManager({
                   className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
                 >
                   <Check size={14} />
-                  حفظ
+                  {t("save")}
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
                   className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground"
                 >
                   <X size={14} />
-                  إلغاء
+                  {t("cancel")}
                 </button>
               </div>
             </div>
@@ -250,7 +253,7 @@ export default function CourseManager({
                 <div>
                   <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
                   {course.section && (
-                    <p className="text-xs text-muted-foreground">الشعبة: {course.section}</p>
+                    <p className="text-xs text-muted-foreground">{t("sectionLabel")}: {course.section}</p>
                   )}
                 </div>
               </div>
@@ -261,7 +264,7 @@ export default function CourseManager({
                 <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "finalExam")}: {course.maxFinal}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "participation")}: {course.maxParticipation}</span>
                 <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "homework")}: {course.maxHomework ?? 10}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">محاضرات: {course.lectureCount}</span>
+                <span className="rounded-md bg-muted px-2 py-0.5">{t("lectures")}: {course.lectureCount}</span>
               </div>
 
               {/* Schedule info */}
@@ -269,20 +272,20 @@ export default function CourseManager({
                 {course.lectureDays && course.lectureDays.length > 0 && (
                   <div className="flex items-center gap-1.5">
                     <Calendar size={12} />
-                    <span>الأيام: {course.lectureDays.map(d => DAYS_AR[d]).join("، ")}</span>
+                    <span>{t("daysLabel")}: {course.lectureDays.map(d => DAYS_AR[d]).join("، ")}</span>
                   </div>
                 )}
                 {course.lectureTime && (
                   <div className="flex items-center gap-1.5">
                     <Clock size={12} />
-                    <span>الوقت: {course.lectureTime}</span>
+                    <span>{t("timeLabel")}: {course.lectureTime}</span>
                   </div>
                 )}
                 {course.semesterStart && course.semesterEnd && (
                   <div className="flex items-center gap-1.5">
                     <Calendar size={12} />
                     <span>
-                      من {format(new Date(course.semesterStart), "yyyy/MM/dd")} إلى {format(new Date(course.semesterEnd), "yyyy/MM/dd")}
+                      {tf(t("fromTo"), { start: format(new Date(course.semesterStart), "yyyy/MM/dd"), end: format(new Date(course.semesterEnd), "yyyy/MM/dd") })}
                     </span>
                   </div>
                 )}
@@ -304,24 +307,24 @@ export default function CourseManager({
                   className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   <Edit3 size={13} />
-                  تعديل البيانات
+                  {t("editData")}
                 </button>
                 <button
                   onClick={() => onSelectCourse(course.id)}
                   className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   <Calendar size={13} />
-                  إدارة المحاضرات
+                  {t("manageLectures")}
                 </button>
                 <button
                   onClick={() => {
                     onDeleteCourse(course.id);
-                    toast.success("تم حذف المقرر");
+                    toast.success(t("courseDeletedToast"));
                   }}
                   className="flex items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
                 >
                   <Trash2 size={13} />
-                  حذف المقرر
+                  {t("deleteCourse")}
                 </button>
               </div>
             </>
