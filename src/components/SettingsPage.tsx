@@ -414,7 +414,17 @@ export default function SettingsPage() {
           <h2 className="font-display text-lg font-bold">حول التطبيق والخصوصية</h2>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            onClick={() => navigate("/help")}
+            className="flex items-center gap-2 rounded-xl border border-border bg-background p-4 text-right transition-colors hover:bg-muted"
+          >
+            <HelpCircle size={18} className="shrink-0 text-primary" />
+            <div>
+              <h3 className="font-display text-sm font-semibold">كيفية الاستخدام</h3>
+              <p className="text-[11px] text-muted-foreground">دليل مختصر لميزات التطبيق</p>
+            </div>
+          </button>
           <button
             onClick={() => navigate("/privacy")}
             className="flex items-center gap-2 rounded-xl border border-border bg-background p-4 text-right transition-colors hover:bg-muted"
