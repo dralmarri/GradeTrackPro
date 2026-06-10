@@ -602,10 +602,24 @@ export default function Index() {
           />
         )}
         {courseTab === "attendance" && (
-          <AttendanceSummary
-            students={activeCourse.students}
-            lectures={activeCourse.lectures}
-          />
+          <div className="space-y-6">
+            <AttendancePerLecture
+              students={activeCourse.students}
+              lectures={activeCourse.lectures}
+              onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
+            />
+            <details className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <summary className="cursor-pointer font-display text-sm font-bold text-foreground">
+                {t("attendanceSummary")}
+              </summary>
+              <div className="mt-4">
+                <AttendanceSummary
+                  students={activeCourse.students}
+                  lectures={activeCourse.lectures}
+                />
+              </div>
+            </details>
+          </div>
         )}
         {courseTab === "status" && (
           <StudentStatus
