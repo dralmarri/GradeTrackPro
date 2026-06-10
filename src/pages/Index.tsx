@@ -554,11 +554,10 @@ export default function Index() {
         </div>
 
         {/* Sub-tabs */}
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-4 pb-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-3 gap-1 px-4 pb-2">
           {[
-            { key: "bonus" as const, label: t("tabLectures"), icon: Star },
-            { key: "exams" as const, label: t("tabExams"), icon: ClipboardList },
             { key: "attendance" as const, label: t("tabAttendance"), icon: UserCheck },
+            { key: "exams" as const, label: t("tabExams"), icon: ClipboardList },
             { key: "status" as const, label: t("tabStatus"), icon: BarChart3 },
           ].map((tab) => (
             <button
@@ -579,15 +578,7 @@ export default function Index() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6">
-        {courseTab === "bonus" && (
-          <BonusTable
-            students={activeCourse.students}
-            lectures={activeCourse.lectures}
-            maxBonus={activeCourse.maxBonus}
-            onUpdateBonus={(sid, li, v) => updateLectureBonus(activeCourse.id, sid, li, v)}
-            onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
-          />
-        )}
+
         {courseTab === "exams" && (
           <ExamsPage
             students={activeCourse.students}
