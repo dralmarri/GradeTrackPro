@@ -27,7 +27,8 @@ export default function CourseStudentsDialog({
   onDeleteStudent,
   onUpdateCourse,
 }: Props) {
-  const { t, dir } = useLanguage();
+  const { t, dir, lang } = useLanguage();
+  const [bonusEnabled, setBonusEnabled] = useBonusEnabled();
   const [maxExam1, setMaxExam1] = useState(course.maxExam1);
   const [maxExam2, setMaxExam2] = useState(course.maxExam2);
   const [maxFinal, setMaxFinal] = useState(course.maxFinal);
