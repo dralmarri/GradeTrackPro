@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import appIcon from "@/assets/app-icon.png";
-import { Mail, Lock, LogIn, UserPlus, Loader2 } from "lucide-react";
+import { Mail, Lock, LogIn, UserPlus, Loader2, Languages } from "lucide-react";
 
 export default function Auth() {
   const { user, loading } = useAuth();
+  const { t, lang, toggleLang } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,7 +28,7 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      toast.error("أدخل البريد الإلكتروني وكلمة المرور");
+      toast.error(t("enterEmailPass"));
       return;
     }
     setSubmitting(true);
@@ -37,7 +39,7 @@ export default function Auth() {
           console.error("Login error:", error.message, error.status, error);
           throw error;
         }
-        toast.success("تم تسجيل الدخول بنجاح");
+        toast.success(t("signInSuccess"));
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -69,17 +71,26 @@ export default function Auth() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted"
+          >
+            <Languages size={14} />
+            {lang === "ar" ? "English" : "العربية"}
+          </button>
+        </div>
         <div className="mb-8 flex flex-col items-center">
           <img src={appIcon} alt="GradeTrackPro" className="mb-4 h-16 w-16 rounded-2xl shadow-lg" />
           <h1 className="font-display text-2xl font-bold text-foreground">GradeTrackPro</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isLogin ? "سجّل دخولك للوصول لبياناتك" : "أنشئ حساباً جديداً"}
+            {isLogin ? t("signInTitle") : t("signUpTitle")}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-muted-foreground">البريد الإلكتروني</label>
+            <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("email")}</label>
             <div className="relative">
               <Mail size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -94,7 +105,7 @@ export default function Auth() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-muted-foreground">كلمة المرور</label>
+            <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("password")}</label>
             <div className="relative">
               <Lock size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -120,12 +131,12 @@ export default function Auth() {
             ) : (
               <UserPlus size={16} />
             )}
-            {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
+            {isLogin ? t("signIn") : t("signUp")}
           </button>
 
           {!isLogin && (
             <p className="rounded-lg border border-amber-300/40 bg-amber-50 px-3 py-2 text-center text-[12px] leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-              بعد إنشاء الحساب سنرسل لك رسالة تأكيد. إذا لم تجدها في صندوق الوارد فتحقق من مجلد الرسائل غير المرغوب فيها (Junk / Spam).
+              {t("confirmHint")}
             </p>
           )}
 
@@ -134,7 +145,7 @@ export default function Auth() {
               type="button"
               onClick={async () => {
                 if (!email) {
-                  toast.error("أدخل بريدك الإلكتروني أولاً");
+                  toast.error(t("enterEmailFirst"));
                   return;
                 }
                 try {
@@ -142,25 +153,25 @@ export default function Auth() {
                     redirectTo: `${window.location.origin}/reset-password`,
                   });
                   if (error) throw error;
-                  toast.success("تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني");
+                  toast.success(t("resetSent"));
                 } catch (err: any) {
-                  toast.error(err.message || "حدث خطأ");
+                  toast.error(err.message || "Error");
                 }
               }}
               className="w-full text-center text-sm text-primary hover:underline"
             >
-              نسيت كلمة المرور؟
+              {t("forgotPassword")}
             </button>
           )}
         </form>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          {isLogin ? "ليس لديك حساب؟" : "لديك حساب؟"}{" "}
+          {isLogin ? t("noAccount") : t("haveAccount")}{" "}
           <button
             onClick={() => setIsLogin(!isLogin)}
             className="font-semibold text-primary hover:underline"
           >
-            {isLogin ? "إنشاء حساب" : "تسجيل الدخول"}
+            {isLogin ? t("signUp") : t("signIn")}
           </button>
         </p>
       </div>
