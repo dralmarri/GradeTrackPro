@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
 import { cn } from "@/lib/utils";
 import { Search, UserX } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
+
 
 interface AttendanceSummaryProps {
   students: Student[];
@@ -10,11 +12,12 @@ interface AttendanceSummaryProps {
 
 export default function AttendanceSummary({ students, lectures }: AttendanceSummaryProps) {
   const [search, setSearch] = useState("");
+  const { t } = useLanguage();
 
   if (students.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <p className="font-display text-lg">لا يوجد طلبة بعد</p>
+        <p className="font-display text-lg">{t("noStudentsYet")}</p>
       </div>
     );
   }
@@ -39,13 +42,13 @@ export default function AttendanceSummary({ students, lectures }: AttendanceSumm
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-        <h3 className="font-display text-sm font-bold text-foreground mb-1">ملخص الحضور والغياب</h3>
-        <p className="text-xs text-muted-foreground mb-3">إجمالي المحاضرات: {lectures.length}</p>
+        <h3 className="font-display text-sm font-bold text-foreground mb-1">{t("attendanceSummary")}</h3>
+        <p className="text-xs text-muted-foreground mb-3">{t("totalLectures")}: {lectures.length}</p>
         <div className="relative">
           <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="بحث بالاسم..."
+            placeholder={t("searchShort")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-lg border border-border bg-background py-2 pr-9 pl-3 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
@@ -69,7 +72,7 @@ export default function AttendanceSummary({ students, lectures }: AttendanceSumm
                 "rounded-full px-2.5 py-0.5 text-xs font-bold",
                 absentCount === 0 ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
               )}>
-                {absentCount === 0 ? "لا غياب" : `${absentCount} غياب`}
+                {absentCount === 0 ? t("noAbsence") : `${absentCount} ${t("absences")}`}
               </span>
             </div>
             {absentDates.length > 0 && (
@@ -91,9 +94,9 @@ export default function AttendanceSummary({ students, lectures }: AttendanceSumm
           <thead>
             <tr className="border-b border-border bg-secondary/50">
               <th className="px-3 py-3 text-right font-display font-semibold w-12">#</th>
-              <th className="min-w-[180px] px-3 py-3 text-right font-display font-semibold">اسم الطالب</th>
-              <th className="px-3 py-3 text-center font-display font-semibold w-24">عدد الغياب</th>
-              <th className="px-3 py-3 text-right font-display font-semibold">أيام الغياب</th>
+              <th className="min-w-[180px] px-3 py-3 text-right font-display font-semibold">{t("studentName")}</th>
+              <th className="px-3 py-3 text-center font-display font-semibold w-24">{t("absenceCount")}</th>
+              <th className="px-3 py-3 text-right font-display font-semibold">{t("absenceDays")}</th>
             </tr>
           </thead>
           <tbody>

@@ -3,6 +3,9 @@ import { Student, LectureInfo } from "@/types/student";
 import { ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NumberInput from "@/components/NumberInput";
+import { useLanguage } from "@/hooks/useLanguage";
+import { tf } from "@/lib/translations";
+
 
 interface BonusTableProps {
   students: Student[];
@@ -23,6 +26,7 @@ export default function BonusTable({
   onUpdateBonus,
   onUpdateAttendance,
 }: BonusTableProps) {
+  const { t } = useLanguage();
   const safeStudents = students || [];
   const safeLectures = lectures || [];
   const [selectedLecture, setSelectedLecture] = useState(() => {
@@ -47,8 +51,8 @@ export default function BonusTable({
   if (safeStudents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <p className="font-display text-lg">لا يوجد طلبة بعد</p>
-        <p className="text-sm">قم باستيراد كشف Excel لإضافة الطلبة</p>
+        <p className="font-display text-lg">{t("noStudentsYet")}</p>
+        <p className="text-sm">{t("importExcelToAdd")}</p>
       </div>
     );
   }
@@ -56,8 +60,8 @@ export default function BonusTable({
   if (safeLectures.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <p className="font-display text-lg">لا توجد محاضرات بعد</p>
-        <p className="text-sm">أضف محاضرة جديدة للبدء</p>
+        <p className="font-display text-lg">{t("noLecturesYet")}</p>
+        <p className="text-sm">{t("addLectureToStart")}</p>
       </div>
     );
   }
@@ -88,7 +92,7 @@ export default function BonusTable({
         <div className="flex-1 text-center">
           <p className="font-display text-sm font-bold text-foreground">{currentLecture.label}</p>
           <p className="text-[11px] text-muted-foreground">
-            المحاضرة {selectedLecture + 1} من {safeLectures.length} • أقصى بونص: {maxBonus}
+            {tf(t("lectureOf"), { i: selectedLecture + 1, n: safeLectures.length, max: maxBonus })}
           </p>
         </div>
         <button
@@ -105,7 +109,7 @@ export default function BonusTable({
         <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="بحث باسم الطالب..."
+          placeholder={t("searchByName")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full rounded-lg border border-input bg-background pr-9 pl-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -149,7 +153,7 @@ export default function BonusTable({
               <div className="flex-1 min-w-0 pointer-events-none">
                 <p className={cn("truncate text-sm font-medium", !isPresent ? "text-muted-foreground line-through" : "text-foreground")}>{student.name}</p>
                 <p className={cn("text-[11px] font-display font-bold", bonusTotal >= 0 ? "text-accent" : "text-destructive")}>
-                  المجموع: {bonusTotal}
+                  {t("total")}: {bonusTotal}
                 </p>
               </div>
               <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -173,16 +177,16 @@ export default function BonusTable({
             <tr className="border-b border-border bg-secondary/50">
               <th className="px-3 py-3 text-right font-display font-semibold w-12">#</th>
               <th className="min-w-[180px] px-3 py-3 text-right font-display font-semibold">
-                اسم الطالب
+                {t("studentName")}
               </th>
-              <th className="px-3 py-3 text-center font-display font-semibold w-16">حضور</th>
+              <th className="px-3 py-3 text-center font-display font-semibold w-16">{t("attendance")}</th>
               <th className="px-3 py-3 text-center font-display font-semibold w-28">
                 {currentLecture.label}
                 <br />
-                <span className="text-[10px] font-normal text-muted-foreground">(من {maxBonus})</span>
+                <span className="text-[10px] font-normal text-muted-foreground">{tf(t("ofMaxGrade"), { max: maxBonus })}</span>
               </th>
               <th className="bg-accent/10 px-3 py-3 text-center font-display text-xs font-semibold text-accent w-24">
-                مجموع البونص
+                {t("bonusTotal")}
               </th>
             </tr>
           </thead>
