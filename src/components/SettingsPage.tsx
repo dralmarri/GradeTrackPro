@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "@/hooks/useTheme";
+import { useBonusEnabled } from "@/hooks/useBonusEnabled";
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
   GradeTier,
