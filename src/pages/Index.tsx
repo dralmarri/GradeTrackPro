@@ -39,14 +39,10 @@ import {
   HelpCircle,
   MessageCircle,
   Users,
-  Moon,
-  Sun,
-  Languages,
   ChevronDown,
 } from "lucide-react";
 import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useTheme } from "@/hooks/useTheme";
 import { useLanguage } from "@/hooks/useLanguage";
 import { tf } from "@/lib/translations";
 
