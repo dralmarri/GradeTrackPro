@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, X, Save } from "lucide-react";
+import { Users, X, Save, Award } from "lucide-react";
 import { toast } from "sonner";
 import { Course, ComponentLabels, DEFAULT_COMPONENT_LABELS } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
@@ -8,6 +8,7 @@ import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
 import NumberInput from "@/components/NumberInput";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useBonusEnabled } from "@/hooks/useBonusEnabled";
 
 interface Props {
   open: boolean;
@@ -26,7 +27,8 @@ export default function CourseStudentsDialog({
   onDeleteStudent,
   onUpdateCourse,
 }: Props) {
-  const { t, dir } = useLanguage();
+  const { t, dir, lang } = useLanguage();
+  const [bonusEnabled, setBonusEnabled] = useBonusEnabled();
   const [maxExam1, setMaxExam1] = useState(course.maxExam1);
   const [maxExam2, setMaxExam2] = useState(course.maxExam2);
   const [maxFinal, setMaxFinal] = useState(course.maxFinal);
@@ -121,6 +123,43 @@ export default function CourseStudentsDialog({
                     students={course.students}
                     onDelete={(id) => onDeleteStudent(id)}
                   />
+                </div>
+              </section>
+
+              {/* Bonus toggle */}
+              <section className="rounded-xl border border-border bg-background/40 p-4">
+                <div className="mb-1 flex items-center gap-2">
+                  <Award className="text-primary" size={16} />
+                  <h4 className="font-display text-sm font-bold">
+                    {lang === "ar" ? "البونص (نقاط إضافية)" : "Bonus (extra points)"}
+                  </h4>
+                </div>
+                <p className="mb-3 text-[11px] text-muted-foreground">
+                  {lang === "ar"
+                    ? "عند التفعيل يظهر جدول البونص داخل صفحة الحضور. عند التعطيل يختفي."
+                    : "When enabled, the bonus table appears inside the attendance page. When disabled, it is hidden."}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setBonusEnabled(true)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                      bonusEnabled
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {lang === "ar" ? "مُفعّل" : "Enabled"}
+                  </button>
+                  <button
+                    onClick={() => setBonusEnabled(false)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                      !bonusEnabled
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {lang === "ar" ? "مُعطّل" : "Disabled"}
+                  </button>
                 </div>
               </section>
 
