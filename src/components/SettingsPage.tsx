@@ -10,7 +10,8 @@ import {
   Trash2,
   RotateCcw,
   ChevronDown,
-
+  UserX,
+  Loader2,
 } from "lucide-react";
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
@@ -24,6 +25,18 @@ import {
   DEFAULT_LETTER_TIERS,
 } from "@/lib/gradeTiers";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -76,6 +89,23 @@ export default function SettingsPage() {
 
   const [tiersOpen, setTiersOpen] = useState(false);
   const [lettersOpen, setLettersOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
+      toast.success("تم حذف حسابك وجميع بياناتك");
+      await supabase.auth.signOut();
+      navigate("/auth", { replace: true });
+    } catch (e: any) {
+      toast.error(e.message || "تعذّر حذف الحساب");
+      setDeleting(false);
+    }
+  };
+
+
 
 
   return (

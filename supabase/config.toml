@@ -2,3 +2,6 @@ project_id = "apaakkzasfipuhgkezej"
 
 [functions.ocr-exam-grades]
 verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = true
