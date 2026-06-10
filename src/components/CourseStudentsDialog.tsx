@@ -126,6 +126,43 @@ export default function CourseStudentsDialog({
                 </div>
               </section>
 
+              {/* Bonus toggle */}
+              <section className="rounded-xl border border-border bg-background/40 p-4">
+                <div className="mb-1 flex items-center gap-2">
+                  <Award className="text-primary" size={16} />
+                  <h4 className="font-display text-sm font-bold">
+                    {lang === "ar" ? "البونص (نقاط إضافية)" : "Bonus (extra points)"}
+                  </h4>
+                </div>
+                <p className="mb-3 text-[11px] text-muted-foreground">
+                  {lang === "ar"
+                    ? "عند التفعيل يظهر جدول البونص داخل صفحة الحضور. عند التعطيل يختفي."
+                    : "When enabled, the bonus table appears inside the attendance page. When disabled, it is hidden."}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setBonusEnabled(true)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                      bonusEnabled
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {lang === "ar" ? "مُفعّل" : "Enabled"}
+                  </button>
+                  <button
+                    onClick={() => setBonusEnabled(false)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                      !bonusEnabled
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {lang === "ar" ? "مُعطّل" : "Disabled"}
+                  </button>
+                </div>
+              </section>
+
               {/* Max marks section */}
               <section className="rounded-xl border border-border bg-background/40 p-4">
                 <h4 className="mb-1 font-display text-sm font-bold">
