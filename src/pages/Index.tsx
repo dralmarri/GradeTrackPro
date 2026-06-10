@@ -221,21 +221,6 @@ export default function Index() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={toggleLang}
-                className="flex h-9 min-w-9 items-center justify-center gap-1 rounded-lg px-2 transition-colors hover:bg-muted"
-                title={t("language")}
-              >
-                <Languages size={18} className="text-muted-foreground" />
-                <span className="text-xs font-semibold text-muted-foreground">{lang === "ar" ? "EN" : "ع"}</span>
-              </button>
-              <button
-                onClick={toggleTheme}
-                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
-                title={theme === "dark" ? t("lightMode") : t("darkMode")}
-              >
-                {theme === "dark" ? <Sun size={18} className="text-muted-foreground" /> : <Moon size={18} className="text-muted-foreground" />}
-              </button>
               <a
                 href="/help"
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
