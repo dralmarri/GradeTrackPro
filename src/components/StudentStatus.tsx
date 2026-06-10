@@ -200,6 +200,11 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
               {/* Header row: name + letter badge on right, total on left */}
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
+                  {grade.tier?.emoji && (
+                    <span className="shrink-0 text-xl leading-none" aria-hidden>
+                      {grade.tier.emoji}
+                    </span>
+                  )}
                   <span
                     className={`shrink-0 rounded-md px-2 py-0.5 font-display text-xs font-bold ${letterBadgeClass}`}
                     dir="ltr"
