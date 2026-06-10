@@ -12,7 +12,9 @@ import {
   ChevronDown,
   UserX,
   Loader2,
+  Languages,
 } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
   GradeTier,
@@ -40,6 +42,7 @@ import {
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const { lang, setLang, t } = useLanguage();
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
 
   const updateTier = (i: number, patch: Partial<GradeTier>) => {
