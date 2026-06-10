@@ -47,7 +47,7 @@ import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 import { tf } from "@/lib/translations";
 
-type CourseTab = "bonus" | "exams" | "status" | "attendance";
+type CourseTab = "attendance" | "exams" | "status";
 type MainView = "courses" | "settings";
 
 export default function Index() {
