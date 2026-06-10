@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { importAllGradesFromExcel, type GradeMatch } from "@/lib/ocr";
 import NumberInput from "@/components/NumberInput";
+import { useLanguage } from "@/hooks/useLanguage";
+import { tf } from "@/lib/translations";
 
 type ExamKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
@@ -40,6 +42,7 @@ export default function ExamsPage({
   componentLabels,
   onUpdateStudent,
 }: ExamsPageProps) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<ExamKey>("exam1");
   const [importLoading, setImportLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,7 +90,7 @@ export default function ExamsPage({
       name.endsWith(".xlsx") ||
       name.endsWith(".xls");
     if (!isSupported) {
-      toast.error("صيغة غير مدعومة. ارفع ملف Excel (.xlsx / .xls) أو CSV");
+      toast.error(t("unsupportedFile"));
       return;
     }
 
@@ -100,7 +103,7 @@ export default function ExamsPage({
       );
 
       if (!result.matches.length && !result.unmatchedRows.length) {
-        toast.error("لم يتم العثور على درجات في الملف. تأكد أن الملف يحتوي على أعمدة الأسماء والدرجات.");
+        toast.error(t("noGradesFound"));
         return;
       }
 
@@ -110,7 +113,7 @@ export default function ExamsPage({
         missing: result.missingStudents,
       });
     } catch (err: any) {
-      toast.error(err?.message || "فشل في قراءة الملف");
+      toast.error(err?.message || t("fileReadFailed"));
     } finally {
       setImportLoading(false);
     }
@@ -129,15 +132,15 @@ export default function ExamsPage({
         onUpdateStudent(m.studentId, { [currentTab.key]: v });
       }
     }
-    toast.success(`تم حفظ ${preview.matches.length} درجة بنجاح ✅`);
+    toast.success(tf(t("gradesSaved"), { n: preview.matches.length }));
     setPreview(null);
   };
 
   if (students.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <p className="font-display text-lg">لا يوجد طلبة بعد</p>
-        <p className="text-sm">قم باستيراد كشف Excel أولاً من صفحة البونص</p>
+        <p className="font-display text-lg">{t("noStudentsImportFirst")}</p>
+        <p className="text-sm">{t("importFirstFromBonus")}</p>
       </div>
     );
   }
@@ -155,7 +158,7 @@ export default function ExamsPage({
         </button>
         <div className="flex-1 text-center">
           <p className="font-display text-sm font-bold text-foreground">{currentTab.label}</p>
-          <p className="text-[11px] text-muted-foreground">من {currentTab.max} درجة</p>
+          <p className="text-[11px] text-muted-foreground">{tf(t("ofMaxGrade"), { max: currentTab.max })}</p>
         </div>
         <button
           onClick={goNextTab}
@@ -189,7 +192,7 @@ export default function ExamsPage({
         <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="بحث باسم الطالب..."
+          placeholder={t("searchByName")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full rounded-lg border border-input bg-background pr-9 pl-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -211,10 +214,10 @@ export default function ExamsPage({
           className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 font-display text-sm font-semibold text-accent-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
         >
           {importLoading ? <Loader2 size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
-          استيراد من Excel
+          {t("importFromExcel")}
         </button>
         <p className="hidden sm:block text-xs text-muted-foreground">
-          ارفع ملف Excel أو CSV — المطابقة بحسب اسم الطالب (لا يهم ترتيب الأسماء)
+          {t("importHint")}
         </p>
       </div>
 
@@ -224,9 +227,9 @@ export default function ExamsPage({
           <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-card shadow-2xl border border-border">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div>
-                <h3 className="font-display text-lg font-bold">مراجعة الدرجات قبل الحفظ</h3>
+                <h3 className="font-display text-lg font-bold">{t("reviewGrades")}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  سيتم تحديث كل أعمدة الاختبارات الموجودة في الملف
+                  {t("reviewGradesHint")}
                 </p>
               </div>
               <button
@@ -242,22 +245,22 @@ export default function ExamsPage({
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-primary/10 p-3">
                   <p className="text-2xl font-bold text-primary">{preview.matches.length}</p>
-                  <p className="text-[11px] text-muted-foreground">سيتم تحديثها</p>
+                  <p className="text-[11px] text-muted-foreground">{t("willBeUpdated")}</p>
                 </div>
                 <div className="rounded-lg bg-amber-500/10 p-3">
                   <p className="text-2xl font-bold text-amber-600">{preview.missing.length}</p>
-                  <p className="text-[11px] text-muted-foreground">طلبة بدون درجة</p>
+                  <p className="text-[11px] text-muted-foreground">{t("studentsWithoutGrade")}</p>
                 </div>
                 <div className="rounded-lg bg-destructive/10 p-3">
                   <p className="text-2xl font-bold text-destructive">{preview.unmatched.length}</p>
-                  <p className="text-[11px] text-muted-foreground">أسماء غير مطابقة</p>
+                  <p className="text-[11px] text-muted-foreground">{t("unmatchedNames")}</p>
                 </div>
               </div>
 
               {/* Matched rows */}
               {preview.matches.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-2">التغييرات (قديم ← جديد):</p>
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">{t("changesOldNew")}</p>
                   <div className="rounded-lg border border-border overflow-hidden">
                     <table className="w-full text-sm">
                       <tbody>
@@ -301,7 +304,7 @@ export default function ExamsPage({
                 <div>
                   <div className="flex items-center gap-1.5 mb-2 text-destructive">
                     <AlertCircle size={14} />
-                    <p className="text-xs font-semibold">أسماء في الملف لم يتم التعرف عليها:</p>
+                    <p className="text-xs font-semibold">{t("unrecognizedNames")}</p>
                   </div>
                   <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-2 space-y-1">
                     {preview.unmatched.map((u, i) => (
@@ -319,7 +322,7 @@ export default function ExamsPage({
                 <div>
                   <div className="flex items-center gap-1.5 mb-2 text-amber-600">
                     <AlertCircle size={14} />
-                    <p className="text-xs font-semibold">طلبة في المقرر ليس لهم درجة في الملف:</p>
+                    <p className="text-xs font-semibold">{t("studentsMissingInFile")}</p>
                   </div>
                   <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1 max-h-40 overflow-y-auto">
                     {preview.missing.map((s) => (
@@ -335,14 +338,14 @@ export default function ExamsPage({
                 onClick={() => setPreview(null)}
                 className="flex-1 rounded-lg border border-border bg-background py-2.5 text-sm font-medium hover:bg-muted"
               >
-                إلغاء
+                {t("cancel")}
               </button>
               <button
                 onClick={applyPreview}
                 disabled={preview.matches.length === 0}
                 className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-md hover:brightness-110 disabled:opacity-50"
               >
-                حفظ {preview.matches.length} درجة
+                {tf(t("saveNGrades"), { n: preview.matches.length })}
               </button>
             </div>
           </div>
@@ -405,7 +408,7 @@ export default function ExamsPage({
             <tr className="border-b border-border bg-secondary/50">
               <th className="px-3 py-3 text-right font-display font-semibold w-12">#</th>
               <th className="min-w-[180px] px-3 py-3 text-right font-display font-semibold">
-                اسم الطالب
+                {t("studentName")}
               </th>
               <th className="px-3 py-3 text-center font-display font-semibold w-28">
                 {currentTab.label}
