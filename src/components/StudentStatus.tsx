@@ -101,13 +101,57 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
         />
       </div>
 
-      {/* Student Cards */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Student Rows */}
+      <div className="space-y-3">
         {(searchQuery ? students.filter((s) => s.name.includes(searchQuery)) : students).map((student, idx) => {
           const total = getTotal(student, course);
           const bonusTotal = getBonusTotal(student, course.maxBonus);
           const grade = getGrade(total, maxTotal);
-          const pct = getPercentage(total, maxTotal);
+          const letter = grade.letter.letter;
+          const isPositiveBonus = bonusTotal > 0;
+          const isNegativeBonus = bonusTotal < 0;
+
+          // Letter badge color by grade family
+          const letterBadgeClass = letter.startsWith("A")
+            ? "bg-success/15 text-success"
+            : letter.startsWith("B")
+            ? "bg-primary/15 text-primary"
+            : letter.startsWith("C")
+            ? "bg-accent/15 text-accent"
+            : letter.startsWith("D")
+            ? "bg-warning/15 text-warning"
+            : "bg-destructive/15 text-destructive";
+
+          const miniCells = [
+            {
+              key: "bonus",
+              label: getLabel(course, "bonus"),
+              value: isPositiveBonus ? `+${bonusTotal}` : `${bonusTotal}`,
+              highlight: isPositiveBonus
+                ? "bg-success/10 text-success"
+                : isNegativeBonus
+                ? "bg-destructive/10 text-destructive"
+                : "bg-muted/50 text-foreground",
+            },
+            {
+              key: "exam1",
+              label: getLabel(course, "exam1"),
+              value: `${student.exam1}`,
+              highlight: "bg-muted/50 text-foreground",
+            },
+            {
+              key: "exam2",
+              label: getLabel(course, "exam2"),
+              value: `${student.exam2}`,
+              highlight: "bg-muted/50 text-foreground",
+            },
+            {
+              key: "final",
+              label: getLabel(course, "finalExam"),
+              value: `${student.finalExam}`,
+              highlight: "bg-muted/50 text-foreground",
+            },
+          ];
 
           return (
             <motion.div
@@ -115,62 +159,36 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.02 }}
-              className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md"
+              className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md"
             >
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary font-display text-xs font-bold text-secondary-foreground">
-                    {idx + 1}
-                  </div>
-                  <h3 className="font-display text-sm font-bold text-foreground">{student.name}</h3>
+              {/* Header row: name + letter badge on right, total on left */}
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-baseline gap-2 font-display">
+                  <span className="text-2xl font-bold text-primary">{total}</span>
+                  <span className="text-xs text-muted-foreground">/ {maxTotal}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`font-display text-sm font-bold ${grade.letter.color}`} dir="ltr">{grade.letter.letter}</span>
-                  <span className={`font-display text-xl ${grade.tier.color}`}>{grade.tier.emoji}</span>
-                </div>
-              </div>
-
-
-
-              <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{getLabel(course, "bonus")} {t("lecturesShort")}</span>
-                  <span className="font-medium">{bonusTotal}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{getLabel(course, "exam1")} ({course.maxExam1})</span>
-                  <span className="font-medium">{student.exam1}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{getLabel(course, "exam2")} ({course.maxExam2})</span>
-                  <span className="font-medium">{student.exam2}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{getLabel(course, "finalExam")} ({course.maxFinal})</span>
-                  <span className="font-medium">{student.finalExam}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{getLabel(course, "participation")} ({course.maxParticipation})</span>
-                  <span className="font-medium">{student.participation}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{getLabel(course, "homework")} ({course.maxHomework ?? 10})</span>
-                  <span className="font-medium">{student.homework || 0}</span>
-                </div>
-                <div className="border-t border-border pt-1.5">
-                  <div className="flex justify-between">
-                    <span className="font-display font-bold text-foreground">{t("totalGrade")}</span>
-                    <span className="font-display font-bold text-primary">{total} / {maxTotal}</span>
-                  </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <h3 className="font-display text-base font-bold text-foreground truncate">{student.name}</h3>
+                  <span
+                    className={`shrink-0 rounded-md px-2 py-0.5 font-display text-xs font-bold ${letterBadgeClass}`}
+                    dir="ltr"
+                  >
+                    {letter}
+                  </span>
                 </div>
               </div>
 
-              {/* Progress bar */}
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${pct}%` }}
-                />
+              {/* Mini metric cards */}
+              <div className="grid grid-cols-4 gap-2">
+                {miniCells.map((cell) => (
+                  <div
+                    key={cell.key}
+                    className={`rounded-xl px-2 py-2.5 text-center ${cell.highlight}`}
+                  >
+                    <p className="mb-0.5 text-[10px] opacity-70">{cell.label}</p>
+                    <p className="font-display text-base font-bold leading-none">{cell.value}</p>
+                  </div>
+                ))}
               </div>
             </motion.div>
           );
