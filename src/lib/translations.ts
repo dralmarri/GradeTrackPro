@@ -186,6 +186,15 @@ const dict = {
     contactDesc: "أرسل اقتراحك أو ملاحظتك",
     languageSection: "لغة التطبيق",
     languageSectionDesc: "اختر لغة الواجهة. يتم الحفظ تلقائياً.",
+    // Attendance per-lecture
+    attendanceRate: "نسبة الحضور",
+    presentLabel: "حاضر",
+    absentLabel: "غائب",
+    // Settings sections
+    accountSection: "الحساب",
+    appearanceLanguageSection: "المظهر واللغة",
+    dataSection: "البيانات",
+    signedInLabel: "مسجل الدخول",
   },
   en: {
     appTagline: "Track student grades",
