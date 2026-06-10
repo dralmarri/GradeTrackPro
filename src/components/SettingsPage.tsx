@@ -50,6 +50,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLanguage();
   const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAuth();
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
 
   const updateTier = (i: number, patch: Partial<GradeTier>) => {
