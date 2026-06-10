@@ -39,15 +39,19 @@ import {
   HelpCircle,
   MessageCircle,
   Users,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTheme } from "@/hooks/useTheme";
 
 type CourseTab = "bonus" | "exams" | "status" | "attendance";
 type MainView = "courses" | "settings";
 
 export default function Index() {
   const { signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const {
     courses,
     loading,
@@ -198,6 +202,13 @@ export default function Index() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={toggleTheme}
+                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+                title={theme === "dark" ? "الوضع النهاري" : "الوضع الليلي"}
+              >
+                {theme === "dark" ? <Sun size={18} className="text-muted-foreground" /> : <Moon size={18} className="text-muted-foreground" />}
+              </button>
               <a
                 href="/help"
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
