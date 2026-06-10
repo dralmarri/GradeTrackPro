@@ -165,8 +165,48 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Theme (Dark mode) */}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          {theme === "dark" ? <Moon className="text-primary" size={20} /> : <Sun className="text-primary" size={20} />}
+          <h2 className="font-display text-lg font-bold">
+            {lang === "ar" ? "مظهر التطبيق" : "Appearance"}
+          </h2>
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">
+          {lang === "ar"
+            ? "اختر بين الوضع النهاري والوضع الليلي. يُحفظ تلقائياً."
+            : "Choose between light and dark mode. Saved automatically."}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setTheme("light")}
+            className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+              theme === "light"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-foreground hover:bg-muted"
+            }`}
+          >
+            <Sun size={16} />
+            {t("lightMode")}
+          </button>
+          <button
+            onClick={() => setTheme("dark")}
+            className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+              theme === "dark"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-foreground hover:bg-muted"
+            }`}
+          >
+            <Moon size={16} />
+            {t("darkMode")}
+          </button>
+        </div>
+      </div>
+
       {/* Add to Home Screen */}
       <AddToHomeScreen />
+
 
       {/* Grade Tiers */}
       <div className="rounded-2xl border border-border bg-card shadow-sm">
