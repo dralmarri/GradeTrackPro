@@ -516,7 +516,7 @@ export default function Index() {
       <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4">
           <button
-            onClick={() => { setActiveCourseId(null); setCourseTab("bonus"); }}
+            onClick={() => { setActiveCourseId(null); setCourseTab("attendance"); }}
             className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted"
           >
             <ChevronLeft size={20} className="rotate-180" />
