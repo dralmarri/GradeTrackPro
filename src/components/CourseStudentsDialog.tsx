@@ -7,6 +7,7 @@ import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
 import NumberInput from "@/components/NumberInput";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface Props {
   open: boolean;
@@ -25,6 +26,7 @@ export default function CourseStudentsDialog({
   onDeleteStudent,
   onUpdateCourse,
 }: Props) {
+  const { t, dir } = useLanguage();
   const [maxExam1, setMaxExam1] = useState(course.maxExam1);
   const [maxExam2, setMaxExam2] = useState(course.maxExam2);
   const [maxFinal, setMaxFinal] = useState(course.maxFinal);
@@ -57,7 +59,7 @@ export default function CourseStudentsDialog({
       maxBonus,
       componentLabels: labels,
     } as any);
-    toast.success("تم حفظ الدرجات القصوى");
+    toast.success(t("maxGradesSaved"));
   };
 
   const fields = [
@@ -84,7 +86,7 @@ export default function CourseStudentsDialog({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            dir="rtl"
+            dir={dir}
             className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-card shadow-2xl"
           >
             <div className="flex items-center justify-between border-b border-border p-4">
@@ -93,7 +95,7 @@ export default function CourseStudentsDialog({
                   <Users size={18} />
                 </div>
                 <div>
-                  <h3 className="font-display text-base font-bold">إدارة الطلبة والدرجات</h3>
+                  <h3 className="font-display text-base font-bold">{t("manageStudentsGrades")}</h3>
                   <p className="text-[11px] text-muted-foreground">{course.name}</p>
                 </div>
               </div>
@@ -108,9 +110,9 @@ export default function CourseStudentsDialog({
             <div className="flex-1 space-y-5 overflow-y-auto p-4">
               {/* Students section */}
               <section className="rounded-xl border border-border bg-background/40 p-4">
-                <h4 className="mb-1 font-display text-sm font-bold">إضافة / حذف الطلبة</h4>
+                <h4 className="mb-1 font-display text-sm font-bold">{t("addRemoveStudents")}</h4>
                 <p className="mb-3 text-[11px] text-muted-foreground">
-                  عدد الطلبة الحاليين: {course.students.length}
+                  {t("currentStudentsCount")}: {course.students.length}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <ExcelImport onImport={(names) => onAddStudents(names)} />
@@ -125,10 +127,10 @@ export default function CourseStudentsDialog({
               {/* Max marks section */}
               <section className="rounded-xl border border-border bg-background/40 p-4">
                 <h4 className="mb-1 font-display text-sm font-bold">
-                  الدرجات القصوى (أوزان الاختبارات والواجبات)
+                  {t("maxGradesWeights")}
                 </h4>
                 <p className="mb-3 text-[11px] text-muted-foreground">
-                  يمكنك تعديل اسم كل مكوّن والدرجة القصوى الخاصة به
+                  {t("editEachComponent")}
                 </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {fields.map((f) => (
@@ -158,7 +160,7 @@ export default function CourseStudentsDialog({
                   className="mt-3 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110"
                 >
                   <Save size={14} />
-                  حفظ الدرجات القصوى
+                  {t("saveMaxGrades")}
                 </button>
               </section>
             </div>
@@ -168,7 +170,7 @@ export default function CourseStudentsDialog({
                 onClick={() => onOpenChange(false)}
                 className="w-full rounded-lg border border-border py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
               >
-                إغلاق
+                {t("close")}
               </button>
             </div>
           </motion.div>

@@ -4,6 +4,8 @@ import { UserMinus, X, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Student } from "@/types/student";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { useLanguage } from "@/hooks/useLanguage";
+import { tf } from "@/lib/translations";
 
 interface ManualDeleteStudentsProps {
   students: Student[];
@@ -11,6 +13,7 @@ interface ManualDeleteStudentsProps {
 }
 
 export default function ManualDeleteStudents({ students, onDelete }: ManualDeleteStudentsProps) {
+  const { t, dir } = useLanguage();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState<Student | null>(null);
@@ -23,7 +26,7 @@ export default function ManualDeleteStudents({ students, onDelete }: ManualDelet
   const handleConfirm = () => {
     if (!pending) return;
     onDelete(pending.id);
-    toast.success(`تم حذف الطالب: ${pending.name}`);
+    toast.success(tf(t("studentDeleted"), { name: pending.name }));
     setPending(null);
   };
 
@@ -34,7 +37,7 @@ export default function ManualDeleteStudents({ students, onDelete }: ManualDelet
         className="flex items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
       >
         <UserMinus size={13} />
-        حذف طالب
+        {t("deleteStudent")}
       </button>
 
       <AnimatePresence>
@@ -51,7 +54,7 @@ export default function ManualDeleteStudents({ students, onDelete }: ManualDelet
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              dir="rtl"
+              dir={dir}
               className="flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl bg-card p-6 shadow-2xl"
             >
               <div className="mb-4 flex items-center justify-between">
@@ -59,7 +62,7 @@ export default function ManualDeleteStudents({ students, onDelete }: ManualDelet
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
                     <UserMinus size={18} />
                   </div>
-                  <h3 className="font-display text-base font-bold">حذف طالب</h3>
+                  <h3 className="font-display text-base font-bold">{t("deleteStudent")}</h3>
                 </div>
                 <button
                   onClick={() => setOpen(false)}
@@ -73,7 +76,7 @@ export default function ManualDeleteStudents({ students, onDelete }: ManualDelet
                 <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="بحث باسم الطالب..."
+                  placeholder={t("searchByName")}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className="w-full rounded-lg border border-input bg-background pr-9 pl-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -83,7 +86,7 @@ export default function ManualDeleteStudents({ students, onDelete }: ManualDelet
               <div className="-mx-1 flex-1 overflow-y-auto px-1">
                 {filtered.length === 0 ? (
                   <p className="py-8 text-center text-sm text-muted-foreground">
-                    لا يوجد طلبة
+                    {t("noStudents")}
                   </p>
                 ) : (
                   <ul className="space-y-1.5">
@@ -101,7 +104,7 @@ export default function ManualDeleteStudents({ students, onDelete }: ManualDelet
                         <button
                           onClick={() => setPending(s)}
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                          aria-label={`حذف ${s.name}`}
+                          aria-label={`${t("delete")} ${s.name}`}
                         >
                           <Trash2 size={15} />
                         </button>
@@ -116,7 +119,7 @@ export default function ManualDeleteStudents({ students, onDelete }: ManualDelet
                   onClick={() => setOpen(false)}
                   className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
                 >
-                  إغلاق
+                  {t("close")}
                 </button>
               </div>
             </motion.div>
@@ -127,9 +130,9 @@ export default function ManualDeleteStudents({ students, onDelete }: ManualDelet
       <ConfirmDialog
         open={!!pending}
         onOpenChange={(o) => !o && setPending(null)}
-        title="تأكيد حذف الطالب"
-        description={pending ? `سيتم حذف الطالب "${pending.name}" وجميع درجاته. لا يمكن التراجع عن هذا الإجراء.` : ""}
-        confirmLabel="حذف"
+        title={t("confirmDeleteStudent")}
+        description={pending ? tf(t("confirmDeleteStudentDesc"), { name: pending.name }) : ""}
+        confirmLabel={t("delete")}
         destructive
         onConfirm={handleConfirm}
       />

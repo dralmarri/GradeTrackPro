@@ -47,6 +47,7 @@ import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "@/hooks/useTheme";
 import { useLanguage } from "@/hooks/useLanguage";
+import { tf } from "@/lib/translations";
 
 type CourseTab = "bonus" | "exams" | "status" | "attendance";
 type MainView = "courses" | "settings";
@@ -103,10 +104,10 @@ export default function Index() {
       : [];
 
   const handleCreateCourse = async () => {
-    if (!newCourseName.trim()) { toast.error("أدخل اسم المادة"); return; }
-    if (!semesterStart || !semesterEnd) { toast.error("حدد تاريخ بداية ونهاية الفصل"); return; }
-    if (selectedDays.length === 0) { toast.error("اختر أيام المحاضرات"); return; }
-    if (previewLectures.length === 0) { toast.error("لا توجد محاضرات في الفترة المحددة"); return; }
+    if (!newCourseName.trim()) { toast.error(t("enterCourseName")); return; }
+    if (!semesterStart || !semesterEnd) { toast.error(t("setDates")); return; }
+    if (selectedDays.length === 0) { toast.error(t("pickDays")); return; }
+    if (previewLectures.length === 0) { toast.error(t("noLecturesInRange")); return; }
 
     const lectures: LectureInfo[] = previewLectures.map((l) => ({
       date: l.date.toISOString(),
@@ -124,7 +125,7 @@ export default function Index() {
     }
     if (id) setActiveCourseId(id);
     resetModal();
-    toast.success(`تم إنشاء المادة بـ ${lectures.length} محاضرة${pendingStudentNames.length > 0 ? ` و ${pendingStudentNames.length} طالب` : ""}`);
+    toast.success(tf(t("courseCreated"), { lectures: lectures.length }) + (pendingStudentNames.length > 0 ? tf(t("andStudents"), { n: pendingStudentNames.length }) : ""));
   };
 
   const resetModal = () => {
@@ -274,25 +275,25 @@ export default function Index() {
                   onClick={(e) => e.stopPropagation()}
                   className="my-8 w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl"
                 >
-                  <h3 className="mb-5 font-display text-lg font-bold">إنشاء مادة جديدة</h3>
+                  <h3 className="mb-5 font-display text-lg font-bold">{t("createCourse")}</h3>
                   <div className="space-y-5">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">اسم المادة</label>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("courseName")}</label>
                         <input
                           value={newCourseName}
                           onChange={(e) => setNewCourseName(e.target.value)}
-                          placeholder="مثال: البرمجة المتقدمة"
+                          placeholder={t("courseNamePh")}
                           className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                           autoFocus
                         />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">الشعبة (اختياري)</label>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("section")}</label>
                         <input
                           value={newSection}
                           onChange={(e) => setNewSection(e.target.value)}
-                          placeholder="مثال: الساعة 11"
+                          placeholder={t("sectionPh")}
                           className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
@@ -300,12 +301,12 @@ export default function Index() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">بداية الفصل</label>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("semesterStart")}</label>
                         <Popover open={startOpen} onOpenChange={setStartOpen}>
                           <PopoverTrigger asChild>
                             <button className={cn("flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted", !semesterStart && "text-muted-foreground")}>
                               <CalendarIcon size={14} />
-                              {semesterStart ? format(semesterStart, "yyyy/MM/dd") : "اختر التاريخ"}
+                              {semesterStart ? format(semesterStart, "yyyy/MM/dd") : t("pickDate")}
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -314,12 +315,12 @@ export default function Index() {
                         </Popover>
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">نهاية الفصل</label>
+                        <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("semesterEnd")}</label>
                         <Popover open={endOpen} onOpenChange={setEndOpen}>
                           <PopoverTrigger asChild>
                             <button className={cn("flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted", !semesterEnd && "text-muted-foreground")}>
                               <CalendarIcon size={14} />
-                              {semesterEnd ? format(semesterEnd, "yyyy/MM/dd") : "اختر التاريخ"}
+                              {semesterEnd ? format(semesterEnd, "yyyy/MM/dd") : t("pickDate")}
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -330,7 +331,7 @@ export default function Index() {
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-muted-foreground">أيام المحاضرات</label>
+                      <label className="mb-2 block text-sm font-medium text-muted-foreground">{t("lectureDays")}</label>
                       <div className="flex flex-wrap gap-2">
                         {WEEKDAYS.map((day) => (
                           <button
@@ -350,20 +351,19 @@ export default function Index() {
                     </div>
 
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-muted-foreground">وقت المحاضرة</label>
+                      <label className="mb-2 block text-sm font-medium text-muted-foreground">{t("lectureTime")}</label>
                       <input
                         type="time"
                         value={lectureTime}
                         onChange={(e) => setLectureTime(e.target.value)}
                         className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        placeholder="مثال: 10:00"
                       />
                     </div>
 
                     {previewLectures.length > 0 && (
                       <div className="rounded-lg border border-border bg-muted/50 p-3">
                         <p className="mb-2 text-sm font-semibold text-foreground">
-                          عدد المحاضرات: {previewLectures.length} محاضرة
+                          {t("lecturesCount")}: {previewLectures.length} {t("lectureWord")}
                         </p>
                         <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
                           {previewLectures.slice(0, 20).map((l, i) => (
@@ -373,7 +373,7 @@ export default function Index() {
                           ))}
                           {previewLectures.length > 20 && (
                             <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                              +{previewLectures.length - 20} أخرى
+                              +{previewLectures.length - 20} {t("other")}
                             </span>
                           )}
                         </div>
@@ -384,21 +384,21 @@ export default function Index() {
                     <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4">
                       <div className="mb-3 flex items-center justify-between gap-2">
                         <div>
-                          <h4 className="font-display text-sm font-semibold text-foreground">إضافة الطلبة</h4>
+                          <h4 className="font-display text-sm font-semibold text-foreground">{t("addStudents")}</h4>
                           <p className="text-[11px] text-muted-foreground">
                             {pendingStudentNames.length > 0
-                              ? `✓ تم تحميل ${pendingStudentNames.length} طالب`
-                              : "اختياري - يمكنك إضافتهم لاحقاً"}
+                              ? `✓ ${t("studentsLoadedCount")} ${pendingStudentNames.length} ${t("student")}`
+                              : t("optionalLater")}
                           </p>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <ExcelImport onImport={(names) => {
                           setPendingStudentNames((prev) => [...prev, ...names]);
-                          toast.success(`تم تحميل ${names.length} طالب`);
+                          toast.success(tf(t("studentLoadedSuccess"), { n: names.length }));
                         }} />
                         <ManualAddStudents
-                          label="إضافة يدوية"
+                          label={t("addManually")}
                           onAdd={(names) => {
                             setPendingStudentNames((prev) => [...prev, ...names]);
                           }}
@@ -409,7 +409,7 @@ export default function Index() {
                             onClick={() => setPendingStudentNames([])}
                             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
                           >
-                            مسح القائمة
+                            {t("clearList")}
                           </button>
                         )}
                       </div>
@@ -417,10 +417,10 @@ export default function Index() {
 
                     <div className="flex gap-3 pt-1">
                       <button onClick={handleCreateCourse} className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110">
-                        إنشاء ({previewLectures.length} محاضرة{pendingStudentNames.length > 0 ? ` • ${pendingStudentNames.length} طالب` : ""})
+                        {t("create")} ({previewLectures.length} {t("lectureWord")}{pendingStudentNames.length > 0 ? ` • ${pendingStudentNames.length} ${t("student")}` : ""})
                       </button>
                       <button onClick={resetModal} className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted">
-                        إلغاء
+                        {t("cancel")}
                       </button>
                     </div>
                   </div>
@@ -435,8 +435,8 @@ export default function Index() {
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
                 <BookOpen className="text-muted-foreground" size={28} />
               </div>
-              <p className="font-display text-lg font-semibold text-foreground">لا توجد مواد بعد</p>
-              <p className="mt-1 text-sm text-muted-foreground">أنشئ مادة جديدة للبدء</p>
+              <p className="font-display text-lg font-semibold text-foreground">{t("noCoursesYet")}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t("createToStart")}</p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -464,11 +464,11 @@ export default function Index() {
                   </div>
                   <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
                   {course.section && (
-                    <p className="text-xs text-muted-foreground">الشعبة: {course.section}</p>
+                    <p className="text-xs text-muted-foreground">{t("sectionLabel")}: {course.section}</p>
                   )}
                   <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-                    <span>{course.students.length} طالب</span>
-                    <span>{course.lectureCount} محاضرة</span>
+                    <span>{course.students.length} {t("student")}</span>
+                    <span>{course.lectureCount} {t("lectureWord")}</span>
                   </div>
                 </motion.div>
               ))}
@@ -481,7 +481,7 @@ export default function Index() {
               className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-5 py-2.5 font-display text-sm font-semibold text-primary shadow-sm transition-all hover:bg-primary/20 hover:shadow-md active:scale-[0.98]"
             >
               <MessageCircle size={16} />
-              Share Your Feedback
+              {t("shareFeedback")}
             </Link>
           </div>
 
@@ -498,14 +498,14 @@ export default function Index() {
         <ConfirmDialog
           open={!!pendingDeleteCourse}
           onOpenChange={(o) => !o && setPendingDeleteCourse(null)}
-          title="حذف المادة؟"
-          description={pendingDeleteCourse ? `سيتم حذف "${pendingDeleteCourse.name}" وكل بياناتها وطلبتها. لا يمكن التراجع.` : ""}
-          confirmLabel="حذف"
+          title={t("deleteCourseTitle")}
+          description={pendingDeleteCourse ? tf(t("deleteCourseDesc"), { name: pendingDeleteCourse.name }) : ""}
+          confirmLabel={t("delete")}
           destructive
           onConfirm={() => {
             if (pendingDeleteCourse) {
               deleteCourse(pendingDeleteCourse.id);
-              toast.success("تم حذف المادة");
+              toast.success(t("courseDeleted"));
               setPendingDeleteCourse(null);
             }
           }}
@@ -529,7 +529,7 @@ export default function Index() {
             <h1 className="font-display text-lg font-bold">{activeCourse.name}</h1>
             <p className="text-xs text-muted-foreground">
               {activeCourse.section && `${activeCourse.section} • `}
-              {activeCourse.students.length} طالب • {activeCourse.lectureCount} محاضرة
+              {activeCourse.students.length} {t("student")} • {activeCourse.lectureCount} {t("lectureWord")}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -537,22 +537,22 @@ export default function Index() {
               <button
                 onClick={() => {
                   exportToExcel(activeCourse);
-                  toast.success("تم تصدير الملف بنجاح");
+                  toast.success(t("exportSuccess"));
                 }}
                 className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 disabled={activeCourse.students.length === 0}
               >
                 <Upload size={14} />
-                تصدير النتائج
+                {t("exportResults")}
               </button>
             )}
             <button
               onClick={() => setStudentsDialogOpen(true)}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
-              title="إدارة الطلبة والدرجات"
+              title={t("manageStudents")}
             >
               <Users size={14} />
-              <span className="hidden sm:inline">إدارة الطلبة</span>
+              <span className="hidden sm:inline">{t("manageStudents")}</span>
             </button>
           </div>
         </div>
@@ -560,10 +560,10 @@ export default function Index() {
         {/* Sub-tabs */}
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-1 px-4 pb-2">
           {[
-            { key: "bonus" as const, label: "المحاضرات", icon: Star },
-            { key: "exams" as const, label: "الاختبارات", icon: ClipboardList },
-            { key: "attendance" as const, label: "الحضور", icon: UserCheck },
-            { key: "status" as const, label: "وضع الطلبة", icon: BarChart3 },
+            { key: "bonus" as const, label: t("tabLectures"), icon: Star },
+            { key: "exams" as const, label: t("tabExams"), icon: ClipboardList },
+            { key: "attendance" as const, label: t("tabAttendance"), icon: UserCheck },
+            { key: "status" as const, label: t("tabStatus"), icon: BarChart3 },
           ].map((tab) => (
             <button
               key={tab.key}

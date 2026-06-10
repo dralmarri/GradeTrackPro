@@ -4,6 +4,7 @@ import { getBonusTotal, getMaxTotal, getPercentage, getTotal } from "@/lib/excel
 import { motion } from "framer-motion";
 import { User, TrendingUp, TrendingDown, Award, Search } from "lucide-react";
 import { GradeTier, LetterTier, loadGradeTiers, loadLetterTiers, getTierFor, getLetterFor } from "@/lib/gradeTiers";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface StudentStatusProps {
   students: Student[];
@@ -11,9 +12,11 @@ interface StudentStatusProps {
 }
 
 export default function StudentStatus({ students, course }: StudentStatusProps) {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
   const [letterTiers, setLetterTiers] = useState<LetterTier[]>(loadLetterTiers());
+
 
   useEffect(() => {
     const handler = () => {
@@ -54,7 +57,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
   if (students.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <p className="font-display text-lg">لا يوجد طلبة بعد</p>
+        <p className="font-display text-lg">{t("noStudentsYet")}</p>
       </div>
     );
   }
@@ -71,10 +74,10 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "المعدل", value: avg.toFixed(1), icon: TrendingUp, color: "bg-primary/10 text-primary" },
-          { label: "أعلى درجة", value: highest.toString(), icon: Award, color: "bg-success/10 text-success" },
-          { label: "أدنى درجة", value: lowest.toString(), icon: TrendingDown, color: "bg-destructive/10 text-destructive" },
-          { label: "نسبة النجاح", value: `${((passCount / students.length) * 100).toFixed(0)}%`, icon: User, color: "bg-accent/10 text-accent" },
+          { label: t("average"), value: avg.toFixed(1), icon: TrendingUp, color: "bg-primary/10 text-primary" },
+          { label: t("highestGrade"), value: highest.toString(), icon: Award, color: "bg-success/10 text-success" },
+          { label: t("lowestGrade"), value: lowest.toString(), icon: TrendingDown, color: "bg-destructive/10 text-destructive" },
+          { label: t("passRate"), value: `${((passCount / students.length) * 100).toFixed(0)}%`, icon: User, color: "bg-accent/10 text-accent" },
         ].map((stat) => (
           <div key={stat.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${stat.color}`}>
@@ -91,7 +94,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
         <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="بحث باسم الطالب..."
+          placeholder={t("searchByName")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full rounded-lg border border-input bg-background pr-9 pl-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -131,7 +134,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
 
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">{getLabel(course, "bonus")} (المحاضرات)</span>
+                  <span className="text-muted-foreground">{getLabel(course, "bonus")} {t("lecturesShort")}</span>
                   <span className="font-medium">{bonusTotal}</span>
                 </div>
                 <div className="flex justify-between">
@@ -156,7 +159,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                 </div>
                 <div className="border-t border-border pt-1.5">
                   <div className="flex justify-between">
-                    <span className="font-display font-bold text-foreground">المجموع الكلي</span>
+                    <span className="font-display font-bold text-foreground">{t("totalGrade")}</span>
                     <span className="font-display font-bold text-primary">{total} / {maxTotal}</span>
                   </div>
                 </div>
