@@ -55,8 +55,7 @@ type MainView = "courses" | "settings";
 
 export default function Index() {
   const { signOut } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const { t, lang, toggleLang } = useLanguage();
+  const { t } = useLanguage();
   const {
     courses,
     loading,
