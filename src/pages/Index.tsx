@@ -41,10 +41,12 @@ import {
   Users,
   Moon,
   Sun,
+  Languages,
 } from "lucide-react";
 import { LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "@/hooks/useTheme";
+import { useLanguage } from "@/hooks/useLanguage";
 
 type CourseTab = "bonus" | "exams" | "status" | "attendance";
 type MainView = "courses" | "settings";
@@ -52,6 +54,7 @@ type MainView = "courses" | "settings";
 export default function Index() {
   const { signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t, lang, toggleLang } = useLanguage();
   const {
     courses,
     loading,
@@ -156,7 +159,7 @@ export default function Index() {
               <ChevronLeft size={20} className="rotate-180" />
             </button>
             <h1 className="font-display text-xl font-bold text-foreground">
-              الإعدادات وإدارة المقررات
+              {t("settingsAndCourses")}
             </h1>
           </div>
         </header>
@@ -169,7 +172,7 @@ export default function Index() {
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <div className="mb-5 flex items-center gap-2">
               <BookOpen className="text-primary" size={20} />
-              <h2 className="font-display text-lg font-bold">إدارة المقررات</h2>
+              <h2 className="font-display text-lg font-bold">{t("coursesManage")}</h2>
             </div>
             <CourseManager
               courses={courses}
@@ -198,35 +201,43 @@ export default function Index() {
                 <h1 className="font-display text-xl font-bold text-foreground">
                   GradeTrackPro
                 </h1>
-                <p className="text-xs text-muted-foreground">متابعة درجات الطلبة</p>
+                <p className="text-xs text-muted-foreground">{t("appTagline")}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={toggleLang}
+                className="flex h-9 min-w-9 items-center justify-center gap-1 rounded-lg px-2 transition-colors hover:bg-muted"
+                title={t("language")}
+              >
+                <Languages size={18} className="text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground">{lang === "ar" ? "EN" : "ع"}</span>
+              </button>
+              <button
                 onClick={toggleTheme}
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
-                title={theme === "dark" ? "الوضع النهاري" : "الوضع الليلي"}
+                title={theme === "dark" ? t("lightMode") : t("darkMode")}
               >
                 {theme === "dark" ? <Sun size={18} className="text-muted-foreground" /> : <Moon size={18} className="text-muted-foreground" />}
               </button>
               <a
                 href="/help"
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
-                title="دليل الاستخدام"
+                title={t("help")}
               >
                 <HelpCircle size={20} className="text-muted-foreground" />
               </a>
               <button
                 onClick={() => setMainView("settings")}
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
-                title="الإعدادات"
+                title={t("settings")}
               >
                 <Settings size={20} className="text-muted-foreground" />
               </button>
               <button
-                onClick={() => { signOut(); toast.success("تم تسجيل الخروج"); }}
+                onClick={() => { signOut(); toast.success(t("signOutSuccess")); }}
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
-                title="تسجيل الخروج"
+                title={t("signOut")}
               >
                 <LogOut size={18} className="text-muted-foreground" />
               </button>
@@ -236,13 +247,13 @@ export default function Index() {
 
         <main className="mx-auto max-w-5xl px-4 py-8">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">المواد الدراسية</h2>
+            <h2 className="font-display text-lg font-semibold">{t("coursesTitle")}</h2>
             <button
               onClick={() => setShowNewCourse(true)}
               className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98]"
             >
               <Plus size={18} />
-              مادة جديدة
+              {t("newCourse")}
             </button>
           </div>
 

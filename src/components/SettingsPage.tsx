@@ -12,7 +12,9 @@ import {
   ChevronDown,
   UserX,
   Loader2,
+  Languages,
 } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
   GradeTier,
@@ -40,6 +42,7 @@ import {
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const { lang, setLang, t } = useLanguage();
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
 
   const updateTier = (i: number, patch: Partial<GradeTier>) => {
@@ -125,6 +128,37 @@ export default function SettingsPage() {
         >
           فتح دليل الاستخدام
         </button>
+      </div>
+
+      {/* Language */}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <Languages className="text-primary" size={20} />
+          <h2 className="font-display text-lg font-bold">{t("languageSection")}</h2>
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground">{t("languageSectionDesc")}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setLang("ar")}
+            className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+              lang === "ar"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-foreground hover:bg-muted"
+            }`}
+          >
+            {t("arabic")}
+          </button>
+          <button
+            onClick={() => setLang("en")}
+            className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
+              lang === "en"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-foreground hover:bg-muted"
+            }`}
+          >
+            {t("english")}
+          </button>
+        </div>
       </div>
 
       {/* Add to Home Screen */}
