@@ -182,7 +182,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             .filter(Boolean) as string[];
           const fmtDate = (d: string) => {
             try {
-              return new Date(d).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+              return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
             } catch {
               return d;
             }
