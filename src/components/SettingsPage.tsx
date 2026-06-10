@@ -13,8 +13,11 @@ import {
   UserX,
   Loader2,
   Languages,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useTheme } from "@/hooks/useTheme";
 import AddToHomeScreen from "./AddToHomeScreen";
 import {
   GradeTier,
@@ -43,6 +46,7 @@ import {
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
 
   const updateTier = (i: number, patch: Partial<GradeTier>) => {
