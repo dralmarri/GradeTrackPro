@@ -54,6 +54,7 @@ type MainView = "courses" | "settings";
 export default function Index() {
   const { signOut } = useAuth();
   const { t } = useLanguage();
+  const [bonusEnabled] = useBonusEnabled();
   const {
     courses,
     loading,
