@@ -59,6 +59,50 @@ html, body {
     --font-display: 'Tajawal', sans-serif;
     --font-body: 'IBM Plex Sans Arabic', sans-serif;
   }
+
+  .dark {
+    --background: 222 30% 8%;
+    --foreground: 210 20% 96%;
+
+    --card: 222 28% 12%;
+    --card-foreground: 210 20% 96%;
+
+    --popover: 222 28% 12%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 215 85% 60%;
+    --primary-foreground: 222 30% 10%;
+
+    --secondary: 222 20% 18%;
+    --secondary-foreground: 210 20% 96%;
+
+    --muted: 222 20% 16%;
+    --muted-foreground: 215 15% 65%;
+
+    --accent: 160 55% 50%;
+    --accent-foreground: 222 30% 10%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 20% 20%;
+    --input: 222 20% 22%;
+    --ring: 215 85% 60%;
+
+    --success: 145 55% 50%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 222 30% 10%;
+
+    --sidebar-background: 222 28% 10%;
+    --sidebar-foreground: 210 20% 90%;
+    --sidebar-primary: 215 85% 60%;
+    --sidebar-primary-foreground: 222 30% 10%;
+    --sidebar-accent: 222 20% 16%;
+    --sidebar-accent-foreground: 210 20% 96%;
+    --sidebar-border: 222 20% 18%;
+    --sidebar-ring: 215 85% 60%;
+  }
 }
 
 @layer base {
