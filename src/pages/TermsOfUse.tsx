@@ -1,8 +1,192 @@
 import { ChevronLeft } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function TermsOfUse() {
   const navigate = useNavigate();
+  const { lang, dir } = useLanguage();
+  const ar = lang === "ar";
+
+  const sections = ar
+    ? [
+        {
+          h: "القبول بالشروط",
+          body: (
+            <p>
+              باستخدامك لتطبيق <strong>GradeTrackPro</strong>، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا لم
+              توافق على أي من هذه الشروط، يرجى عدم استخدام التطبيق.
+            </p>
+          ),
+        },
+        {
+          h: "الحساب وتسجيل الدخول",
+          body: (
+            <ul className="list-disc ps-6 space-y-1">
+              <li>يتطلب استخدام التطبيق إنشاء حساب وتسجيل الدخول ببريد إلكتروني وكلمة مرور</li>
+              <li>أنت مسؤول عن الحفاظ على سرية بيانات حسابك وعدم مشاركتها مع الآخرين</li>
+              <li>تتم مزامنة بياناتك تلقائياً عبر السحابة بين أجهزتك المختلفة</li>
+            </ul>
+          ),
+        },
+        {
+          h: "وصف الخدمة",
+          body: (
+            <>
+              <p>GradeTrackPro هو تطبيق لإدارة درجات الطلاب يتيح للمعلمين وأعضاء هيئة التدريس:</p>
+              <ul className="list-disc ps-6 space-y-1">
+                <li>إنشاء وإدارة المقررات الدراسية والشُعب وجداول المحاضرات</li>
+                <li>تسجيل حضور المحاضرات وإدارة درجات البونص</li>
+                <li>إدخال درجات الاختبارات والمشاركة والواجبات يدوياً أو عبر استيراد ملفات Excel</li>
+                <li>استيراد قوائم الطلاب من Excel ومطابقتها بالأسماء تلقائياً</li>
+                <li>تصدير النتائج كاملة بصيغة Excel</li>
+                <li>متابعة وضع كل طالب ونتائجه عبر جميع الأجهزة بشكل فوري</li>
+              </ul>
+            </>
+          ),
+        },
+        {
+          h: "مسؤولية المستخدم",
+          body: (
+            <ul className="list-disc ps-6 space-y-1">
+              <li>أنت المسؤول الوحيد عن دقة البيانات المُدخلة ومراجعتها قبل اعتمادها</li>
+              <li>عند استيراد ملفات Excel، يجب التحقق من مطابقة الأسماء والدرجات قبل الحفظ</li>
+              <li>يُنصح بتصدير نسخ احتياطية دورية من بياناتك</li>
+              <li>يجب استخدام التطبيق للأغراض التعليمية المشروعة فقط</li>
+              <li>يجب الحفاظ على سرية بيانات الطلاب وعدم مشاركتها مع أطراف غير مخوّلة</li>
+            </ul>
+          ),
+        },
+        {
+          h: "إخلاء المسؤولية",
+          body: (
+            <ul className="list-disc ps-6 space-y-1">
+              <li>التطبيق مُقدّم "كما هو" دون أي ضمانات صريحة أو ضمنية</li>
+              <li>لا نضمن توفر الخدمة بشكل متواصل دون انقطاع أو خلوها من الأخطاء</li>
+              <li>لا نتحمل مسؤولية فقدان البيانات الناتج عن سوء الاستخدام أو أعطال الخدمة السحابية أو الجهاز</li>
+              <li>لا نتحمل مسؤولية أي أخطاء في احتساب الدرجات ناتجة عن إدخال بيانات خاطئة أو ملف Excel غير صحيح</li>
+            </ul>
+          ),
+        },
+        {
+          h: "الملكية الفكرية",
+          body: (
+            <p>
+              جميع حقوق الملكية الفكرية للتطبيق محفوظة. لا يجوز نسخ أو تعديل أو توزيع التطبيق أو أي جزء منه دون إذن
+              كتابي مسبق.
+            </p>
+          ),
+        },
+        {
+          h: "تعديل الشروط",
+          body: (
+            <p>
+              نحتفظ بالحق في تعديل هذه الشروط في أي وقت. ستُنشر التعديلات على هذه الصفحة مع تحديث التاريخ.
+            </p>
+          ),
+        },
+        {
+          h: "التواصل",
+          body: (
+            <p>
+              لأي استفسارات حول شروط الاستخدام، يرجى زيارة{" "}
+              <Link to="/contact" className="font-medium text-primary hover:underline">
+                صفحة تواصل معنا
+              </Link>
+              .
+            </p>
+          ),
+        },
+      ]
+    : [
+        {
+          h: "Acceptance of terms",
+          body: (
+            <p>
+              By using <strong>GradeTrackPro</strong>, you agree to be bound by these terms. If you do not agree
+              with any of them, please do not use the app.
+            </p>
+          ),
+        },
+        {
+          h: "Account & sign-in",
+          body: (
+            <ul className="list-disc ps-6 space-y-1">
+              <li>Using the app requires creating an account with an email and password</li>
+              <li>You are responsible for keeping your account credentials confidential</li>
+              <li>Your data is automatically synced via the cloud across your devices</li>
+            </ul>
+          ),
+        },
+        {
+          h: "Service description",
+          body: (
+            <>
+              <p>GradeTrackPro is a student grade management app that lets instructors:</p>
+              <ul className="list-disc ps-6 space-y-1">
+                <li>Create and manage courses, sections, and lecture schedules</li>
+                <li>Record lecture attendance and manage bonus grades</li>
+                <li>Enter exam, participation, and assignment grades manually or via Excel import</li>
+                <li>Import student lists from Excel with automatic name matching</li>
+                <li>Export the complete results as Excel</li>
+                <li>Track each student's status and results across all devices in real time</li>
+              </ul>
+            </>
+          ),
+        },
+        {
+          h: "User responsibility",
+          body: (
+            <ul className="list-disc ps-6 space-y-1">
+              <li>You are solely responsible for the accuracy of entered data and reviewing it before finalizing</li>
+              <li>When importing Excel files, verify name and grade matching before saving</li>
+              <li>Regular backup exports of your data are recommended</li>
+              <li>The app must be used for legitimate educational purposes only</li>
+              <li>Keep student data confidential and do not share it with unauthorized parties</li>
+            </ul>
+          ),
+        },
+        {
+          h: "Disclaimer",
+          body: (
+            <ul className="list-disc ps-6 space-y-1">
+              <li>The app is provided "as is" with no express or implied warranties</li>
+              <li>We do not guarantee uninterrupted availability or that the service is error-free</li>
+              <li>We are not liable for data loss caused by misuse, cloud outages, or device failure</li>
+              <li>We are not liable for grade-calculation errors caused by incorrect entries or invalid files</li>
+            </ul>
+          ),
+        },
+        {
+          h: "Intellectual property",
+          body: (
+            <p>
+              All intellectual property rights in the app are reserved. The app or any part of it may not be
+              copied, modified, or distributed without prior written permission.
+            </p>
+          ),
+        },
+        {
+          h: "Changes to terms",
+          body: (
+            <p>
+              We reserve the right to modify these terms at any time. Updates will be posted on this page with a
+              revised date.
+            </p>
+          ),
+        },
+        {
+          h: "Contact",
+          body: (
+            <p>
+              For any questions about these terms, please visit the{" "}
+              <Link to="/contact" className="font-medium text-primary hover:underline">
+                contact page
+              </Link>
+              .
+            </p>
+          ),
+        },
+      ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -12,84 +196,24 @@ export default function TermsOfUse() {
             onClick={() => navigate(-1)}
             className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted"
           >
-            <ChevronLeft size={20} className="rotate-180" />
+            <ChevronLeft size={20} className={dir === "rtl" ? "rotate-180" : ""} />
           </button>
-          <h1 className="font-display text-xl font-bold text-foreground">شروط الاستخدام</h1>
+          <h1 className="font-display text-xl font-bold text-foreground">
+            {ar ? "شروط الاستخدام" : "Terms of Use"}
+          </h1>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-8 space-y-6 text-sm leading-relaxed text-foreground" dir="rtl">
-        <p className="text-muted-foreground">آخر تحديث: يونيو 2026</p>
-
-        <section className="space-y-2">
-          <h2 className="font-display text-lg font-bold">القبول بالشروط</h2>
-          <p>باستخدامك لتطبيق <strong>GradeTrackPro</strong>، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا لم توافق على أي من هذه الشروط، يرجى عدم استخدام التطبيق.</p>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="font-display text-lg font-bold">الحساب وتسجيل الدخول</h2>
-          <ul className="list-disc pr-6 space-y-1">
-            <li>يتطلب استخدام التطبيق إنشاء حساب وتسجيل الدخول ببريد إلكتروني وكلمة مرور</li>
-            <li>أنت مسؤول عن الحفاظ على سرية بيانات حسابك وعدم مشاركتها مع الآخرين</li>
-            <li>تتم مزامنة بياناتك تلقائياً عبر السحابة بين أجهزتك المختلفة</li>
-          </ul>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="font-display text-lg font-bold">وصف الخدمة</h2>
-          <p>GradeTrackPro هو تطبيق لإدارة درجات الطلاب يتيح للمعلمين وأعضاء هيئة التدريس:</p>
-          <ul className="list-disc pr-6 space-y-1">
-            <li>إنشاء وإدارة المقررات الدراسية والشُعب وجداول المحاضرات</li>
-            <li>تسجيل حضور المحاضرات وإدارة درجات البونص</li>
-            <li>إدخال درجات الاختبارات والمشاركة والواجبات يدوياً أو عبر استيراد ملفات Excel</li>
-            <li>استيراد قوائم الطلاب من Excel ومطابقتها بالأسماء تلقائياً</li>
-            <li>تصدير النتائج كاملة بصيغة Excel</li>
-            <li>متابعة وضع كل طالب ونتائجه عبر جميع الأجهزة بشكل فوري</li>
-          </ul>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="font-display text-lg font-bold">مسؤولية المستخدم</h2>
-          <ul className="list-disc pr-6 space-y-1">
-            <li>أنت المسؤول الوحيد عن دقة البيانات المُدخلة ومراجعتها قبل اعتمادها</li>
-            <li>عند استيراد ملفات Excel، يجب التحقق من مطابقة الأسماء والدرجات قبل الحفظ</li>
-            <li>يُنصح بتصدير نسخ احتياطية دورية من بياناتك</li>
-            <li>يجب استخدام التطبيق للأغراض التعليمية المشروعة فقط</li>
-            <li>يجب الحفاظ على سرية بيانات الطلاب وعدم مشاركتها مع أطراف غير مخوّلة</li>
-          </ul>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="font-display text-lg font-bold">إخلاء المسؤولية</h2>
-          <ul className="list-disc pr-6 space-y-1">
-            <li>التطبيق مُقدّم "كما هو" دون أي ضمانات صريحة أو ضمنية</li>
-            <li>لا نضمن توفر الخدمة بشكل متواصل دون انقطاع أو خلوها من الأخطاء</li>
-            <li>لا نتحمل مسؤولية فقدان البيانات الناتج عن سوء الاستخدام أو أعطال الخدمة السحابية أو الجهاز</li>
-            <li>لا نتحمل مسؤولية أي أخطاء في احتساب الدرجات ناتجة عن إدخال بيانات خاطئة أو ملف Excel غير صحيح</li>
-          </ul>
-        </section>
-
-
-        <section className="space-y-2">
-          <h2 className="font-display text-lg font-bold">الملكية الفكرية</h2>
-          <p>جميع حقوق الملكية الفكرية للتطبيق محفوظة. لا يجوز نسخ أو تعديل أو توزيع التطبيق أو أي جزء منه دون إذن كتابي مسبق.</p>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="font-display text-lg font-bold">تعديل الشروط</h2>
-          <p>نحتفظ بالحق في تعديل هذه الشروط في أي وقت. ستُنشر التعديلات على هذه الصفحة مع تحديث التاريخ.</p>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="font-display text-lg font-bold">التواصل</h2>
-          <p>
-            لأي استفسارات حول شروط الاستخدام، يرجى زيارة{" "}
-            <Link to="/contact" className="font-medium text-primary hover:underline">
-              صفحة تواصل معنا
-            </Link>
-            .
-          </p>
-        </section>
+      <main className="mx-auto max-w-3xl px-4 py-8 space-y-6 text-sm leading-relaxed text-foreground">
+        <p className="text-muted-foreground">
+          {ar ? "آخر تحديث: يونيو 2026" : "Last updated: June 2026"}
+        </p>
+        {sections.map((s) => (
+          <section key={s.h} className="space-y-2">
+            <h2 className="font-display text-lg font-bold">{s.h}</h2>
+            {s.body}
+          </section>
+        ))}
       </main>
     </div>
   );
