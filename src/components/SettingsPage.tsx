@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { LogOut, UserCircle2 } from "lucide-react";
+import { toast as sonnerToast } from "sonner";
 import {
   Info,
   Mail,
