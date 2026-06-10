@@ -213,10 +213,6 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
           );
         })}
       </div>
-            </motion.div>
-          );
-        })}
-      </div>
     </div>
   );
 }
