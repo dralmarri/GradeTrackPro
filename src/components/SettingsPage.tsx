@@ -117,22 +117,6 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-      {/* How to use */}
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <div className="mb-3 flex items-center gap-2">
-          <HelpCircle className="text-primary" size={20} />
-          <h2 className="font-display text-lg font-bold">كيفية الاستخدام</h2>
-        </div>
-        <p className="mb-3 text-xs text-muted-foreground">
-          دليل مختصر يشرح خطوة بخطوة كل ميزات التطبيق: إنشاء المقررات، الحضور، الاختبارات، والتصدير.
-        </p>
-        <button
-          onClick={() => navigate("/help")}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110"
-        >
-          فتح دليل الاستخدام
-        </button>
-      </div>
 
       {/* Language */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
