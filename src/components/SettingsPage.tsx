@@ -226,42 +226,7 @@ export default function SettingsPage() {
       {/* Add to Home Screen */}
       <AddToHomeScreen />
 
-      {/* Bonus toggle */}
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <div className="mb-3 flex items-center gap-2">
-          <Award className="text-primary" size={20} />
-          <h2 className="font-display text-lg font-bold">
-            {lang === "ar" ? "البونص (نقاط إضافية)" : "Bonus (extra points)"}
-          </h2>
-        </div>
-        <p className="mb-4 text-xs text-muted-foreground">
-          {lang === "ar"
-            ? "عند التفعيل يظهر جدول البونص داخل صفحة الحضور لكل محاضرة. عند التعطيل يختفي تماماً."
-            : "When enabled, the bonus table appears inside the attendance page per lecture. When disabled, it is hidden."}
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setBonusEnabled(true)}
-            className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
-              bonusEnabled
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-foreground hover:bg-muted"
-            }`}
-          >
-            {lang === "ar" ? "مُفعّل" : "Enabled"}
-          </button>
-          <button
-            onClick={() => setBonusEnabled(false)}
-            className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${
-              !bonusEnabled
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-foreground hover:bg-muted"
-            }`}
-          >
-            {lang === "ar" ? "مُعطّل" : "Disabled"}
-          </button>
-        </div>
-      </div>
+
 
 
 
