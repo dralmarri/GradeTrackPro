@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Smartphone, ChevronDown, AlertTriangle, Share2, MoreVertical } from "lucide-react";
+import { isNativeApp } from "@/lib/platform";
 
 type Platform = "ios" | "android";
 
@@ -128,33 +129,35 @@ export default function AddToHomeScreen() {
           </div>
         </PlatformSection>
 
-        <PlatformSection
-          open={open === "android"}
-          onToggle={() => setOpen(open === "android" ? null : "android")}
-          title="Android"
-          icon="🤖"
-          isUserDevice={device === "android"}
-        >
-          <Step n={1}>
-            افتح التطبيق في متصفح <strong>Chrome</strong>
-          </Step>
-          <Step n={2}>
-            اضغط زر القائمة{" "}
-            <span className="mx-1 inline-flex items-center rounded-md border border-border bg-muted px-1.5 py-0.5 align-middle">
-              <MoreVertical size={12} />
-            </span>{" "}
-            في الزاوية العلوية من Chrome
-          </Step>
-          <Step n={3}>
-            اضغط <strong>إضافة إلى الشاشة الرئيسية</strong> من القائمة
-          </Step>
-          <Step n={4}>
-            اضغط <strong>إضافة</strong> للتأكيد — تم!
-          </Step>
-          <div className="mt-3 rounded-lg bg-primary/10 p-3 text-xs leading-relaxed text-foreground">
-            سيظهر التطبيق على شاشتك الرئيسية ويفتح بملء الشاشة كتطبيق أصلي.
-          </div>
-        </PlatformSection>
+        {!isNativeApp() && (
+          <PlatformSection
+            open={open === "android"}
+            onToggle={() => setOpen(open === "android" ? null : "android")}
+            title="Android"
+            icon="🤖"
+            isUserDevice={device === "android"}
+          >
+            <Step n={1}>
+              افتح التطبيق في متصفح <strong>Chrome</strong>
+            </Step>
+            <Step n={2}>
+              اضغط زر القائمة{" "}
+              <span className="mx-1 inline-flex items-center rounded-md border border-border bg-muted px-1.5 py-0.5 align-middle">
+                <MoreVertical size={12} />
+              </span>{" "}
+              في الزاوية العلوية من Chrome
+            </Step>
+            <Step n={3}>
+              اضغط <strong>إضافة إلى الشاشة الرئيسية</strong> من القائمة
+            </Step>
+            <Step n={4}>
+              اضغط <strong>إضافة</strong> للتأكيد — تم!
+            </Step>
+            <div className="mt-3 rounded-lg bg-primary/10 p-3 text-xs leading-relaxed text-foreground">
+              سيظهر التطبيق على شاشتك الرئيسية ويفتح بملء الشاشة كتطبيق أصلي.
+            </div>
+          </PlatformSection>
+        )}
       </div>
     </div>
   );
