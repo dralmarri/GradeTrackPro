@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import appIcon from "@/assets/app-icon.png";
 import { useLanguage } from "@/hooks/useLanguage";
+import { isNativeApp } from "@/lib/platform";
 import {
   ChevronLeft,
   UserPlus,
@@ -338,22 +339,24 @@ export default function Help() {
             </ol>
           </div>
 
-          <div className="rounded-xl border border-border bg-background p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <Smartphone size={18} className="text-foreground" />
-              <h4 className="font-display text-sm font-bold">{androidTitle}</h4>
+          {!isNativeApp() && (
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Smartphone size={18} className="text-foreground" />
+                <h4 className="font-display text-sm font-bold">{androidTitle}</h4>
+              </div>
+              <ol className="space-y-2 px-2">
+                {androidSteps.map((step, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
+                    <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                      {i + 1}
+                    </span>
+                    <span className="leading-relaxed">{step}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
-            <ol className="space-y-2 px-2">
-              {androidSteps.map((step, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
-                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-                    {i + 1}
-                  </span>
-                  <span className="leading-relaxed">{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
+          )}
 
           <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
             {ar
