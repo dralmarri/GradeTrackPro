@@ -3,6 +3,7 @@ import { Course, ComponentLabels, DEFAULT_COMPONENT_LABELS, getLabel } from "@/t
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { format } from "date-fns";
 import {
   BookOpen,
@@ -55,6 +56,7 @@ export default function CourseManager({
   const [editSemesterStart, setEditSemesterStart] = useState("");
   const [editSemesterEnd, setEditSemesterEnd] = useState("");
   const [editLabels, setEditLabels] = useState<Required<ComponentLabels>>({ ...DEFAULT_COMPONENT_LABELS });
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const startEdit = (course: Course) => {
     setEditingId(course.id);
@@ -318,10 +320,7 @@ export default function CourseManager({
                   {t("manageLectures")}
                 </button>
                 <button
-                  onClick={() => {
-                    onDeleteCourse(course.id);
-                    toast.success(t("courseDeletedToast"));
-                  }}
+                  onClick={() => setPendingDelete({ id: course.id, name: course.name })}
                   className="flex items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
                 >
                   <Trash2 size={13} />
@@ -332,6 +331,22 @@ export default function CourseManager({
           )}
         </div>
       ))}
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => { if (!o) setPendingDelete(null); }}
+        title={t("deleteCourseTitle")}
+        description={pendingDelete ? tf(t("deleteCourseDesc"), { name: pendingDelete.name }) : ""}
+        confirmLabel={t("deleteCourse")}
+        cancelLabel={t("cancel") || "إلغاء"}
+        destructive
+        onConfirm={() => {
+          if (pendingDelete) {
+            onDeleteCourse(pendingDelete.id);
+            toast.success(t("courseDeletedToast"));
+            setPendingDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }
