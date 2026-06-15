@@ -3,9 +3,7 @@ import { Share2, Apple, Link2, Copy, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 
-// ⚠️ حدّث هذا الرابط بعد ظهور التطبيق في App Store برابطه المباشر
-// مثال: https://apps.apple.com/app/idXXXXXXXXXX
-const APP_STORE_URL = "https://apps.apple.com/app/gradetrackpro";
+const APP_STORE_URL = "https://apps.apple.com/kw/app/gradetrackpro/id6778925716";
 const WEB_URL = "https://gradetrackpro.com";
 
 export default function ShareApp() {
