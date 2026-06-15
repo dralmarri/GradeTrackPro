@@ -225,9 +225,6 @@ export default function SettingsPage() {
       {/* Add to Home Screen */}
       <AddToHomeScreen />
 
-      {/* Share App */}
-      <ShareApp />
-
 
 
 
