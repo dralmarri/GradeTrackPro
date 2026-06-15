@@ -320,10 +320,7 @@ export default function CourseManager({
                   {t("manageLectures")}
                 </button>
                 <button
-                  onClick={() => {
-                    onDeleteCourse(course.id);
-                    toast.success(t("courseDeletedToast"));
-                  }}
+                  onClick={() => setPendingDelete({ id: course.id, name: course.name })}
                   className="flex items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
                 >
                   <Trash2 size={13} />
