@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "@/hooks/useTheme";
-import AddToHomeScreen from "./AddToHomeScreen";
+
 
 import {
   GradeTier,
@@ -123,35 +123,6 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
 
-      {/* Account section */}
-      <div>
-        <h2 className="mb-2 px-1 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          {t("accountSection")}
-        </h2>
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-          <div className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-              <UserCircle2 className="text-primary" size={20} />
-            </div>
-            <div className="flex-1 min-w-0 text-right">
-              <p className="truncate font-display text-sm font-bold text-foreground" dir="ltr">
-                {user?.email || "—"}
-              </p>
-              <p className="text-[11px] text-muted-foreground">{t("signedInLabel")}</p>
-            </div>
-          </div>
-          <button
-            onClick={async () => { await signOut(); sonnerToast.success(t("signOut")); }}
-            className="flex w-full items-center gap-3 border-t border-border p-4 text-right transition-colors hover:bg-muted/50"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
-              <LogOut className="text-amber-600" size={20} />
-            </div>
-            <p className="font-display text-sm font-bold text-foreground">{t("signOut")}</p>
-          </button>
-        </div>
-      </div>
-
       {/* Language */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-3 flex items-center gap-2">
@@ -222,8 +193,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Add to Home Screen */}
-      <AddToHomeScreen />
+
 
 
 
