@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "@/hooks/useTheme";
+import ShareApp from "./ShareApp";
 
 
 import {
