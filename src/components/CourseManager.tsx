@@ -331,6 +331,22 @@ export default function CourseManager({
           )}
         </div>
       ))}
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => { if (!o) setPendingDelete(null); }}
+        title={t("deleteCourseTitle")}
+        description={pendingDelete ? tf(t("deleteCourseDesc"), { name: pendingDelete.name }) : ""}
+        confirmLabel={t("deleteCourse")}
+        cancelLabel={t("cancel") || "إلغاء"}
+        destructive
+        onConfirm={() => {
+          if (pendingDelete) {
+            onDeleteCourse(pendingDelete.id);
+            toast.success(t("courseDeletedToast"));
+            setPendingDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }
