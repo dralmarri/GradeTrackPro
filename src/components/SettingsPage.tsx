@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "@/hooks/useTheme";
+import ShareApp from "./ShareApp";
 
 
 import {
@@ -474,6 +475,9 @@ export default function SettingsPage() {
           </p>
         </div>
       </div>
+
+      {/* Share App */}
+      <ShareApp />
 
       {/* Account section (moved to bottom) */}
       <div>
