@@ -56,6 +56,7 @@ export default function CourseManager({
   const [editSemesterStart, setEditSemesterStart] = useState("");
   const [editSemesterEnd, setEditSemesterEnd] = useState("");
   const [editLabels, setEditLabels] = useState<Required<ComponentLabels>>({ ...DEFAULT_COMPONENT_LABELS });
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const startEdit = (course: Course) => {
     setEditingId(course.id);
