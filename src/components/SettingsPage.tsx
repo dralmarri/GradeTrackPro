@@ -22,7 +22,7 @@ import {
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "@/hooks/useTheme";
 import AddToHomeScreen from "./AddToHomeScreen";
-import ShareApp from "./ShareApp";
+
 import {
   GradeTier,
   LetterTier,
@@ -224,9 +224,6 @@ export default function SettingsPage() {
 
       {/* Add to Home Screen */}
       <AddToHomeScreen />
-
-      {/* Share App */}
-      <ShareApp />
 
 
 
