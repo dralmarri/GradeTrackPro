@@ -476,6 +476,9 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Share App */}
+      <ShareApp />
+
       {/* Account section (moved to bottom) */}
       <div>
         <h2 className="mb-2 px-1 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
