@@ -3,6 +3,7 @@ import { Course, ComponentLabels, DEFAULT_COMPONENT_LABELS, getLabel } from "@/t
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { format } from "date-fns";
 import {
   BookOpen,
