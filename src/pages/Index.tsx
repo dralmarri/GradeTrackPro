@@ -208,34 +208,41 @@ export default function Index() {
     return (
       <div className="min-h-screen bg-background">
         <header className="border-b border-border bg-card/80 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
-            <div className="flex items-center gap-3">
-              <img src={appIcon} alt="GradeTrackPro" className="h-10 w-10 rounded-xl shadow-md" />
+          <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-4 py-6">
+            {/* App icon + name centered on top */}
+            <div className="flex flex-col items-center gap-2 text-center">
+              <img
+                src={appIcon}
+                alt="GradeTrackPro"
+                className="h-20 w-20 rounded-2xl shadow-md sm:h-24 sm:w-24"
+              />
               <div>
-                <h1 className="font-display text-xl font-bold text-foreground">
+                <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
                   GradeTrackPro
                 </h1>
-                <p className="text-xs text-muted-foreground">{t("appTagline")}</p>
+                <p className="text-xs text-muted-foreground sm:text-sm">{t("appTagline")}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            {/* Action buttons row below */}
+            <div className="flex items-center justify-center gap-2">
               <a
                 href="/help"
-                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background transition-colors hover:bg-muted"
                 title={t("help")}
               >
                 <HelpCircle size={20} className="text-muted-foreground" />
               </a>
               <button
                 onClick={() => setMainView("settings")}
-                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background transition-colors hover:bg-muted"
                 title={t("settings")}
               >
                 <Settings size={20} className="text-muted-foreground" />
               </button>
               <button
                 onClick={() => { signOut(); toast.success(t("signOutSuccess")); }}
-                className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background transition-colors hover:bg-muted"
                 title={t("signOut")}
               >
                 <LogOut size={18} className="text-muted-foreground" />
@@ -243,6 +250,7 @@ export default function Index() {
             </div>
           </div>
         </header>
+
 
         <main className="mx-auto max-w-5xl px-4 py-8">
           <div className="mb-6 flex items-center justify-between">
