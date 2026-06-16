@@ -25,6 +25,9 @@ interface ExamsPageProps {
   maxFinal: number;
   maxParticipation: number;
   maxHomework: number;
+  maxBonus?: number;
+  bonusEnabled?: boolean;
+  lectureCount?: number;
   componentLabels?: ComponentLabels;
   customComponents?: CustomComponent[];
   hiddenComponents?: StandardComponentKey[];
@@ -42,6 +45,9 @@ export default function ExamsPage({
   maxFinal,
   maxParticipation,
   maxHomework,
+  maxBonus = 0,
+  bonusEnabled = false,
+  lectureCount = 0,
   componentLabels,
   customComponents,
   hiddenComponents,
@@ -63,6 +69,7 @@ export default function ExamsPage({
   const tabs: ExamTabConfig[] = [
     ...standardTabs,
     ...customs.map((c) => ({ key: c.key, label: c.label, max: c.max, isCustom: true })),
+    ...(bonusEnabled ? [{ key: "__bonus__", label: L.bonus, max: maxBonus, isCustom: false }] : []),
   ];
 
   const [activeTabKey, setActiveTabKey] = useState<string>("exam1");
