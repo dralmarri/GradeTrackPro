@@ -472,25 +472,8 @@ export default function Index() {
             </div>
           )}
 
-          <div className="mt-10 flex justify-center">
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-5 py-2.5 font-display text-sm font-semibold text-primary shadow-sm transition-all hover:bg-primary/20 hover:shadow-md active:scale-[0.98]"
-            >
-              <MessageCircle size={16} />
-              {t("shareFeedback")}
-            </Link>
-          </div>
-
-          <footer className="mt-8 border-t border-border pt-6 text-center">
-            <p className="text-xs text-muted-foreground" dir="ltr">
-              Developed by <span className="font-semibold text-foreground">Prof. Ayedh Almarri</span>
-            </p>
-            <p className="mt-1 text-[11px] text-muted-foreground" dir="ltr">
-              Version <strong>v1.0.0</strong>
-            </p>
-          </footer>
         </main>
+
 
         <ConfirmDialog
           open={!!pendingDeleteCourse}
