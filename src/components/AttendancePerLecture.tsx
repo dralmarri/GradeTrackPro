@@ -3,14 +3,18 @@ import { Student, LectureInfo } from "@/types/student";
 import { ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
+import NumberInput from "@/components/NumberInput";
 
 interface Props {
   students: Student[];
   lectures: LectureInfo[];
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
+  bonusEnabled?: boolean;
+  maxBonus?: number;
+  onUpdateBonus?: (studentId: string, lectureIndex: number, value: number) => void;
 }
 
-export default function AttendancePerLecture({ students, lectures, onUpdateAttendance }: Props) {
+export default function AttendancePerLecture({ students, lectures, onUpdateAttendance, bonusEnabled, maxBonus, onUpdateBonus }: Props) {
   const { t } = useLanguage();
   const safeStudents = students || [];
   const safeLectures = lectures || [];
