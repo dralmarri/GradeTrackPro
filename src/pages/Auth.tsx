@@ -69,8 +69,10 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-background px-4 py-6">
+      <div className="mx-auto w-full max-w-sm">
+        <AppStoreBanner />
+
         <div className="mb-4 flex justify-end">
           <button
             onClick={toggleLang}
