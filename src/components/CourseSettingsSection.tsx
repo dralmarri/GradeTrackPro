@@ -22,6 +22,7 @@ interface Draft {
   labels: Required<ComponentLabels>;
   bonusEnabled: boolean;
   customComponents: CustomComponent[];
+  hiddenComponents: StandardComponentKey[];
 }
 
 function toDraft(c: Course): Draft {
@@ -35,6 +36,7 @@ function toDraft(c: Course): Draft {
     labels: { ...DEFAULT_COMPONENT_LABELS, ...(c.componentLabels || {}) },
     bonusEnabled: c.bonusEnabled !== false,
     customComponents: c.customComponents || [],
+    hiddenComponents: c.hiddenComponents || [],
   };
 }
 
