@@ -206,32 +206,58 @@ export default function CourseSettingsSection({ courses, onUpdateCourse }: Props
                         </h5>
                         <p className="mb-3 text-[11px] text-muted-foreground">
                           {lang === "ar"
-                            ? "عدّل اسم كل مكوّن ودرجته القصوى."
-                            : "Edit each component's name and max value."}
+                            ? "عدّل اسم كل مكوّن ودرجته القصوى. اضغط 👁 لإخفائه من صفحتي الدرجات والنتائج."
+                            : "Edit each component's name and max. Tap 👁 to hide it from Grades and Results."}
                         </p>
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                          {standardFields(d).map((f) => (
-                            <div key={f.key} className="rounded-lg border border-border bg-background p-2">
-                              <input
-                                type="text"
-                                value={d.labels[f.key]}
-                                onChange={(e) =>
-                                  updateDraft(course.id, {
-                                    labels: { ...d.labels, [f.key]: e.target.value },
-                                  })
-                                }
-                                placeholder={DEFAULT_COMPONENT_LABELS[f.key]}
-                                className="mb-1 w-full rounded-md border border-input bg-background px-2 py-1 text-center text-xs outline-none focus:border-primary"
-                              />
-                              <NumberInput
-                                value={f.value}
-                                onChange={f.set}
-                                min={0}
-                                showZero
-                                className="w-full px-2 py-1 text-sm font-bold"
-                              />
-                            </div>
-                          ))}
+                          {standardFields(d).map((f) => {
+                            const canHide = f.key !== "bonus";
+                            const isHidden = canHide && d.hiddenComponents.includes(f.key as StandardComponentKey);
+                            const toggleHidden = () => {
+                              if (!canHide) return;
+                              const key = f.key as StandardComponentKey;
+                              const next = isHidden
+                                ? d.hiddenComponents.filter((k) => k !== key)
+                                : [...d.hiddenComponents, key];
+                              updateDraft(course.id, { hiddenComponents: next });
+                            };
+                            return (
+                              <div
+                                key={f.key}
+                                className={`relative rounded-lg border border-border bg-background p-2 ${isHidden ? "opacity-50" : ""}`}
+                              >
+                                {canHide && (
+                                  <button
+                                    type="button"
+                                    onClick={toggleHidden}
+                                    title={isHidden ? (lang === "ar" ? "إظهار" : "Show") : (lang === "ar" ? "إخفاء" : "Hide")}
+                                    className="absolute top-1 left-1 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                  >
+                                    {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                                  </button>
+                                )}
+                                <input
+                                  type="text"
+                                  value={d.labels[f.key]}
+                                  onChange={(e) =>
+                                    updateDraft(course.id, {
+                                      labels: { ...d.labels, [f.key]: e.target.value },
+                                    })
+                                  }
+                                  placeholder={DEFAULT_COMPONENT_LABELS[f.key]}
+                                  disabled={isHidden}
+                                  className="mb-1 w-full rounded-md border border-input bg-background px-2 py-1 text-center text-xs outline-none focus:border-primary"
+                                />
+                                <NumberInput
+                                  value={f.value}
+                                  onChange={f.set}
+                                  min={0}
+                                  showZero
+                                  className="w-full px-2 py-1 text-sm font-bold"
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
