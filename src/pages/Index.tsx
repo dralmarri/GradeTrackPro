@@ -561,29 +561,8 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Sub-tabs */}
-        <div className="mx-auto grid max-w-7xl grid-cols-3 gap-1 px-4 pb-2">
-          {[
-            { key: "attendance" as const, label: t("tabAttendance"), icon: UserCheck },
-            { key: "exams" as const, label: t("tabExams"), icon: ClipboardList },
-            { key: "status" as const, label: t("tabStatus"), icon: BarChart3 },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setCourseTab(tab.key)}
-              className={cn(
-                "flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-                courseTab === tab.key
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <tab.icon size={14} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
       </header>
+
 
       <main className="mx-auto max-w-7xl px-4 py-6">
 
