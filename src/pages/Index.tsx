@@ -576,10 +576,8 @@ export default function Index() {
               students={activeCourse.students}
               lectures={activeCourse.lectures}
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
-              bonusEnabled={activeCourse.bonusEnabled !== false}
-              maxBonus={activeCourse.maxBonus}
-              onUpdateBonus={(sid, li, value) => updateLectureBonus(activeCourse.id, sid, li, value)}
             />
+
 
             <details className="rounded-2xl border border-border bg-card p-4 shadow-sm">
               <summary className="cursor-pointer font-display text-sm font-bold text-foreground">
