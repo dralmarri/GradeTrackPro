@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Share2, Apple, Link2, Copy, Check, X } from "lucide-react";
+import { Share2, Link2, Copy, Check, X } from "lucide-react";
+import AppleLogo from "@/components/icons/AppleLogo";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 
@@ -98,7 +99,7 @@ export default function ShareApp() {
                 {copiedStore ? (
                   <Check size={20} className="text-success" />
                 ) : (
-                  <Apple size={20} className="text-primary" />
+                  <AppleLogo size={20} className="text-primary" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
