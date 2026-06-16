@@ -50,9 +50,9 @@ const dict = {
     version: "Version",
     // Course tabs
     tabLectures: "المحاضرات",
-    tabExams: "الاختبارات",
+    tabExams: "الدرجات",
     tabAttendance: "الحضور",
-    tabStatus: "وضع الطلبة",
+    tabStatus: "النتائج",
     // Modal
     enterCourseName: "أدخل اسم المادة",
     setDates: "حدد تاريخ بداية ونهاية الفصل",
