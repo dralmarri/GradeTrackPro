@@ -100,6 +100,7 @@ export default function SettingsPage() {
     toast.success("تمت إعادة سلم الحروف إلى الافتراضي");
   };
 
+  const [gradesOpen, setGradesOpen] = useState(false);
   const [tiersOpen, setTiersOpen] = useState(false);
   const [lettersOpen, setLettersOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -124,7 +125,194 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
 
-      {/* Language */}
+      {/* 1. Grade Management (merged: tiers + letter scale) */}
+      <div className="rounded-2xl border border-border bg-card shadow-sm">
+        <button
+          type="button"
+          onClick={() => setGradesOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 p-6 text-right"
+        >
+          <div className="flex items-center gap-2">
+            <Award className="text-primary" size={20} />
+            <h2 className="font-display text-lg font-bold">إدارة درجات المقرر</h2>
+          </div>
+          <ChevronDown
+            size={18}
+            className={`text-muted-foreground transition-transform ${gradesOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+        {gradesOpen && (
+          <div className="space-y-4 px-6 pb-6">
+            {/* Sub-section: Grade Tiers */}
+            <div className="rounded-xl border border-border bg-background">
+              <button
+                type="button"
+                onClick={() => setTiersOpen((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 p-4 text-right"
+              >
+                <div className="flex items-center gap-2">
+                  <Award className="text-primary" size={16} />
+                  <h3 className="font-display text-sm font-bold">تقسيمات درجات المقرر</h3>
+                </div>
+                <ChevronDown
+                  size={16}
+                  className={`text-muted-foreground transition-transform ${tiersOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {tiersOpen && (
+                <div className="px-4 pb-4">
+                  <div className="mb-3 flex items-center justify-end">
+                    <button
+                      onClick={resetTiers}
+                      className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                    >
+                      <RotateCcw size={12} />
+                      افتراضي
+                    </button>
+                  </div>
+                  <p className="mb-4 text-xs text-muted-foreground">
+                    عدّل الإيموجي والحد الأدنى للنسبة المئوية (٠–١٠٠) لكل تقدير. يُحفظ تلقائياً.
+                  </p>
+                  <div className="space-y-2">
+                    {tiers.map((t, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 rounded-xl border border-border bg-card p-2"
+                      >
+                        <input
+                          type="text"
+                          value={t.emoji}
+                          onChange={(e) => updateTier(i, { emoji: e.target.value })}
+                          className="w-14 rounded-lg border border-input bg-background px-2 py-2 text-center text-xl outline-none focus:border-primary"
+                        />
+                        <input
+                          type="text"
+                          value={t.label || ""}
+                          placeholder="اسم التقدير"
+                          onChange={(e) => updateTier(i, { label: e.target.value })}
+                          className="w-28 flex-shrink-0 rounded-lg border border-input bg-background px-2 py-2 text-center text-xs outline-none focus:border-primary"
+                        />
+                        <div className="flex flex-1 items-center gap-2">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">من ≥</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={t.minPercent}
+                            onChange={(e) =>
+                              updateTier(i, {
+                                minPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                              })
+                            }
+                            className="w-20 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm outline-none focus:border-primary"
+                          />
+                          <span className="text-xs text-muted-foreground">%</span>
+                        </div>
+                        <button
+                          onClick={() => removeTier(i)}
+                          disabled={tiers.length <= 1}
+                          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={addTier}
+                    className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted"
+                  >
+                    <Plus size={14} />
+                    إضافة تقدير
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Sub-section: Letter Grade Scale */}
+            <div className="rounded-xl border border-border bg-background">
+              <button
+                type="button"
+                onClick={() => setLettersOpen((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 p-4 text-right"
+              >
+                <div className="flex items-center gap-2">
+                  <Award className="text-primary" size={16} />
+                  <h3 className="font-display text-sm font-bold">سلم درجات الحروف</h3>
+                </div>
+                <ChevronDown
+                  size={16}
+                  className={`text-muted-foreground transition-transform ${lettersOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {lettersOpen && (
+                <div className="px-4 pb-4">
+                  <div className="mb-3 flex items-center justify-end">
+                    <button
+                      onClick={resetLetters}
+                      className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                    >
+                      <RotateCcw size={12} />
+                      افتراضي
+                    </button>
+                  </div>
+                  <p className="mb-4 text-xs text-muted-foreground">
+                    عدّل الحرف والحد الأدنى للنسبة المئوية حسب لائحة مؤسستك التعليمية (مثل A=95-100، B+=86-89...). يُحفظ تلقائياً.
+                  </p>
+                  <div className="space-y-2">
+                    {letterTiers.map((t, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 rounded-xl border border-border bg-card p-2"
+                      >
+                        <input
+                          type="text"
+                          value={t.letter}
+                          onChange={(e) => updateLetter(i, { letter: e.target.value })}
+                          dir="ltr"
+                          className="w-14 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm font-bold outline-none focus:border-primary"
+                        />
+                        <div className="flex flex-1 items-center gap-2">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">من ≥</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={t.minPercent}
+                            onChange={(e) =>
+                              updateLetter(i, {
+                                minPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
+                              })
+                            }
+                            className="w-20 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm outline-none focus:border-primary"
+                          />
+                          <span className="text-xs text-muted-foreground">%</span>
+                        </div>
+                        <button
+                          onClick={() => removeLetter(i)}
+                          disabled={letterTiers.length <= 1}
+                          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={addLetter}
+                    className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted"
+                  >
+                    <Plus size={14} />
+                    إضافة حرف
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 2. Language */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-3 flex items-center gap-2">
           <Languages className="text-primary" size={20} />
@@ -155,7 +343,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Theme (Dark mode) */}
+      {/* 3. Theme (Dark mode) */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-3 flex items-center gap-2">
           {theme === "dark" ? <Moon className="text-primary" size={20} /> : <Sun className="text-primary" size={20} />}
@@ -194,190 +382,82 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* 4. Share App */}
+      <ShareApp />
 
-
-
-
-
-
-
-      {/* Grade Tiers */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm">
-        <button
-          type="button"
-          onClick={() => setTiersOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 p-6 text-right"
-        >
-          <div className="flex items-center gap-2">
-            <Award className="text-primary" size={20} />
-            <h2 className="font-display text-lg font-bold">تقسيمات درجات المقرر</h2>
-          </div>
-          <ChevronDown
-            size={18}
-            className={`text-muted-foreground transition-transform ${tiersOpen ? "rotate-180" : ""}`}
-          />
-        </button>
-        {tiersOpen && (
-        <div className="px-6 pb-6">
-        <div className="mb-3 flex items-center justify-end">
-          <button
-            onClick={resetTiers}
-            className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
-          >
-            <RotateCcw size={12} />
-            افتراضي
-          </button>
-        </div>
-        <p className="mb-4 text-xs text-muted-foreground">
-          عدّل الإيموجي والحد الأدنى للنسبة المئوية (٠–١٠٠) لكل تقدير. يُحفظ تلقائياً.
-        </p>
-
-
-        <div className="space-y-2">
-          {tiers.map((t, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-2 rounded-xl border border-border bg-background p-2"
-            >
-              <input
-                type="text"
-                value={t.emoji}
-                onChange={(e) => updateTier(i, { emoji: e.target.value })}
-                className="w-14 rounded-lg border border-input bg-background px-2 py-2 text-center text-xl outline-none focus:border-primary"
-              />
-              <input
-                type="text"
-                value={t.label || ""}
-                placeholder="اسم التقدير"
-                onChange={(e) => updateTier(i, { label: e.target.value })}
-                className="w-28 flex-shrink-0 rounded-lg border border-input bg-background px-2 py-2 text-center text-xs outline-none focus:border-primary"
-              />
-              <div className="flex flex-1 items-center gap-2">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">من ≥</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={t.minPercent}
-                  onChange={(e) =>
-                    updateTier(i, {
-                      minPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
-                    })
-                  }
-                  className="w-20 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm outline-none focus:border-primary"
-                />
-                <span className="text-xs text-muted-foreground">%</span>
-              </div>
-
-              <button
-                onClick={() => removeTier(i)}
-                disabled={tiers.length <= 1}
-                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
-              >
-                <Trash2 size={14} />
-              </button>
+      {/* 5. Account info */}
+      <div>
+        <h2 className="mb-2 px-1 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          {t("accountSection")}
+        </h2>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <UserCircle2 className="text-primary" size={20} />
             </div>
-          ))}
+            <div className="flex-1 min-w-0 text-right">
+              <p className="truncate font-display text-sm font-bold text-foreground" dir="ltr">
+                {user?.email || "—"}
+              </p>
+              <p className="text-[11px] text-muted-foreground">{t("signedInLabel")}</p>
+            </div>
+          </div>
         </div>
-
-        <button
-          onClick={addTier}
-          className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted"
-        >
-          <Plus size={14} />
-          إضافة تقدير
-        </button>
-        </div>
-        )}
       </div>
 
-      {/* Letter Grade Scale */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm">
+      {/* 6. Sign out */}
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <button
-          type="button"
-          onClick={() => setLettersOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 p-6 text-right"
+          onClick={async () => { await signOut(); sonnerToast.success(t("signOut")); }}
+          className="flex w-full items-center gap-3 p-4 text-right transition-colors hover:bg-muted/50"
         >
-          <div className="flex items-center gap-2">
-            <Award className="text-primary" size={20} />
-            <h2 className="font-display text-lg font-bold">سلم درجات الحروف</h2>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
+            <LogOut className="text-amber-600" size={20} />
           </div>
-          <ChevronDown
-            size={18}
-            className={`text-muted-foreground transition-transform ${lettersOpen ? "rotate-180" : ""}`}
-          />
+          <p className="font-display text-sm font-bold text-foreground">{t("signOut")}</p>
         </button>
-        {lettersOpen && (
-        <div className="px-6 pb-6">
-        <div className="mb-3 flex items-center justify-end">
-          <button
-            onClick={resetLetters}
-            className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
-          >
-            <RotateCcw size={12} />
-            افتراضي
-          </button>
-        </div>
-        <p className="mb-4 text-xs text-muted-foreground">
-          عدّل الحرف والحد الأدنى للنسبة المئوية حسب لائحة مؤسستك التعليمية (مثل A=95-100، B+=86-89...). يُحفظ تلقائياً.
-        </p>
-
-
-        <div className="space-y-2">
-          {letterTiers.map((t, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-2 rounded-xl border border-border bg-background p-2"
-            >
-              <input
-                type="text"
-                value={t.letter}
-                onChange={(e) => updateLetter(i, { letter: e.target.value })}
-                dir="ltr"
-                className="w-14 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm font-bold outline-none focus:border-primary"
-              />
-              <div className="flex flex-1 items-center gap-2">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">من ≥</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={t.minPercent}
-                  onChange={(e) =>
-                    updateLetter(i, {
-                      minPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
-                    })
-                  }
-                  className="w-20 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm outline-none focus:border-primary"
-                />
-                <span className="text-xs text-muted-foreground">%</span>
-              </div>
-              <button
-                onClick={() => removeLetter(i)}
-                disabled={letterTiers.length <= 1}
-                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={addLetter}
-          className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted"
-        >
-          <Plus size={14} />
-          إضافة حرف
-        </button>
-        </div>
-        )}
       </div>
 
+      {/* 7. Delete account */}
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <UserX className="text-destructive" size={20} />
+          <h2 className="font-display text-lg font-bold text-destructive">حذف الحساب</h2>
+        </div>
+        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+          سيؤدي حذف حسابك إلى إزالة جميع بياناتك نهائياً (المقررات، الطلاب، الحضور، الدرجات) من خوادمنا. لا يمكن التراجع عن هذه العملية.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              disabled={deleting}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
+            >
+              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              حذف حسابي نهائياً
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>هل أنت متأكد من حذف حسابك؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                سيتم حذف حسابك وجميع بياناتك (المقررات، الطلاب، الدرجات، الحضور) بشكل دائم ولا يمكن استعادتها.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                نعم، احذف حسابي
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
 
-
-
-      {/* About */}
+      {/* 8. About */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
           <Info className="text-primary" size={20} />
@@ -432,82 +512,10 @@ export default function SettingsPage() {
             Developed by <span className="text-base font-bold text-foreground">Prof. Ayedh Almarri</span>
           </p>
           <p className="text-sm text-muted-foreground" dir="ltr">
-            Version <strong className="text-foreground">v1.0.0</strong>
+            Version <strong className="text-foreground">v2.0.0</strong>
           </p>
         </div>
       </div>
-
-      {/* Share App */}
-      <ShareApp />
-
-      {/* Account section */}
-      <div>
-        <h2 className="mb-2 px-1 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          {t("accountSection")}
-        </h2>
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-          <div className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-              <UserCircle2 className="text-primary" size={20} />
-            </div>
-            <div className="flex-1 min-w-0 text-right">
-              <p className="truncate font-display text-sm font-bold text-foreground" dir="ltr">
-                {user?.email || "—"}
-              </p>
-              <p className="text-[11px] text-muted-foreground">{t("signedInLabel")}</p>
-            </div>
-          </div>
-          <button
-            onClick={async () => { await signOut(); sonnerToast.success(t("signOut")); }}
-            className="flex w-full items-center gap-3 border-t border-border p-4 text-right transition-colors hover:bg-muted/50"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
-              <LogOut className="text-amber-600" size={20} />
-            </div>
-            <p className="font-display text-sm font-bold text-foreground">{t("signOut")}</p>
-          </button>
-        </div>
-      </div>
-
-      {/* Danger zone: Delete account (moved to bottom) */}
-      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
-        <div className="mb-3 flex items-center gap-2">
-          <UserX className="text-destructive" size={20} />
-          <h2 className="font-display text-lg font-bold text-destructive">حذف الحساب</h2>
-        </div>
-        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
-          سيؤدي حذف حسابك إلى إزالة جميع بياناتك نهائياً (المقررات، الطلاب، الحضور، الدرجات) من خوادمنا. لا يمكن التراجع عن هذه العملية.
-        </p>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              disabled={deleting}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
-            >
-              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              حذف حسابي نهائياً
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent dir="rtl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>هل أنت متأكد من حذف حسابك؟</AlertDialogTitle>
-              <AlertDialogDescription>
-                سيتم حذف حسابك وجميع بياناتك (المقررات، الطلاب، الدرجات، الحضور) بشكل دائم ولا يمكن استعادتها.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteAccount}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                نعم، احذف حسابي
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-
 
     </div>
   );
