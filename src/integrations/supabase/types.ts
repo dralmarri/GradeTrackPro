@@ -49,8 +49,10 @@ export type Database = {
       }
       courses: {
         Row: {
+          bonus_enabled: boolean
           component_labels: Json | null
           created_at: string | null
+          custom_components: Json
           id: string
           lecture_count: number | null
           lecture_days: Json | null
@@ -69,8 +71,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bonus_enabled?: boolean
           component_labels?: Json | null
           created_at?: string | null
+          custom_components?: Json
           id?: string
           lecture_count?: number | null
           lecture_days?: Json | null
@@ -89,8 +93,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bonus_enabled?: boolean
           component_labels?: Json | null
           created_at?: string | null
+          custom_components?: Json
           id?: string
           lecture_count?: number | null
           lecture_days?: Json | null
@@ -115,6 +121,7 @@ export type Database = {
           attendance: Json | null
           course_id: string
           created_at: string | null
+          custom_scores: Json
           exam1: number | null
           exam2: number | null
           final_exam: number | null
@@ -129,6 +136,7 @@ export type Database = {
           attendance?: Json | null
           course_id: string
           created_at?: string | null
+          custom_scores?: Json
           exam1?: number | null
           exam2?: number | null
           final_exam?: number | null
@@ -143,6 +151,7 @@ export type Database = {
           attendance?: Json | null
           course_id?: string
           created_at?: string | null
+          custom_scores?: Json
           exam1?: number | null
           exam2?: number | null
           final_exam?: number | null
