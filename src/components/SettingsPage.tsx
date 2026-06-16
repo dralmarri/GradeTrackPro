@@ -152,7 +152,7 @@ export default function SettingsPage() {
               >
                 <div className="flex items-center gap-2">
                   <Award className="text-primary" size={16} />
-                  <h3 className="font-display text-sm font-bold">تقسيمات درجات المقرر</h3>
+                  <h3 className="font-display text-sm font-bold">وزن درجات المقرر بالأرقام</h3>
                 </div>
                 <ChevronDown
                   size={16}
