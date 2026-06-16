@@ -44,6 +44,8 @@ export function getLabel(course: { componentLabels?: ComponentLabels }, key: key
   return course.componentLabels?.[key] || DEFAULT_COMPONENT_LABELS[key];
 }
 
+export type StandardComponentKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
+
 export interface Course {
   id: string;
   name: string;
@@ -64,4 +66,5 @@ export interface Course {
   componentLabels?: ComponentLabels;
   bonusEnabled?: boolean;
   customComponents?: CustomComponent[];
+  hiddenComponents?: StandardComponentKey[];
 }

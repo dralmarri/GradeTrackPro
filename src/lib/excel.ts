@@ -18,10 +18,15 @@ export function getCustomMaxTotal(course: Pick<Course, "customComponents">): num
   return (course.customComponents || []).reduce((s, c) => s + (Number(c.max) || 0), 0);
 }
 
-export function getMaxTotal(course: Pick<Course, "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "maxBonus" | "bonusEnabled" | "customComponents">): number {
-  const base = course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0);
+export function getMaxTotal(course: Pick<Course, "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "maxBonus" | "bonusEnabled" | "customComponents" | "hiddenComponents">): number {
+  const hidden = new Set((course as any).hiddenComponents || []);
+  let base = 0;
+  if (!hidden.has("exam1")) base += course.maxExam1;
+  if (!hidden.has("exam2")) base += course.maxExam2;
+  if (!hidden.has("finalExam")) base += course.maxFinal;
+  if (!hidden.has("participation")) base += course.maxParticipation;
+  if (!hidden.has("homework")) base += (course.maxHomework || 0);
   const customMax = getCustomMaxTotal(course as Course);
-  // bonus historically wasn't part of max — kept identical so percentages stay consistent
   return base + customMax;
 }
 
@@ -63,16 +68,17 @@ export function parseExcelFile(file: File): Promise<string[]> {
 export function exportToExcel(course: Course) {
   const bonusOn = course.bonusEnabled !== false;
   const customs = course.customComponents || [];
+  const hidden = new Set(course.hiddenComponents || []);
   const data = course.students.map((s, idx) => {
     const row: Record<string, any> = {
       "#": idx + 1,
       "اسم الطالب": s.name,
-      "اختبار أول": s.exam1,
-      "اختبار ثاني": s.exam2,
-      "نهائي": s.finalExam,
-      "مشاركة": s.participation,
-      "واجب": s.homework,
     };
+    if (!hidden.has("exam1")) row["اختبار أول"] = s.exam1;
+    if (!hidden.has("exam2")) row["اختبار ثاني"] = s.exam2;
+    if (!hidden.has("finalExam")) row["نهائي"] = s.finalExam;
+    if (!hidden.has("participation")) row["مشاركة"] = s.participation;
+    if (!hidden.has("homework")) row["واجب"] = s.homework;
     for (const c of customs) {
       row[c.label] = Math.max(0, Math.min(Number(s.customScores?.[c.key] || 0), c.max));
     }
@@ -113,10 +119,16 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-export function getTotal(student: Student, course?: Partial<Pick<Course, "maxBonus" | "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "bonusEnabled" | "customComponents">>): number {
+export function getTotal(student: Student, course?: Partial<Pick<Course, "maxBonus" | "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "bonusEnabled" | "customComponents" | "hiddenComponents">>): number {
   const bonusOn = course ? course.bonusEnabled !== false : true;
   const bonusTotal = bonusOn ? getBonusTotal(student, course?.maxBonus) : 0;
-  const base = student.exam1 + student.exam2 + student.finalExam + student.participation + (student.homework || 0);
+  const hidden = new Set((course as any)?.hiddenComponents || []);
+  let base = 0;
+  if (!hidden.has("exam1")) base += student.exam1;
+  if (!hidden.has("exam2")) base += student.exam2;
+  if (!hidden.has("finalExam")) base += student.finalExam;
+  if (!hidden.has("participation")) base += student.participation;
+  if (!hidden.has("homework")) base += (student.homework || 0);
   const customSum = course ? getCustomTotal(student, course as Course) : 0;
   if (course && course.maxExam1 !== undefined) {
     const maxTotal = getMaxTotal(course as Course);

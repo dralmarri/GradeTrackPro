@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Student, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS } from "@/types/student";
+import { Student, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS, StandardComponentKey } from "@/types/student";
 import { FileSpreadsheet, Loader2, Search, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ interface ExamsPageProps {
   maxHomework: number;
   componentLabels?: ComponentLabels;
   customComponents?: CustomComponent[];
+  hiddenComponents?: StandardComponentKey[];
   onUpdateStudent: (studentId: string, updates: Partial<Student>) => void;
 }
 
@@ -43,18 +44,24 @@ export default function ExamsPage({
   maxHomework,
   componentLabels,
   customComponents,
+  hiddenComponents,
   onUpdateStudent,
 }: ExamsPageProps) {
   const { t } = useLanguage();
   const L = { ...DEFAULT_COMPONENT_LABELS, ...(componentLabels || {}) };
   const customs = customComponents || [];
+  const hidden = new Set<StandardComponentKey>(hiddenComponents || []);
 
-  const tabs: ExamTabConfig[] = [
+  const standardTabs: ExamTabConfig[] = [
     { key: "exam1", label: L.exam1, max: maxExam1, isCustom: false },
     { key: "exam2", label: L.exam2, max: maxExam2, isCustom: false },
     { key: "finalExam", label: L.finalExam, max: maxFinal, isCustom: false },
     { key: "participation", label: L.participation, max: maxParticipation, isCustom: false },
     { key: "homework", label: L.homework, max: maxHomework, isCustom: false },
+  ].filter((t) => !hidden.has(t.key as StandardComponentKey));
+
+  const tabs: ExamTabConfig[] = [
+    ...standardTabs,
     ...customs.map((c) => ({ key: c.key, label: c.label, max: c.max, isCustom: true })),
   ];
 
@@ -157,6 +164,15 @@ export default function ExamsPage({
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
         <p className="font-display text-lg">{t("noStudentsImportFirst")}</p>
         <p className="text-sm">{t("importFirstFromBonus")}</p>
+      </div>
+    );
+  }
+
+  if (tabs.length === 0 || !currentTab) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <p className="font-display text-lg">لا توجد مكوّنات درجات مفعّلة</p>
+        <p className="text-sm">فعّل أو أضف مكوّناً من صفحة الإعدادات</p>
       </div>
     );
   }

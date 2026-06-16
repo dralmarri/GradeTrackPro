@@ -122,13 +122,13 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             ? "bg-warning/15 text-warning"
             : "bg-destructive/15 text-destructive";
 
-          const miniCells: { key: string; label: string; value: string; max: number; highlight: string }[] = [
-            { key: "exam1", label: getLabel(course, "exam1"), value: `${student.exam1}`, max: course.maxExam1, highlight: "bg-muted/50 text-foreground" },
-            { key: "exam2", label: getLabel(course, "exam2"), value: `${student.exam2}`, max: course.maxExam2, highlight: "bg-muted/50 text-foreground" },
-            { key: "final", label: getLabel(course, "finalExam"), value: `${student.finalExam}`, max: course.maxFinal, highlight: "bg-muted/50 text-foreground" },
-            { key: "participation", label: getLabel(course, "participation"), value: `${student.participation}`, max: course.maxParticipation, highlight: "bg-muted/50 text-foreground" },
-            { key: "homework", label: getLabel(course, "homework"), value: `${student.homework || 0}`, max: course.maxHomework ?? 10, highlight: "bg-muted/50 text-foreground" },
-          ];
+          const hidden = new Set(course.hiddenComponents || []);
+          const miniCells: { key: string; label: string; value: string; max: number; highlight: string }[] = [];
+          if (!hidden.has("exam1")) miniCells.push({ key: "exam1", label: getLabel(course, "exam1"), value: `${student.exam1}`, max: course.maxExam1, highlight: "bg-muted/50 text-foreground" });
+          if (!hidden.has("exam2")) miniCells.push({ key: "exam2", label: getLabel(course, "exam2"), value: `${student.exam2}`, max: course.maxExam2, highlight: "bg-muted/50 text-foreground" });
+          if (!hidden.has("finalExam")) miniCells.push({ key: "final", label: getLabel(course, "finalExam"), value: `${student.finalExam}`, max: course.maxFinal, highlight: "bg-muted/50 text-foreground" });
+          if (!hidden.has("participation")) miniCells.push({ key: "participation", label: getLabel(course, "participation"), value: `${student.participation}`, max: course.maxParticipation, highlight: "bg-muted/50 text-foreground" });
+          if (!hidden.has("homework")) miniCells.push({ key: "homework", label: getLabel(course, "homework"), value: `${student.homework || 0}`, max: course.maxHomework ?? 10, highlight: "bg-muted/50 text-foreground" });
           for (const c of (course.customComponents || [])) {
             miniCells.push({
               key: c.key,
