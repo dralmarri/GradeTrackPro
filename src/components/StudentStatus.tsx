@@ -108,10 +108,10 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
           const bonusTotal = getBonusTotal(student, course.maxBonus);
           const grade = getGrade(total, maxTotal);
           const letter = grade.letter.letter;
+          const bonusOn = course.bonusEnabled !== false;
           const isPositiveBonus = bonusTotal > 0;
           const isNegativeBonus = bonusTotal < 0;
 
-          // Letter badge color by grade family
           const letterBadgeClass = letter.startsWith("A")
             ? "bg-success/15 text-success"
             : letter.startsWith("B")
@@ -122,43 +122,24 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             ? "bg-warning/15 text-warning"
             : "bg-destructive/15 text-destructive";
 
-          const miniCells = [
-            {
-              key: "exam1",
-              label: getLabel(course, "exam1"),
-              value: `${student.exam1}`,
-              max: course.maxExam1,
+          const miniCells: { key: string; label: string; value: string; max: number; highlight: string }[] = [
+            { key: "exam1", label: getLabel(course, "exam1"), value: `${student.exam1}`, max: course.maxExam1, highlight: "bg-muted/50 text-foreground" },
+            { key: "exam2", label: getLabel(course, "exam2"), value: `${student.exam2}`, max: course.maxExam2, highlight: "bg-muted/50 text-foreground" },
+            { key: "final", label: getLabel(course, "finalExam"), value: `${student.finalExam}`, max: course.maxFinal, highlight: "bg-muted/50 text-foreground" },
+            { key: "participation", label: getLabel(course, "participation"), value: `${student.participation}`, max: course.maxParticipation, highlight: "bg-muted/50 text-foreground" },
+            { key: "homework", label: getLabel(course, "homework"), value: `${student.homework || 0}`, max: course.maxHomework ?? 10, highlight: "bg-muted/50 text-foreground" },
+          ];
+          for (const c of (course.customComponents || [])) {
+            miniCells.push({
+              key: c.key,
+              label: c.label,
+              value: `${student.customScores?.[c.key] || 0}`,
+              max: c.max,
               highlight: "bg-muted/50 text-foreground",
-            },
-            {
-              key: "exam2",
-              label: getLabel(course, "exam2"),
-              value: `${student.exam2}`,
-              max: course.maxExam2,
-              highlight: "bg-muted/50 text-foreground",
-            },
-            {
-              key: "final",
-              label: getLabel(course, "finalExam"),
-              value: `${student.finalExam}`,
-              max: course.maxFinal,
-              highlight: "bg-muted/50 text-foreground",
-            },
-            {
-              key: "participation",
-              label: getLabel(course, "participation"),
-              value: `${student.participation}`,
-              max: course.maxParticipation,
-              highlight: "bg-muted/50 text-foreground",
-            },
-            {
-              key: "homework",
-              label: getLabel(course, "homework"),
-              value: `${student.homework || 0}`,
-              max: course.maxHomework ?? 10,
-              highlight: "bg-muted/50 text-foreground",
-            },
-            {
+            });
+          }
+          if (bonusOn) {
+            miniCells.push({
               key: "bonus",
               label: getLabel(course, "bonus"),
               value: isPositiveBonus ? `+${bonusTotal}` : `${bonusTotal}`,
@@ -168,8 +149,8 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                 : isNegativeBonus
                 ? "bg-destructive/10 text-destructive"
                 : "bg-muted/50 text-foreground",
-            },
-          ];
+            });
+          }
 
           // Absences
           const absenceIndices: number[] = [];

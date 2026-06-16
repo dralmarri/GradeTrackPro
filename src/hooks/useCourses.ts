@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Course, Student, LectureInfo } from "@/types/student";
+import { Course, Student, LectureInfo, CustomComponent } from "@/types/student";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +25,8 @@ function dbRowToCourse(row: any): Omit<Course, "students"> {
     semesterStart: row.semester_start || "",
     semesterEnd: row.semester_end || "",
     componentLabels: (row.component_labels || {}) as Course["componentLabels"],
+    bonusEnabled: row.bonus_enabled !== false,
+    customComponents: (row.custom_components || []) as CustomComponent[],
   };
 }
 
@@ -39,6 +41,7 @@ function dbRowToStudent(row: any): Student {
     finalExam: Number(row.final_exam) || 0,
     participation: Number(row.participation) || 0,
     homework: Number(row.homework) || 0,
+    customScores: (row.custom_scores || {}) as Record<string, number>,
   };
 }
 
@@ -80,6 +83,7 @@ export function useCourses() {
       user_id: user.id, name, section: section || "",
       lecture_count: lectures.length, lectures,
       max_bonus: 3, max_exam1: 20, max_exam2: 20, max_final: 40, max_participation: 10, max_homework: 10,
+      bonus_enabled: true, custom_components: [],
       lecture_days: schedule?.lectureDays || [], lecture_time: schedule?.lectureTime || "",
       semester_start: schedule?.semesterStart || "", semester_end: schedule?.semesterEnd || "",
     }).select().single();
@@ -105,6 +109,8 @@ export function useCourses() {
     if (updates.semesterStart !== undefined) u.semester_start = updates.semesterStart;
     if (updates.semesterEnd !== undefined) u.semester_end = updates.semesterEnd;
     if ((updates as any).componentLabels !== undefined) u.component_labels = (updates as any).componentLabels;
+    if ((updates as any).bonusEnabled !== undefined) u.bonus_enabled = (updates as any).bonusEnabled;
+    if ((updates as any).customComponents !== undefined) u.custom_components = (updates as any).customComponents;
 
     // Auto-regenerate lectures if schedule changed
     const course = courses.find((c) => c.id === courseId);
@@ -158,7 +164,7 @@ export function useCourses() {
     const rows = names.map((name) => ({
       course_id: courseId, user_id: user.id, name,
       lecture_bonus: new Array(lc).fill(0), attendance: new Array(lc).fill(true),
-      exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0,
+      exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
     }));
     const { error } = await db.from("students").insert(rows);
     if (error) console.error("Error adding students:", error);
@@ -175,6 +181,7 @@ export function useCourses() {
     if (updates.finalExam !== undefined) u.final_exam = updates.finalExam;
     if (updates.participation !== undefined) u.participation = updates.participation;
     if ((updates as any).homework !== undefined) u.homework = (updates as any).homework;
+    if ((updates as any).customScores !== undefined) u.custom_scores = (updates as any).customScores;
     const { error } = await db.from("students").update(u).eq("id", studentId);
     if (error) console.error("Error updating student:", error);
     else await fetchCourses();
@@ -268,6 +275,8 @@ export function useCourses() {
               max_exam2: course.maxExam2, max_final: course.maxFinal,
               max_participation: course.maxParticipation,
               max_homework: (course as any).maxHomework || 10,
+              bonus_enabled: (course as any).bonusEnabled !== false,
+              custom_components: (course as any).customComponents || [],
               lecture_days: course.lectureDays || [], lecture_time: course.lectureTime || "",
               semester_start: course.semesterStart || "", semester_end: course.semesterEnd || "",
             }).select().single();
@@ -277,6 +286,7 @@ export function useCourses() {
                 lecture_bonus: s.lectureBonus, attendance: s.attendance,
                 exam1: s.exam1, exam2: s.exam2, final_exam: s.finalExam, participation: s.participation,
                 homework: (s as any).homework || 0,
+                custom_scores: (s as any).customScores || {},
               })));
             }
           }

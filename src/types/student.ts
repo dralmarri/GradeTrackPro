@@ -1,3 +1,9 @@
+export interface CustomComponent {
+  key: string;       // unique, e.g. "custom_1"
+  label: string;
+  max: number;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -8,6 +14,7 @@ export interface Student {
   finalExam: number;
   participation: number;
   homework: number;
+  customScores?: Record<string, number>;
 }
 
 export interface LectureInfo {
@@ -55,4 +62,6 @@ export interface Course {
   semesterStart: string;
   semesterEnd: string;
   componentLabels?: ComponentLabels;
+  bonusEnabled?: boolean;
+  customComponents?: CustomComponent[];
 }

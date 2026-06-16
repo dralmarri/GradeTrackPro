@@ -46,7 +46,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useBonusEnabled } from "@/hooks/useBonusEnabled";
+
 import { tf } from "@/lib/translations";
 import AppStoreBanner from "@/components/AppStoreBanner";
 
@@ -57,7 +57,6 @@ type MainView = "courses" | "settings";
 export default function Index() {
   
   const { t } = useLanguage();
-  const [bonusEnabled] = useBonusEnabled();
   const {
     courses,
     loading,
@@ -206,7 +205,7 @@ export default function Index() {
           </div>
         </div>
 
-        <SettingsPage />
+        <SettingsPage courses={courses} onUpdateCourse={updateCourse} />
 
         <BottomNav
           active="settings"
@@ -566,6 +565,7 @@ export default function Index() {
             maxParticipation={activeCourse.maxParticipation}
             maxHomework={activeCourse.maxHomework}
             componentLabels={activeCourse.componentLabels}
+            customComponents={activeCourse.customComponents}
             onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
           />
         )}
@@ -576,7 +576,7 @@ export default function Index() {
               lectures={activeCourse.lectures}
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
             />
-            {bonusEnabled && (
+            {activeCourse.bonusEnabled !== false && (
               <BonusTable
                 students={activeCourse.students}
                 lectures={activeCourse.lectures}

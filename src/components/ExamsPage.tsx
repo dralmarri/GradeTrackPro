@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
-import { Student, ComponentLabels, DEFAULT_COMPONENT_LABELS } from "@/types/student";
-import { FileSpreadsheet, Loader2, ChevronLeft, ChevronRight, Search, X, AlertCircle } from "lucide-react";
+import { Student, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS } from "@/types/student";
+import { FileSpreadsheet, Loader2, Search, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { importAllGradesFromExcel, type GradeMatch } from "@/lib/ocr";
@@ -8,12 +8,13 @@ import NumberInput from "@/components/NumberInput";
 import { useLanguage } from "@/hooks/useLanguage";
 import { tf } from "@/lib/translations";
 
-type ExamKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
+type StandardKey = "exam1" | "exam2" | "finalExam" | "participation" | "homework";
 
 interface ExamTabConfig {
-  key: ExamKey;
+  key: string;
   label: string;
   max: number;
+  isCustom: boolean;
 }
 
 interface ExamsPageProps {
@@ -25,6 +26,7 @@ interface ExamsPageProps {
   maxParticipation: number;
   maxHomework: number;
   componentLabels?: ComponentLabels;
+  customComponents?: CustomComponent[];
   onUpdateStudent: (studentId: string, updates: Partial<Student>) => void;
 }
 
@@ -40,10 +42,23 @@ export default function ExamsPage({
   maxParticipation,
   maxHomework,
   componentLabels,
+  customComponents,
   onUpdateStudent,
 }: ExamsPageProps) {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<ExamKey>("exam1");
+  const L = { ...DEFAULT_COMPONENT_LABELS, ...(componentLabels || {}) };
+  const customs = customComponents || [];
+
+  const tabs: ExamTabConfig[] = [
+    { key: "exam1", label: L.exam1, max: maxExam1, isCustom: false },
+    { key: "exam2", label: L.exam2, max: maxExam2, isCustom: false },
+    { key: "finalExam", label: L.finalExam, max: maxFinal, isCustom: false },
+    { key: "participation", label: L.participation, max: maxParticipation, isCustom: false },
+    { key: "homework", label: L.homework, max: maxHomework, isCustom: false },
+    ...customs.map((c) => ({ key: c.key, label: c.label, max: c.max, isCustom: true })),
+  ];
+
+  const [activeTabKey, setActiveTabKey] = useState<string>("exam1");
   const [importLoading, setImportLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,28 +68,24 @@ export default function ExamsPage({
     missing: { id: string; name: string }[];
   }>(null);
 
-  const L = { ...DEFAULT_COMPONENT_LABELS, ...(componentLabels || {}) };
-  const tabs: ExamTabConfig[] = [
-    { key: "exam1", label: L.exam1, max: maxExam1 },
-    { key: "exam2", label: L.exam2, max: maxExam2 },
-    { key: "finalExam", label: L.finalExam, max: maxFinal },
-    { key: "participation", label: L.participation, max: maxParticipation },
-    { key: "homework", label: L.homework, max: maxHomework },
-  ];
-
-  const currentTab = tabs.find((t) => t.key === activeTab)!;
-  const currentTabIndex = tabs.findIndex((t) => t.key === activeTab);
-  const maxByKey = Object.fromEntries(tabs.map((t) => [t.key, t.max])) as Record<ExamKey, number>;
-  const labelByKey = Object.fromEntries(tabs.map((t) => [t.key, t.label])) as Record<ExamKey, string>;
+  const currentTab = tabs.find((t) => t.key === activeTabKey) || tabs[0];
   const filteredStudents = searchQuery
     ? students.filter((s) => s.name.includes(searchQuery))
     : students;
 
-  const goNextTab = () => {
-    if (currentTabIndex < tabs.length - 1) setActiveTab(tabs[currentTabIndex + 1].key);
+  const getVal = (s: Student): number => {
+    if (currentTab.isCustom) return Number(s.customScores?.[currentTab.key] || 0);
+    return Number((s as any)[currentTab.key]) || 0;
   };
-  const goPrevTab = () => {
-    if (currentTabIndex > 0) setActiveTab(tabs[currentTabIndex - 1].key);
+
+  const setVal = (s: Student, v: number) => {
+    const clamped = clamp(v, currentTab.max);
+    if (currentTab.isCustom) {
+      const next = { ...(s.customScores || {}), [currentTab.key]: clamped };
+      onUpdateStudent(s.id, { customScores: next } as Partial<Student>);
+    } else {
+      onUpdateStudent(s.id, { [currentTab.key]: clamped } as Partial<Student>);
+    }
   };
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,6 +107,10 @@ export default function ExamsPage({
 
     setImportLoading(true);
     try {
+      const maxByKey: Record<StandardKey, number> = {
+        exam1: maxExam1, exam2: maxExam2, finalExam: maxFinal,
+        participation: maxParticipation, homework: maxHomework,
+      };
       const result = await importAllGradesFromExcel(
         file,
         students.map((s) => ({ id: s.id, name: s.name })),
@@ -121,15 +136,16 @@ export default function ExamsPage({
 
   const applyPreview = () => {
     if (!preview) return;
+    const maxByKey: Record<StandardKey, number> = {
+      exam1: maxExam1, exam2: maxExam2, finalExam: maxFinal,
+      participation: maxParticipation, homework: maxHomework,
+    };
     for (const m of preview.matches) {
       if (m.scores) {
         const updates = Object.fromEntries(
-          Object.entries(m.scores).map(([key, value]) => [key, clamp(Number(value), maxByKey[key as ExamKey])]),
+          Object.entries(m.scores).map(([key, value]) => [key, clamp(Number(value), maxByKey[key as StandardKey])]),
         ) as Partial<Student>;
         onUpdateStudent(m.studentId, updates);
-      } else {
-        const v = clamp(m.score, currentTab.max);
-        onUpdateStudent(m.studentId, { [currentTab.key]: v });
       }
     }
     toast.success(tf(t("gradesSaved"), { n: preview.matches.length }));
@@ -147,22 +163,20 @@ export default function ExamsPage({
 
   return (
     <div className="space-y-4">
-      {/* Pill tab cards (mockup-style) */}
+      {/* Pill tab cards */}
       <div className={cn(
         "grid gap-2",
-        tabs.length === 3 ? "grid-cols-3" : tabs.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-5"
+        tabs.length <= 3 ? "grid-cols-3" : tabs.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-5"
       )}>
         {tabs.map((tab) => {
-          const active = activeTab === tab.key;
+          const active = activeTabKey === tab.key;
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => setActiveTabKey(tab.key)}
               className={cn(
                 "rounded-2xl border-2 px-3 py-3 sm:py-4 text-center transition-all",
-                active
-                  ? "border-primary bg-primary/5 shadow-sm"
-                  : "border-border bg-card hover:border-primary/30"
+                active ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/30"
               )}
             >
               <p className={cn(
@@ -176,7 +190,6 @@ export default function ExamsPage({
           );
         })}
       </div>
-
 
       {/* Search */}
       <div className="relative">
@@ -219,20 +232,14 @@ export default function ExamsPage({
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div>
                 <h3 className="font-display text-lg font-bold">{t("reviewGrades")}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t("reviewGradesHint")}
-                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("reviewGradesHint")}</p>
               </div>
-              <button
-                onClick={() => setPreview(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted"
-              >
+              <button onClick={() => setPreview(null)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted">
                 <X size={18} />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Summary */}
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-primary/10 p-3">
                   <p className="text-2xl font-bold text-primary">{preview.matches.length}</p>
@@ -248,49 +255,6 @@ export default function ExamsPage({
                 </div>
               </div>
 
-              {/* Matched rows */}
-              {preview.matches.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-2">{t("changesOldNew")}</p>
-                  <div className="rounded-lg border border-border overflow-hidden">
-                    <table className="w-full text-sm">
-                      <tbody>
-                        {preview.matches.map((m) => {
-                          const student = students.find((s) => s.id === m.studentId);
-                          const entries = m.scores
-                            ? Object.entries(m.scores) as [ExamKey, number][]
-                            : [[currentTab.key, m.score] as [ExamKey, number]];
-                          return (
-                            <tr key={m.studentId} className="border-b border-border/50 last:border-0">
-                              <td className="px-3 py-2 font-medium">{m.studentName}</td>
-                              <td className="px-3 py-2 text-center w-52">
-                                <div className="space-y-1 text-xs">
-                                  {entries.map(([key, value]) => {
-                                    const old = (student?.[key] as number) || 0;
-                                    const next = clamp(value, maxByKey[key]);
-                                    const changed = old !== next;
-                                    return (
-                                      <div key={key} className={cn("flex items-center justify-between gap-2", !changed && "text-muted-foreground")}>
-                                        <span>{labelByKey[key]}</span>
-                                        <span>
-                                          {old} <span className="mx-1">←</span>{" "}
-                                          <span className={cn("font-bold", changed && "text-primary")}>{next}</span>
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Unmatched names */}
               {preview.unmatched.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1.5 mb-2 text-destructive">
@@ -307,35 +271,13 @@ export default function ExamsPage({
                   </div>
                 </div>
               )}
-
-              {/* Missing students */}
-              {preview.missing.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 mb-2 text-amber-600">
-                    <AlertCircle size={14} />
-                    <p className="text-xs font-semibold">{t("studentsMissingInFile")}</p>
-                  </div>
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1 max-h-40 overflow-y-auto">
-                    {preview.missing.map((s) => (
-                      <div key={s.id} className="text-xs">{s.name}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="flex gap-2 p-4 border-t border-border">
-              <button
-                onClick={() => setPreview(null)}
-                className="flex-1 rounded-lg border border-border bg-background py-2.5 text-sm font-medium hover:bg-muted"
-              >
+              <button onClick={() => setPreview(null)} className="flex-1 rounded-lg border border-border bg-background py-2.5 text-sm font-medium hover:bg-muted">
                 {t("cancel")}
               </button>
-              <button
-                onClick={applyPreview}
-                disabled={preview.matches.length === 0}
-                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-md hover:brightness-110 disabled:opacity-50"
-              >
+              <button onClick={applyPreview} disabled={preview.matches.length === 0} className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-md hover:brightness-110 disabled:opacity-50">
                 {tf(t("saveNGrades"), { n: preview.matches.length })}
               </button>
             </div>
@@ -346,13 +288,9 @@ export default function ExamsPage({
       {/* Mobile card layout */}
       <div className="space-y-2 sm:hidden">
         {filteredStudents.map((student, idx) => {
-          const currentVal = (student[currentTab.key] as number) || 0;
-
+          const currentVal = getVal(student);
           return (
-            <div
-              key={student.id}
-              className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
-            >
+            <div key={student.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground">
                 {idx + 1}
               </span>
@@ -361,31 +299,20 @@ export default function ExamsPage({
               </div>
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => {
-                    const v = clamp(currentVal - 1, currentTab.max);
-                    onUpdateStudent(student.id, { [currentTab.key]: v });
-                  }}
+                  onClick={() => setVal(student, currentVal - 1)}
                   className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10 text-destructive font-bold text-lg transition-colors active:bg-destructive/20"
-                >
-                  −
-                </button>
+                >−</button>
                 <NumberInput
                   value={currentVal}
-                  onChange={(v) => onUpdateStudent(student.id, { [currentTab.key]: v })}
+                  onChange={(v) => setVal(student, v)}
                   min={0}
                   max={currentTab.max}
                   className="w-14 px-1 py-1.5 text-sm font-bold"
                 />
-
                 <button
-                  onClick={() => {
-                    const v = clamp(currentVal + 1, currentTab.max);
-                    onUpdateStudent(student.id, { [currentTab.key]: v });
-                  }}
+                  onClick={() => setVal(student, currentVal + 1)}
                   className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-lg transition-colors active:bg-primary/20"
-                >
-                  +
-                </button>
+                >+</button>
               </div>
             </div>
           );
@@ -398,9 +325,7 @@ export default function ExamsPage({
           <thead>
             <tr className="border-b border-border bg-secondary/50">
               <th className="px-3 py-3 text-right font-display font-semibold w-12">#</th>
-              <th className="min-w-[180px] px-3 py-3 text-right font-display font-semibold">
-                {t("studentName")}
-              </th>
+              <th className="min-w-[180px] px-3 py-3 text-right font-display font-semibold">{t("studentName")}</th>
               <th className="px-3 py-3 text-center font-display font-semibold w-28">
                 {currentTab.label}
                 <br />
@@ -411,45 +336,34 @@ export default function ExamsPage({
             </tr>
           </thead>
           <tbody>
-            {filteredStudents.map((student, idx) => (
-              <tr
-                key={student.id}
-                className="border-b border-border/50 transition-colors hover:bg-muted/30"
-              >
-                <td className="px-3 py-2.5 text-center text-muted-foreground">{idx + 1}</td>
-                <td className="px-3 py-2.5 font-medium">{student.name}</td>
-                <td className="px-3 py-1.5 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      onClick={() => {
-                        const curr = (student[currentTab.key] as number) || 0;
-                        onUpdateStudent(student.id, { [currentTab.key]: clamp(curr - 1, currentTab.max) });
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/10 text-destructive font-bold transition-colors hover:bg-destructive/20"
-                    >
-                      −
-                    </button>
-                    <NumberInput
-                      value={(student[currentTab.key] as number) || 0}
-                      onChange={(v) => onUpdateStudent(student.id, { [currentTab.key]: v })}
-                      min={0}
-                      max={currentTab.max}
-                      className="w-16"
-                    />
-
-                    <button
-                      onClick={() => {
-                        const curr = (student[currentTab.key] as number) || 0;
-                        onUpdateStudent(student.id, { [currentTab.key]: clamp(curr + 1, currentTab.max) });
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-bold transition-colors hover:bg-primary/20"
-                    >
-                      +
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filteredStudents.map((student, idx) => {
+              const currentVal = getVal(student);
+              return (
+                <tr key={student.id} className="border-b border-border/50 transition-colors hover:bg-muted/30">
+                  <td className="px-3 py-2.5 text-center text-muted-foreground">{idx + 1}</td>
+                  <td className="px-3 py-2.5 font-medium">{student.name}</td>
+                  <td className="px-3 py-1.5 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => setVal(student, currentVal - 1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/10 text-destructive font-bold transition-colors hover:bg-destructive/20"
+                      >−</button>
+                      <NumberInput
+                        value={currentVal}
+                        onChange={(v) => setVal(student, v)}
+                        min={0}
+                        max={currentTab.max}
+                        className="w-16"
+                      />
+                      <button
+                        onClick={() => setVal(student, currentVal + 1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary font-bold transition-colors hover:bg-primary/20"
+                      >+</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
