@@ -564,12 +564,16 @@ export default function Index() {
             maxFinal={activeCourse.maxFinal}
             maxParticipation={activeCourse.maxParticipation}
             maxHomework={activeCourse.maxHomework}
+            maxBonus={activeCourse.maxBonus}
+            bonusEnabled={activeCourse.bonusEnabled !== false}
+            lectureCount={activeCourse.lectureCount}
             componentLabels={activeCourse.componentLabels}
             customComponents={activeCourse.customComponents}
             hiddenComponents={activeCourse.hiddenComponents}
             onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
           />
         )}
+
         {courseTab === "attendance" && (
           <div className="space-y-6">
             <AttendancePerLecture
