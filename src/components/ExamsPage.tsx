@@ -168,6 +168,15 @@ export default function ExamsPage({
     );
   }
 
+  if (tabs.length === 0 || !currentTab) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <p className="font-display text-lg">لا توجد مكوّنات درجات مفعّلة</p>
+        <p className="text-sm">فعّل أو أضف مكوّناً من صفحة الإعدادات</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Pill tab cards */}
