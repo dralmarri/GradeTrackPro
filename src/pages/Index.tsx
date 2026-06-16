@@ -155,7 +155,7 @@ export default function Index() {
 
 
   // Settings / Course management view
-  if (!activeCourse && mainView === "settings") {
+  if (mainView === "settings") {
     return (
       <div className="min-h-screen bg-background pb-24">
         <header className="border-b border-border bg-card/80 backdrop-blur-sm">
