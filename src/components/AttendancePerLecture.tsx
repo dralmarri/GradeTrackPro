@@ -130,6 +130,7 @@ export default function AttendancePerLecture({ students, lectures, onUpdateAtten
       <div className="space-y-2">
         {filtered.map((student, idx) => {
           const isPresent = student.attendance?.[selectedLecture] !== false;
+          const currentBonus = student.lectureBonus?.[selectedLecture] || 0;
           return (
             <div
               key={student.id}
@@ -139,6 +140,17 @@ export default function AttendancePerLecture({ students, lectures, onUpdateAtten
                 {idx + 1}
               </span>
               <p className="flex-1 truncate text-sm sm:text-base font-bold text-foreground">{student.name}</p>
+
+              {bonusEnabled && onUpdateBonus && (
+                <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                  <NumberInput
+                    value={currentBonus}
+                    onChange={(v) => onUpdateBonus(student.id, selectedLecture, v)}
+                    allowNegative
+                    className="w-20 px-2 py-2 text-sm font-bold"
+                  />
+                </div>
+              )}
 
               {/* Toggle pill */}
               <div className="flex shrink-0 items-center rounded-xl bg-muted/60 p-1">
@@ -172,3 +184,4 @@ export default function AttendancePerLecture({ students, lectures, onUpdateAtten
     </div>
   );
 }
+
