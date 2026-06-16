@@ -346,11 +346,18 @@ export default function Help() {
             </div>
           </a>
 
+          <p className="mb-3 text-[11px] font-semibold text-muted-foreground">
+            {ar
+              ? "لمستخدمي iPhone: التحميل من App Store هو الخيار الموصى به. الخطوات التالية بديل عبر متصفح Safari فقط:"
+              : "For iPhone users: downloading from the App Store is the recommended option. The steps below are only a fallback via Safari:"}
+          </p>
+
           <div className="mb-4 rounded-xl border border-border bg-background p-4">
             <div className="mb-2 flex items-center gap-2">
               <AppleLogo size={18} className="text-foreground" />
               <h4 className="font-display text-sm font-bold">{iosTitle}</h4>
             </div>
+
 
             <ol className="space-y-2 px-2">
               {iosSteps.map((step, i) => (
