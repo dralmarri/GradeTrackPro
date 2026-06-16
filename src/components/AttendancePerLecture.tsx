@@ -64,7 +64,7 @@ export default function AttendancePerLecture({ students, lectures, onUpdateAtten
 
   // Date subtitle — Gregorian only (e.g. "الأربعاء، 10 يونيو 2026")
   const dateObj = new Date(current.date);
-  const subtitle = dateObj.toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const subtitle = dateObj.toLocaleDateString("ar-EG-u-nu-latn", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const title = `المحاضرة ${selectedLecture + 1}`;
 
   return (
