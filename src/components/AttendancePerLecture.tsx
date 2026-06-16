@@ -81,7 +81,7 @@ export default function AttendancePerLecture({ students, lectures, onUpdateAtten
         </button>
         <div className="flex-1 text-center">
           <p className="font-display text-lg font-extrabold text-foreground">{title}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
+          <p className="mt-1 text-sm sm:text-base font-bold text-foreground">{subtitle}</p>
         </div>
         <button
           onClick={goNext}
@@ -109,16 +109,6 @@ export default function AttendancePerLecture({ students, lectures, onUpdateAtten
         </div>
       </div>
 
-      {/* Lecture quick jump */}
-      <select
-        value={selectedLecture}
-        onChange={(e) => setSelectedLecture(Number(e.target.value))}
-        className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-      >
-        {safeLectures.map((l, i) => (
-          <option key={i} value={i}>{l.label}</option>
-        ))}
-      </select>
 
       {/* Search */}
       <div className="relative">
