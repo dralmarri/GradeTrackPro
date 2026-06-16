@@ -32,7 +32,10 @@ export default function TermsOfUse() {
           h: "وصف الخدمة",
           body: (
             <>
-              <p>GradeTrackPro هو تطبيق لإدارة درجات الطلاب يتيح للمعلمين وأعضاء هيئة التدريس:</p>
+              <p>
+                GradeTrackPro متاح كموقع ويب وكتطبيق أصلي على iPhone و iPad عبر Apple App Store، ويستخدمان نفس
+                الحساب وقاعدة البيانات لمزامنة فورية بين جميع أجهزتك. يتيح التطبيق للمعلمين وأعضاء هيئة التدريس:
+              </p>
               <ul className="list-disc ps-6 space-y-1">
                 <li>إنشاء وإدارة المقررات الدراسية والشُعب وجداول المحاضرات</li>
                 <li>تسجيل حضور المحاضرات وإدارة درجات البونص</li>
@@ -44,6 +47,25 @@ export default function TermsOfUse() {
             </>
           ),
         },
+        {
+          h: "شروط خاصة بتطبيق App Store",
+          body: (
+            <>
+              <p>
+                عند استخدامك لنسخة iOS من التطبيق المُحمَّلة من Apple App Store، فإنك توافق إضافة على ما يلي:
+              </p>
+              <ul className="list-disc ps-6 space-y-1">
+                <li>هذه الاتفاقية مُبرَمة بينك وبين مطوّر التطبيق فقط، وليست بينك وبين شركة Apple، وApple ليست طرفاً فيها.</li>
+                <li>Apple ليست مسؤولة عن التطبيق ولا عن محتواه أو دعمه أو صيانته.</li>
+                <li>في حال وجود أي خلل في التطبيق، يحق لك إبلاغ Apple وستقوم بإرجاع ثمن الشراء إن وُجد، ولا تتحمل Apple أي مسؤولية أخرى.</li>
+                <li>أي مطالبات تتعلق بالتطبيق (أداء، أضرار، عدم مطابقة قانون، انتهاك ملكية فكرية) هي مسؤولية المطوّر وحده وليست مسؤولية Apple.</li>
+                <li>Apple وشركاتها التابعة مستفيدون كطرف ثالث (Third-Party Beneficiaries) من هذه الشروط، ولهم الحق في تطبيقها ضدك.</li>
+                <li>تُقرّ بعدم وجودك في أي دولة تخضع لحظر حكومة الولايات المتحدة، وبعدم إدراجك في قوائم الأطراف المحظورة.</li>
+              </ul>
+            </>
+          ),
+        },
+
         {
           h: "مسؤولية المستخدم",
           body: (
@@ -121,7 +143,11 @@ export default function TermsOfUse() {
           h: "Service description",
           body: (
             <>
-              <p>GradeTrackPro is a student grade management app that lets instructors:</p>
+              <p>
+                GradeTrackPro is available as a web app and as a native iOS app on iPhone and iPad via the Apple
+                App Store. Both share the same account and database, with instant sync across all your devices. The
+                app lets instructors:
+              </p>
               <ul className="list-disc ps-6 space-y-1">
                 <li>Create and manage courses, sections, and lecture schedules</li>
                 <li>Record lecture attendance and manage bonus grades</li>
@@ -133,6 +159,26 @@ export default function TermsOfUse() {
             </>
           ),
         },
+        {
+          h: "App Store specific terms",
+          body: (
+            <>
+              <p>
+                When using the iOS version of the app downloaded from the Apple App Store, you additionally agree
+                to the following:
+              </p>
+              <ul className="list-disc ps-6 space-y-1">
+                <li>This agreement is concluded solely between you and the developer, not with Apple. Apple is not a party to it.</li>
+                <li>Apple is not responsible for the app, its content, support, or maintenance.</li>
+                <li>If the app fails to conform to any applicable warranty, you may notify Apple, which will refund the purchase price (if any). Apple has no other warranty obligation.</li>
+                <li>Any claims relating to the app (performance, damages, legal or IP infringement) are the developer's sole responsibility, not Apple's.</li>
+                <li>Apple and its subsidiaries are third-party beneficiaries of these terms and may enforce them against you.</li>
+                <li>You confirm you are not located in a U.S.-embargoed country and not listed on any U.S. government prohibited-parties list.</li>
+              </ul>
+            </>
+          ),
+        },
+
         {
           h: "User responsibility",
           body: (

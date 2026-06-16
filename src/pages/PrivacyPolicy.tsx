@@ -44,13 +44,26 @@ export default function PrivacyPolicy() {
           body: (
             <>
               <p>
-                تُخزَّن بياناتكم بشكل آمن في قاعدة بيانات سحابية لتمكين المزامنة الفورية بين أجهزتكم المختلفة. كل
-                مستخدم لا يستطيع الوصول إلا إلى بياناته الخاصة فقط عبر سياسات أمان صارمة (Row-Level Security).
+                التطبيق متاح كموقع ويب وكتطبيق iOS عبر Apple App Store، وكلاهما يستخدمان نفس الحساب وقاعدة
+                البيانات السحابية. تُخزَّن بياناتكم بشكل آمن لتمكين المزامنة الفورية بين أجهزتكم المختلفة. كل مستخدم
+                لا يستطيع الوصول إلا إلى بياناته الخاصة فقط عبر سياسات أمان صارمة (Row-Level Security).
               </p>
               <p>قد يحتفظ التطبيق بنسخة مؤقتة من بعض البيانات على جهازكم لتحسين الأداء والعمل دون اتصال.</p>
             </>
           ),
         },
+        {
+          h: "التتبع والإعلانات",
+          body: (
+            <ul className="list-disc ps-6 space-y-1">
+              <li>لا نستخدم أي معرّفات تتبّع للإعلانات (IDFA على iOS أو مكافئها).</li>
+              <li>لا نتتبّع نشاطكم عبر تطبيقات أو مواقع شركات أخرى.</li>
+              <li>لا نعرض أي إعلانات داخل التطبيق.</li>
+              <li>لا نبيع بياناتكم ولا نشاركها مع أي طرف ثالث لأغراض تسويقية.</li>
+            </ul>
+          ),
+        },
+
         {
           h: "استيراد ملفات Excel",
           body: (
@@ -143,13 +156,27 @@ export default function PrivacyPolicy() {
           body: (
             <>
               <p>
-                Your data is securely stored in a cloud database to enable instant sync across your devices. Each
-                user can only access their own data via strict Row-Level Security policies.
+                The app is available as a website and as an iOS app on the Apple App Store. Both use the same
+                account and cloud database. Your data is securely stored in the cloud to enable instant sync
+                across your devices. Each user can only access their own data via strict Row-Level Security
+                policies.
               </p>
               <p>The app may keep a temporary local copy of some data to improve performance and offline use.</p>
             </>
           ),
         },
+        {
+          h: "Tracking & advertising",
+          body: (
+            <ul className="list-disc ps-6 space-y-1">
+              <li>We do not use any advertising identifiers (IDFA on iOS or equivalents).</li>
+              <li>We do not track you across other companies' apps or websites.</li>
+              <li>We show no ads inside the app.</li>
+              <li>We do not sell your data or share it with third parties for marketing.</li>
+            </ul>
+          ),
+        },
+
         {
           h: "Excel imports",
           body: (

@@ -110,10 +110,12 @@ export default function Help() {
           title: "٩. المزامنة السحابية",
           items: [
             "كل بياناتك تُحفظ تلقائياً في السحابة فور الإدخال",
+            "نفس الحساب يعمل على الويب وعلى تطبيق iOS من App Store — بياناتك متزامنة تلقائياً بين الجميع",
             "تستطيع فتح حسابك من أي جهاز وستجد بياناتك محدّثة",
             "بيانات كل معلّم خاصة به ولا يطّلع عليها أحد",
           ],
         },
+
         {
           icon: SettingsIcon,
           title: "١٠. الإعدادات",
@@ -205,9 +207,11 @@ export default function Help() {
           title: "9. Cloud sync",
           items: [
             "All your data is saved to the cloud the moment you enter it",
+            "The same account works on the web and on the iOS App Store app — data syncs automatically between them",
             "Open your account on any device and find your data up to date",
             "Each instructor's data is private — nobody else can see it",
           ],
+
         },
         {
           icon: SettingsIcon,
@@ -346,11 +350,18 @@ export default function Help() {
             </div>
           </a>
 
+          <p className="mb-3 text-[11px] font-semibold text-muted-foreground">
+            {ar
+              ? "لمستخدمي iPhone: التحميل من App Store هو الخيار الموصى به. الخطوات التالية بديل عبر متصفح Safari فقط:"
+              : "For iPhone users: downloading from the App Store is the recommended option. The steps below are only a fallback via Safari:"}
+          </p>
+
           <div className="mb-4 rounded-xl border border-border bg-background p-4">
             <div className="mb-2 flex items-center gap-2">
               <AppleLogo size={18} className="text-foreground" />
               <h4 className="font-display text-sm font-bold">{iosTitle}</h4>
             </div>
+
 
             <ol className="space-y-2 px-2">
               {iosSteps.map((step, i) => (
