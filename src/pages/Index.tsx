@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -17,6 +17,7 @@ import AttendancePerLecture from "@/components/AttendancePerLecture";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
 import CourseStudentsDialog from "@/components/CourseStudentsDialog";
+import BottomNav, { type BottomNavKey } from "@/components/BottomNav";
 
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Calendar } from "@/components/ui/calendar";
@@ -37,12 +38,12 @@ import {
   BarChart3,
   UserCheck,
   Settings,
-  HelpCircle,
+  
   MessageCircle,
   Users,
   ChevronDown,
 } from "lucide-react";
-import { LogOut, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useBonusEnabled } from "@/hooks/useBonusEnabled";
@@ -52,7 +53,7 @@ type CourseTab = "attendance" | "exams" | "status";
 type MainView = "courses" | "settings";
 
 export default function Index() {
-  const { signOut } = useAuth();
+  
   const { t } = useLanguage();
   const [bonusEnabled] = useBonusEnabled();
   const {
@@ -147,10 +148,15 @@ export default function Index() {
     );
   }
 
+  // Bottom nav handlers shared across views
+  const goHome = () => { setActiveCourseId(null); setMainView("courses"); };
+  const goSettings = () => { setActiveCourseId(null); setMainView("settings"); };
+  const goCourseTab = (tab: CourseTab) => { setMainView("courses"); setCourseTab(tab); };
+
   // Settings / Course management view
   if (!activeCourse && mainView === "settings") {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-24">
         <header className="border-b border-border bg-card/80 backdrop-blur-sm">
           <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
             <button
@@ -198,6 +204,14 @@ export default function Index() {
         </div>
 
         <SettingsPage />
+
+        <BottomNav
+          active="settings"
+          hasActiveCourse={!!activeCourseId}
+          onHome={goHome}
+          onCourseTab={goCourseTab}
+          onSettings={goSettings}
+        />
       </div>
     );
   }
@@ -206,15 +220,15 @@ export default function Index() {
   // Course list view
   if (!activeCourse) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-24">
         <header className="border-b border-border bg-card/80 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-4 py-6">
+          <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-4 py-6">
             {/* App icon + name centered on top */}
             <div className="flex flex-col items-center gap-2 text-center">
               <img
                 src={appIcon}
                 alt="GradeTrackPro"
-                className="h-20 w-20 rounded-2xl shadow-md sm:h-24 sm:w-24"
+                className="h-24 w-24 rounded-2xl shadow-md sm:h-28 sm:w-28"
               />
               <div>
                 <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
@@ -223,33 +237,9 @@ export default function Index() {
                 <p className="text-xs text-muted-foreground sm:text-sm">{t("appTagline")}</p>
               </div>
             </div>
-
-            {/* Action buttons row below */}
-            <div className="flex items-center justify-center gap-2">
-              <a
-                href="/help"
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background transition-colors hover:bg-muted"
-                title={t("help")}
-              >
-                <HelpCircle size={20} className="text-muted-foreground" />
-              </a>
-              <button
-                onClick={() => setMainView("settings")}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background transition-colors hover:bg-muted"
-                title={t("settings")}
-              >
-                <Settings size={20} className="text-muted-foreground" />
-              </button>
-              <button
-                onClick={() => { signOut(); toast.success(t("signOutSuccess")); }}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background transition-colors hover:bg-muted"
-                title={t("signOut")}
-              >
-                <LogOut size={18} className="text-muted-foreground" />
-              </button>
-            </div>
           </div>
         </header>
+
 
 
         <main className="mx-auto max-w-5xl px-4 py-8">
@@ -516,13 +506,21 @@ export default function Index() {
             }
           }}
         />
+
+        <BottomNav
+          active="home"
+          hasActiveCourse={!!activeCourseId}
+          onHome={goHome}
+          onCourseTab={goCourseTab}
+          onSettings={goSettings}
+        />
       </div>
     );
   }
 
   // Course detail view
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4">
           <button
@@ -646,6 +644,14 @@ export default function Index() {
         onAddStudents={(names) => addStudentsToCourse(activeCourse.id, names)}
         onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
         onUpdateCourse={(u) => updateCourse(activeCourse.id, u)}
+      />
+
+      <BottomNav
+        active={courseTab as BottomNavKey}
+        hasActiveCourse={true}
+        onHome={goHome}
+        onCourseTab={(tab) => setCourseTab(tab)}
+        onSettings={goSettings}
       />
     </div>
   );
