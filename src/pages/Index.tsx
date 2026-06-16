@@ -17,6 +17,7 @@ import AttendancePerLecture from "@/components/AttendancePerLecture";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
 import CourseStudentsDialog from "@/components/CourseStudentsDialog";
+import BottomNav, { type BottomNavKey } from "@/components/BottomNav";
 
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Calendar } from "@/components/ui/calendar";
