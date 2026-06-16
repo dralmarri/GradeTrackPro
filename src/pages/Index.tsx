@@ -645,6 +645,14 @@ export default function Index() {
         onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
         onUpdateCourse={(u) => updateCourse(activeCourse.id, u)}
       />
+
+      <BottomNav
+        active={courseTab as BottomNavKey}
+        hasActiveCourse={true}
+        onHome={goHome}
+        onCourseTab={(tab) => setCourseTab(tab)}
+        onSettings={goSettings}
+      />
     </div>
   );
 }
