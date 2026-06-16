@@ -377,45 +377,6 @@ export default function SettingsPage() {
 
 
 
-      {/* Danger zone: Delete account */}
-      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
-        <div className="mb-3 flex items-center gap-2">
-          <UserX className="text-destructive" size={20} />
-          <h2 className="font-display text-lg font-bold text-destructive">حذف الحساب</h2>
-        </div>
-        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
-          سيؤدي حذف حسابك إلى إزالة جميع بياناتك نهائياً (المقررات، الطلاب، الحضور، الدرجات) من خوادمنا. لا يمكن التراجع عن هذه العملية.
-        </p>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              disabled={deleting}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
-            >
-              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              حذف حسابي نهائياً
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent dir="rtl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>هل أنت متأكد من حذف حسابك؟</AlertDialogTitle>
-              <AlertDialogDescription>
-                سيتم حذف حسابك وجميع بياناتك (المقررات، الطلاب، الدرجات، الحضور) بشكل دائم ولا يمكن استعادتها.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteAccount}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                نعم، احذف حسابي
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-
       {/* About */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
@@ -479,7 +440,7 @@ export default function SettingsPage() {
       {/* Share App */}
       <ShareApp />
 
-      {/* Account section (moved to bottom) */}
+      {/* Account section */}
       <div>
         <h2 className="mb-2 px-1 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
           {t("accountSection")}
@@ -507,6 +468,46 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* Danger zone: Delete account (moved to bottom) */}
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <UserX className="text-destructive" size={20} />
+          <h2 className="font-display text-lg font-bold text-destructive">حذف الحساب</h2>
+        </div>
+        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+          سيؤدي حذف حسابك إلى إزالة جميع بياناتك نهائياً (المقررات، الطلاب، الحضور، الدرجات) من خوادمنا. لا يمكن التراجع عن هذه العملية.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              disabled={deleting}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
+            >
+              {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              حذف حسابي نهائياً
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>هل أنت متأكد من حذف حسابك؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                سيتم حذف حسابك وجميع بياناتك (المقررات، الطلاب، الدرجات، الحضور) بشكل دائم ولا يمكن استعادتها.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                نعم، احذف حسابي
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
 
     </div>
   );
