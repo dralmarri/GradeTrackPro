@@ -81,6 +81,7 @@ export default function AttendancePerLecture({ students, lectures, onUpdateAtten
         </button>
         <div className="flex-1 text-center">
           <p className="font-display text-lg font-extrabold text-foreground">{title}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
         </div>
         <button
           onClick={goNext}
