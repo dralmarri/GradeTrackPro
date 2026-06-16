@@ -244,7 +244,9 @@ export default function Index() {
 
 
         <main className="mx-auto max-w-5xl px-4 py-8">
+          <AppStoreBanner />
           <div className="mb-6 flex items-center justify-between">
+
             <h2 className="font-display text-lg font-semibold">{t("coursesTitle")}</h2>
             <button
               onClick={() => setShowNewCourse(true)}
