@@ -112,6 +112,7 @@ export function useCourses() {
     if ((updates as any).componentLabels !== undefined) u.component_labels = (updates as any).componentLabels;
     if ((updates as any).bonusEnabled !== undefined) u.bonus_enabled = (updates as any).bonusEnabled;
     if ((updates as any).customComponents !== undefined) u.custom_components = (updates as any).customComponents;
+    if ((updates as any).hiddenComponents !== undefined) u.hidden_components = (updates as any).hiddenComponents;
 
     // Auto-regenerate lectures if schedule changed
     const course = courses.find((c) => c.id === courseId);
