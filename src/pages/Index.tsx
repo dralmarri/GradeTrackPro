@@ -566,6 +566,7 @@ export default function Index() {
             maxHomework={activeCourse.maxHomework}
             componentLabels={activeCourse.componentLabels}
             customComponents={activeCourse.customComponents}
+            hiddenComponents={activeCourse.hiddenComponents}
             onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
           />
         )}
