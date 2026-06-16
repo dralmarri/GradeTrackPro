@@ -6,7 +6,10 @@ const root = process.cwd();
 const resourcesDir = path.join(root, 'resources');
 const sourceIcon = path.join(resourcesDir, 'icon.png');
 const outputSize = 2732;
-const iconWidth = 430;
+// Splash is 2732x2732 and iOS LaunchScreen uses scaleAspectFill, cropping the
+// square splash to screen height. Keep the icon small (~9% of splash width) so
+// it renders around 18–20% of screen width on a typical iPhone.
+const iconWidth = 260;
 const lightBackground = '#0ea5e9';
 const darkBackground = '#0f172a';
 
