@@ -207,9 +207,11 @@ export default function Help() {
           title: "9. Cloud sync",
           items: [
             "All your data is saved to the cloud the moment you enter it",
+            "The same account works on the web and on the iOS App Store app — data syncs automatically between them",
             "Open your account on any device and find your data up to date",
             "Each instructor's data is private — nobody else can see it",
           ],
+
         },
         {
           icon: SettingsIcon,
