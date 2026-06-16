@@ -27,6 +27,7 @@ function dbRowToCourse(row: any): Omit<Course, "students"> {
     componentLabels: (row.component_labels || {}) as Course["componentLabels"],
     bonusEnabled: row.bonus_enabled !== false,
     customComponents: (row.custom_components || []) as CustomComponent[],
+    hiddenComponents: (row.hidden_components || []) as any,
   };
 }
 
