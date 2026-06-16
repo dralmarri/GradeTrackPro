@@ -150,8 +150,9 @@ export default function Index() {
 
   // Bottom nav handlers shared across views
   const goHome = () => { setActiveCourseId(null); setMainView("courses"); };
-  const goSettings = () => { setActiveCourseId(null); setMainView("settings"); };
+  const goSettings = () => { setMainView("settings"); };
   const goCourseTab = (tab: CourseTab) => { setMainView("courses"); setCourseTab(tab); };
+
 
   // Settings / Course management view
   if (!activeCourse && mainView === "settings") {
