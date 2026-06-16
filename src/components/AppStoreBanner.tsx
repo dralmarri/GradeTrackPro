@@ -48,7 +48,7 @@ export default function AppStoreBanner() {
           </div>
           <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
             {ar
-              ? "حمّل GradeTrackPro كتطبيق أصلي على iPhone و iPad. امسح الكود من جوالك للانتقال مباشرة إلى المتجر."
+              ? "حمّل GradeTrackPro كتطبيق أصلي على iPhone و iPad. امسح الكود من موبايلك للانتقال مباشرة إلى المتجر."
               : "Get GradeTrackPro as a native app on iPhone and iPad. Scan the QR with your phone to open the App Store."}
           </p>
           <a

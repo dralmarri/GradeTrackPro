@@ -220,9 +220,9 @@ export default function Help() {
         },
       ];
 
-  const installTitle = ar ? "تثبيت التطبيق كأيقونة على جوالك" : "Install the app on your phone";
+  const installTitle = ar ? "تثبيت التطبيق كأيقونة على موبايلك" : "Install the app on your phone";
   const installIntro = ar
-    ? "تستطيع إضافة GradeTrackPro كأيقونة على شاشة جوالك ليفتح كتطبيق مستقل بدون شريط المتصفح."
+    ? "تستطيع إضافة GradeTrackPro كأيقونة على شاشة موبايلك ليفتح كتطبيق مستقل بدون شريط المتصفح."
     : "You can add GradeTrackPro as an icon on your phone's home screen so it opens like a standalone app.";
   const iosTitle = ar ? "على iPhone / iPad (Safari)" : "On iPhone / iPad (Safari)";
   const androidTitle = ar ? "على Android (Chrome)" : "On Android (Chrome)";
