@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Student, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS } from "@/types/student";
+import { Student, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS, StandardComponentKey } from "@/types/student";
 import { FileSpreadsheet, Loader2, Search, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
