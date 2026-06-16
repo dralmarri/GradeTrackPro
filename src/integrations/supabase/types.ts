@@ -53,6 +53,7 @@ export type Database = {
           component_labels: Json | null
           created_at: string | null
           custom_components: Json
+          hidden_components: Json
           id: string
           lecture_count: number | null
           lecture_days: Json | null
@@ -75,6 +76,7 @@ export type Database = {
           component_labels?: Json | null
           created_at?: string | null
           custom_components?: Json
+          hidden_components?: Json
           id?: string
           lecture_count?: number | null
           lecture_days?: Json | null
@@ -97,6 +99,7 @@ export type Database = {
           component_labels?: Json | null
           created_at?: string | null
           custom_components?: Json
+          hidden_components?: Json
           id?: string
           lecture_count?: number | null
           lecture_days?: Json | null
