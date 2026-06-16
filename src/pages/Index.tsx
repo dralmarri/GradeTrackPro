@@ -148,10 +148,15 @@ export default function Index() {
     );
   }
 
+  // Bottom nav handlers shared across views
+  const goHome = () => { setActiveCourseId(null); setMainView("courses"); };
+  const goSettings = () => { setActiveCourseId(null); setMainView("settings"); };
+  const goCourseTab = (tab: CourseTab) => { setMainView("courses"); setCourseTab(tab); };
+
   // Settings / Course management view
   if (!activeCourse && mainView === "settings") {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-24">
         <header className="border-b border-border bg-card/80 backdrop-blur-sm">
           <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
             <button
@@ -199,6 +204,14 @@ export default function Index() {
         </div>
 
         <SettingsPage />
+
+        <BottomNav
+          active="settings"
+          hasActiveCourse={!!activeCourseId}
+          onHome={goHome}
+          onCourseTab={goCourseTab}
+          onSettings={goSettings}
+        />
       </div>
     );
   }
