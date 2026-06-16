@@ -119,10 +119,16 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-export function getTotal(student: Student, course?: Partial<Pick<Course, "maxBonus" | "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "bonusEnabled" | "customComponents">>): number {
+export function getTotal(student: Student, course?: Partial<Pick<Course, "maxBonus" | "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "bonusEnabled" | "customComponents" | "hiddenComponents">>): number {
   const bonusOn = course ? course.bonusEnabled !== false : true;
   const bonusTotal = bonusOn ? getBonusTotal(student, course?.maxBonus) : 0;
-  const base = student.exam1 + student.exam2 + student.finalExam + student.participation + (student.homework || 0);
+  const hidden = new Set((course as any)?.hiddenComponents || []);
+  let base = 0;
+  if (!hidden.has("exam1")) base += student.exam1;
+  if (!hidden.has("exam2")) base += student.exam2;
+  if (!hidden.has("finalExam")) base += student.finalExam;
+  if (!hidden.has("participation")) base += student.participation;
+  if (!hidden.has("homework")) base += (student.homework || 0);
   const customSum = course ? getCustomTotal(student, course as Course) : 0;
   if (course && course.maxExam1 !== undefined) {
     const maxTotal = getMaxTotal(course as Course);
