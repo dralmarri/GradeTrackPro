@@ -88,12 +88,23 @@ export default function ExamsPage({
     : students;
 
   const getVal = (s: Student): number => {
+    if (currentTab.key === "__bonus__") {
+      const sum = (s.lectureBonus || []).reduce((a, b) => a + (Number(b) || 0), 0);
+      return sum;
+    }
     if (currentTab.isCustom) return Number(s.customScores?.[currentTab.key] || 0);
     return Number((s as any)[currentTab.key]) || 0;
   };
 
   const setVal = (s: Student, v: number) => {
     const clamped = clamp(v, currentTab.max);
+    if (currentTab.key === "__bonus__") {
+      const len = Math.max(lectureCount, (s.lectureBonus || []).length, 1);
+      const next = new Array(len).fill(0);
+      next[0] = clamped;
+      onUpdateStudent(s.id, { lectureBonus: next } as Partial<Student>);
+      return;
+    }
     if (currentTab.isCustom) {
       const next = { ...(s.customScores || {}), [currentTab.key]: clamped };
       onUpdateStudent(s.id, { customScores: next } as Partial<Student>);
