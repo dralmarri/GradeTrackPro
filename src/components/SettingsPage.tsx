@@ -134,7 +134,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-2">
             <Award className="text-primary" size={20} />
-            <h2 className="font-display text-lg font-bold">إدارة درجات المقرر</h2>
+            <h2 className="font-display text-lg font-bold">وزن درجات المقرر</h2>
           </div>
           <ChevronDown
             size={18}
