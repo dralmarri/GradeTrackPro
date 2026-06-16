@@ -25,6 +25,9 @@ interface ExamsPageProps {
   maxFinal: number;
   maxParticipation: number;
   maxHomework: number;
+  maxBonus?: number;
+  bonusEnabled?: boolean;
+  lectureCount?: number;
   componentLabels?: ComponentLabels;
   customComponents?: CustomComponent[];
   hiddenComponents?: StandardComponentKey[];
@@ -42,6 +45,9 @@ export default function ExamsPage({
   maxFinal,
   maxParticipation,
   maxHomework,
+  maxBonus = 0,
+  bonusEnabled = false,
+  lectureCount = 0,
   componentLabels,
   customComponents,
   hiddenComponents,
@@ -63,6 +69,7 @@ export default function ExamsPage({
   const tabs: ExamTabConfig[] = [
     ...standardTabs,
     ...customs.map((c) => ({ key: c.key, label: c.label, max: c.max, isCustom: true })),
+    ...(bonusEnabled ? [{ key: "__bonus__", label: L.bonus, max: maxBonus, isCustom: false }] : []),
   ];
 
   const [activeTabKey, setActiveTabKey] = useState<string>("exam1");
@@ -81,12 +88,23 @@ export default function ExamsPage({
     : students;
 
   const getVal = (s: Student): number => {
+    if (currentTab.key === "__bonus__") {
+      const sum = (s.lectureBonus || []).reduce((a, b) => a + (Number(b) || 0), 0);
+      return sum;
+    }
     if (currentTab.isCustom) return Number(s.customScores?.[currentTab.key] || 0);
     return Number((s as any)[currentTab.key]) || 0;
   };
 
   const setVal = (s: Student, v: number) => {
     const clamped = clamp(v, currentTab.max);
+    if (currentTab.key === "__bonus__") {
+      const len = Math.max(lectureCount, (s.lectureBonus || []).length, 1);
+      const next = new Array(len).fill(0);
+      next[0] = clamped;
+      onUpdateStudent(s.id, { lectureBonus: next } as Partial<Student>);
+      return;
+    }
     if (currentTab.isCustom) {
       const next = { ...(s.customScores || {}), [currentTab.key]: clamped };
       onUpdateStudent(s.id, { customScores: next } as Partial<Student>);

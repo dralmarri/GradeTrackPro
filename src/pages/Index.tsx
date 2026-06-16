@@ -564,22 +564,24 @@ export default function Index() {
             maxFinal={activeCourse.maxFinal}
             maxParticipation={activeCourse.maxParticipation}
             maxHomework={activeCourse.maxHomework}
+            maxBonus={activeCourse.maxBonus}
+            bonusEnabled={activeCourse.bonusEnabled !== false}
+            lectureCount={activeCourse.lectureCount}
             componentLabels={activeCourse.componentLabels}
             customComponents={activeCourse.customComponents}
             hiddenComponents={activeCourse.hiddenComponents}
             onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
           />
         )}
+
         {courseTab === "attendance" && (
           <div className="space-y-6">
             <AttendancePerLecture
               students={activeCourse.students}
               lectures={activeCourse.lectures}
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
-              bonusEnabled={activeCourse.bonusEnabled !== false}
-              maxBonus={activeCourse.maxBonus}
-              onUpdateBonus={(sid, li, value) => updateLectureBonus(activeCourse.id, sid, li, value)}
             />
+
 
             <details className="rounded-2xl border border-border bg-card p-4 shadow-sm">
               <summary className="cursor-pointer font-display text-sm font-bold text-foreground">
