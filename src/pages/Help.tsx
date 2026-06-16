@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import AppleLogo from "@/components/icons/AppleLogo";
 import appIcon from "@/assets/app-icon.png";
 import { useLanguage } from "@/hooks/useLanguage";
 import { isNativeApp } from "@/lib/platform";
@@ -17,7 +18,7 @@ import {
   HelpCircle,
   MessageSquare,
   Smartphone,
-  Apple,
+
   Share,
   MoreVertical,
 } from "lucide-react";
@@ -329,7 +330,7 @@ export default function Help() {
             rel="noopener noreferrer"
             className="mb-4 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 transition-colors hover:bg-primary/10"
           >
-            <Apple size={28} className="shrink-0 text-foreground" />
+            <AppleLogo size={28} className="shrink-0 text-foreground" />
             <div className="flex-1 text-right">
               <h4 className="font-display text-sm font-bold text-foreground">
                 {ar ? "متوفر الآن على App Store" : "Now available on the App Store"}
@@ -347,7 +348,7 @@ export default function Help() {
 
           <div className="mb-4 rounded-xl border border-border bg-background p-4">
             <div className="mb-2 flex items-center gap-2">
-              <Apple size={18} className="text-foreground" />
+              <AppleLogo size={18} className="text-foreground" />
               <h4 className="font-display text-sm font-bold">{iosTitle}</h4>
             </div>
 

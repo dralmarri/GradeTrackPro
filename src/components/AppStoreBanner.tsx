@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Apple, X } from "lucide-react";
+import { X } from "lucide-react";
+import AppleLogo from "@/components/icons/AppleLogo";
 import { isNativeApp } from "@/lib/platform";
 import { useLanguage } from "@/hooks/useLanguage";
 
@@ -40,7 +41,7 @@ export default function AppStoreBanner() {
       <div className="flex items-center gap-4">
         <div className="flex-1 min-w-0 pe-6">
           <div className="mb-1.5 flex items-center gap-2">
-            <Apple size={20} className="shrink-0 text-foreground" />
+            <AppleLogo size={20} className="shrink-0 text-foreground" />
             <h3 className="font-display text-sm font-bold text-foreground sm:text-base">
               {ar ? "متوفر الآن على App Store 🎉" : "Now available on the App Store 🎉"}
             </h3>
@@ -56,7 +57,7 @@ export default function AppStoreBanner() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-1.5 text-xs font-semibold text-background shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
           >
-            <Apple size={14} />
+            <AppleLogo size={14} />
             {ar ? "افتح App Store" : "Open App Store"}
           </a>
         </div>
