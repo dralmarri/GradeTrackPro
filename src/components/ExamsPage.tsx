@@ -27,6 +27,7 @@ interface ExamsPageProps {
   maxHomework: number;
   componentLabels?: ComponentLabels;
   customComponents?: CustomComponent[];
+  hiddenComponents?: StandardComponentKey[];
   onUpdateStudent: (studentId: string, updates: Partial<Student>) => void;
 }
 
@@ -43,18 +44,24 @@ export default function ExamsPage({
   maxHomework,
   componentLabels,
   customComponents,
+  hiddenComponents,
   onUpdateStudent,
 }: ExamsPageProps) {
   const { t } = useLanguage();
   const L = { ...DEFAULT_COMPONENT_LABELS, ...(componentLabels || {}) };
   const customs = customComponents || [];
+  const hidden = new Set<StandardComponentKey>(hiddenComponents || []);
 
-  const tabs: ExamTabConfig[] = [
+  const standardTabs: ExamTabConfig[] = [
     { key: "exam1", label: L.exam1, max: maxExam1, isCustom: false },
     { key: "exam2", label: L.exam2, max: maxExam2, isCustom: false },
     { key: "finalExam", label: L.finalExam, max: maxFinal, isCustom: false },
     { key: "participation", label: L.participation, max: maxParticipation, isCustom: false },
     { key: "homework", label: L.homework, max: maxHomework, isCustom: false },
+  ].filter((t) => !hidden.has(t.key as StandardComponentKey));
+
+  const tabs: ExamTabConfig[] = [
+    ...standardTabs,
     ...customs.map((c) => ({ key: c.key, label: c.label, max: c.max, isCustom: true })),
   ];
 
