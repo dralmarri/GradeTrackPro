@@ -97,6 +97,7 @@ export default function CourseSettingsSection({ courses, onUpdateCourse }: Props
       componentLabels: d.labels,
       bonusEnabled: d.bonusEnabled,
       customComponents: d.customComponents,
+      hiddenComponents: d.hiddenComponents,
     } as any);
     toast.success(lang === "ar" ? "تم حفظ إعدادات المقرر" : "Course settings saved");
   };
