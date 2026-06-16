@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Award, ChevronDown, Plus, Save, Trash2 } from "lucide-react";
+import { Award, ChevronDown, Eye, EyeOff, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Course, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS } from "@/types/student";
+import { Course, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS, StandardComponentKey } from "@/types/student";
 import NumberInput from "@/components/NumberInput";
 import { useLanguage } from "@/hooks/useLanguage";
 
