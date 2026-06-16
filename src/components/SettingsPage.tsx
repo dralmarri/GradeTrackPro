@@ -22,6 +22,8 @@ import {
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "@/hooks/useTheme";
 import ShareApp from "./ShareApp";
+import CourseSettingsSection from "./CourseSettingsSection";
+import { Course } from "@/types/student";
 
 
 import {
@@ -48,7 +50,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export default function SettingsPage() {
+interface SettingsPageProps {
+  courses?: Course[];
+  onUpdateCourse?: (courseId: string, updates: Partial<Omit<Course, "id" | "students">>) => void;
+}
+
+export default function SettingsPage({ courses, onUpdateCourse }: SettingsPageProps = {}) {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -124,6 +131,11 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+
+      {/* 0. Course settings (per-course: max grades, bonus toggle, custom components) */}
+      {courses && onUpdateCourse && (
+        <CourseSettingsSection courses={courses} onUpdateCourse={onUpdateCourse} />
+      )}
 
       {/* 1. Grade Management (merged: tiers + letter scale) */}
       <div className="rounded-2xl border border-border bg-card shadow-sm">
