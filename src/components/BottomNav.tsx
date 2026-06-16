@@ -32,7 +32,7 @@ export default function BottomNav({
 
   const items: { key: BottomNavKey; label: string; icon: typeof Home; onClick: () => void }[] = [
     { key: "home", label: lang === "ar" ? "الرئيسية" : "Home", icon: Home, onClick: onHome },
-    { key: "attendance", label: t("tabLectures"), icon: UserCheck, onClick: () => requireCourse("attendance") },
+    { key: "attendance", label: t("tabAttendance"), icon: UserCheck, onClick: () => requireCourse("attendance") },
     { key: "exams", label: t("tabExams"), icon: ClipboardList, onClick: () => requireCourse("exams") },
     { key: "status", label: t("tabStatus"), icon: BarChart3, onClick: () => requireCourse("status") },
     { key: "settings", label: t("settings"), icon: Settings, onClick: onSettings },
