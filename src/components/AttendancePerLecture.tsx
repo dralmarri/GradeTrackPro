@@ -109,16 +109,6 @@ export default function AttendancePerLecture({ students, lectures, onUpdateAtten
         </div>
       </div>
 
-      {/* Lecture quick jump */}
-      <select
-        value={selectedLecture}
-        onChange={(e) => setSelectedLecture(Number(e.target.value))}
-        className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-      >
-        {safeLectures.map((l, i) => (
-          <option key={i} value={i}>{l.label}</option>
-        ))}
-      </select>
 
       {/* Search */}
       <div className="relative">
