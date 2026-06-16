@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -38,12 +38,12 @@ import {
   BarChart3,
   UserCheck,
   Settings,
-  HelpCircle,
+  
   MessageCircle,
   Users,
   ChevronDown,
 } from "lucide-react";
-import { LogOut, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useBonusEnabled } from "@/hooks/useBonusEnabled";
@@ -53,7 +53,7 @@ type CourseTab = "attendance" | "exams" | "status";
 type MainView = "courses" | "settings";
 
 export default function Index() {
-  const { signOut } = useAuth();
+  
   const { t } = useLanguage();
   const [bonusEnabled] = useBonusEnabled();
   const {
