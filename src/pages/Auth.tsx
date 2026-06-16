@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import appIcon from "@/assets/app-icon.png";
 import { Mail, Lock, LogIn, UserPlus, Loader2, Languages } from "lucide-react";
+import AppStoreBanner from "@/components/AppStoreBanner";
+
 
 export default function Auth() {
   const { user, loading } = useAuth();
