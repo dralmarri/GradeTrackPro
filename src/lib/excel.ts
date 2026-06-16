@@ -18,10 +18,15 @@ export function getCustomMaxTotal(course: Pick<Course, "customComponents">): num
   return (course.customComponents || []).reduce((s, c) => s + (Number(c.max) || 0), 0);
 }
 
-export function getMaxTotal(course: Pick<Course, "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "maxBonus" | "bonusEnabled" | "customComponents">): number {
-  const base = course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0);
+export function getMaxTotal(course: Pick<Course, "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "maxBonus" | "bonusEnabled" | "customComponents" | "hiddenComponents">): number {
+  const hidden = new Set((course as any).hiddenComponents || []);
+  let base = 0;
+  if (!hidden.has("exam1")) base += course.maxExam1;
+  if (!hidden.has("exam2")) base += course.maxExam2;
+  if (!hidden.has("finalExam")) base += course.maxFinal;
+  if (!hidden.has("participation")) base += course.maxParticipation;
+  if (!hidden.has("homework")) base += (course.maxHomework || 0);
   const customMax = getCustomMaxTotal(course as Course);
-  // bonus historically wasn't part of max — kept identical so percentages stay consistent
   return base + customMax;
 }
 
