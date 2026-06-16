@@ -143,7 +143,11 @@ export default function TermsOfUse() {
           h: "Service description",
           body: (
             <>
-              <p>GradeTrackPro is a student grade management app that lets instructors:</p>
+              <p>
+                GradeTrackPro is available as a web app and as a native iOS app on iPhone and iPad via the Apple
+                App Store. Both share the same account and database, with instant sync across all your devices. The
+                app lets instructors:
+              </p>
               <ul className="list-disc ps-6 space-y-1">
                 <li>Create and manage courses, sections, and lecture schedules</li>
                 <li>Record lecture attendance and manage bonus grades</li>
@@ -155,6 +159,26 @@ export default function TermsOfUse() {
             </>
           ),
         },
+        {
+          h: "App Store specific terms",
+          body: (
+            <>
+              <p>
+                When using the iOS version of the app downloaded from the Apple App Store, you additionally agree
+                to the following:
+              </p>
+              <ul className="list-disc ps-6 space-y-1">
+                <li>This agreement is concluded solely between you and the developer, not with Apple. Apple is not a party to it.</li>
+                <li>Apple is not responsible for the app, its content, support, or maintenance.</li>
+                <li>If the app fails to conform to any applicable warranty, you may notify Apple, which will refund the purchase price (if any). Apple has no other warranty obligation.</li>
+                <li>Any claims relating to the app (performance, damages, legal or IP infringement) are the developer's sole responsibility, not Apple's.</li>
+                <li>Apple and its subsidiaries are third-party beneficiaries of these terms and may enforce them against you.</li>
+                <li>You confirm you are not located in a U.S.-embargoed country and not listed on any U.S. government prohibited-parties list.</li>
+              </ul>
+            </>
+          ),
+        },
+
         {
           h: "User responsibility",
           body: (
