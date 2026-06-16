@@ -345,10 +345,12 @@ export default function Help() {
             </div>
           </a>
 
-
+          <div className="mb-4 rounded-xl border border-border bg-background p-4">
+            <div className="mb-2 flex items-center gap-2">
               <Apple size={18} className="text-foreground" />
               <h4 className="font-display text-sm font-bold">{iosTitle}</h4>
             </div>
+
             <ol className="space-y-2 px-2">
               {iosSteps.map((step, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-foreground/90">
