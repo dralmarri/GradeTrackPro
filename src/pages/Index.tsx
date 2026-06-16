@@ -518,11 +518,13 @@ export default function Index() {
             <ChevronLeft size={20} className="rotate-180" />
           </button>
           <div className="flex-1">
-            <h1 className="font-display text-lg font-bold">{activeCourse.name}</h1>
-            <p className="text-xs text-muted-foreground">
-              {activeCourse.section && `${activeCourse.section} • `}
-              {activeCourse.students.length} {t("student")} • {activeCourse.lectureCount} {t("lectureWord")}
+            <h1 className="font-display text-2xl font-extrabold leading-tight">{activeCourse.name}</h1>
+            <p className="text-sm font-bold text-foreground/80">
+              {activeCourse.section && <>{activeCourse.section} • </>}
+              <span dir="ltr" className="inline-block">{activeCourse.students.length}</span> {t("student")} •{" "}
+              <span dir="ltr" className="inline-block">{activeCourse.lectureCount}</span> {t("lectureWord")}
             </p>
+
           </div>
           <div className="flex items-center gap-2">
             {courseTab === "status" && (
