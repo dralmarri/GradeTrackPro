@@ -68,16 +68,17 @@ export function parseExcelFile(file: File): Promise<string[]> {
 export function exportToExcel(course: Course) {
   const bonusOn = course.bonusEnabled !== false;
   const customs = course.customComponents || [];
+  const hidden = new Set(course.hiddenComponents || []);
   const data = course.students.map((s, idx) => {
     const row: Record<string, any> = {
       "#": idx + 1,
       "اسم الطالب": s.name,
-      "اختبار أول": s.exam1,
-      "اختبار ثاني": s.exam2,
-      "نهائي": s.finalExam,
-      "مشاركة": s.participation,
-      "واجب": s.homework,
     };
+    if (!hidden.has("exam1")) row["اختبار أول"] = s.exam1;
+    if (!hidden.has("exam2")) row["اختبار ثاني"] = s.exam2;
+    if (!hidden.has("finalExam")) row["نهائي"] = s.finalExam;
+    if (!hidden.has("participation")) row["مشاركة"] = s.participation;
+    if (!hidden.has("homework")) row["واجب"] = s.homework;
     for (const c of customs) {
       row[c.label] = Math.max(0, Math.min(Number(s.customScores?.[c.key] || 0), c.max));
     }
