@@ -6,8 +6,23 @@ export function getBonusTotal(student: Student, maxBonus?: number): number {
   return typeof maxBonus === "number" ? Math.min(rawTotal, maxBonus) : rawTotal;
 }
 
-export function getMaxTotal(course: Pick<Course, "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "maxBonus">): number {
-  return course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0);
+export function getCustomTotal(student: Student, course: Pick<Course, "customComponents">): number {
+  const comps = course.customComponents || [];
+  return comps.reduce((sum, c) => {
+    const raw = Number(student.customScores?.[c.key] || 0);
+    return sum + Math.max(0, Math.min(raw, c.max));
+  }, 0);
+}
+
+export function getCustomMaxTotal(course: Pick<Course, "customComponents">): number {
+  return (course.customComponents || []).reduce((s, c) => s + (Number(c.max) || 0), 0);
+}
+
+export function getMaxTotal(course: Pick<Course, "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "maxBonus" | "bonusEnabled" | "customComponents">): number {
+  const base = course.maxExam1 + course.maxExam2 + course.maxFinal + course.maxParticipation + (course.maxHomework || 0);
+  const customMax = getCustomMaxTotal(course as Course);
+  // bonus historically wasn't part of max — kept identical so percentages stay consistent
+  return base + customMax;
 }
 
 export function getPercentage(total: number, maxTotal: number): number {
@@ -24,7 +39,7 @@ export function parseExcelFile(file: File): Promise<string[]> {
         const workbook = XLSX.read(data, { type: "array" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { header: 1 });
-        
+
         const names: string[] = [];
         for (let i = 0; i < jsonData.length; i++) {
           const row = jsonData[i] as unknown as unknown[];
@@ -46,34 +61,40 @@ export function parseExcelFile(file: File): Promise<string[]> {
 }
 
 export function exportToExcel(course: Course) {
+  const bonusOn = course.bonusEnabled !== false;
+  const customs = course.customComponents || [];
   const data = course.students.map((s, idx) => {
-    const bonusTotal = s.lectureBonus.reduce((a, b) => a + b, 0);
-    return {
+    const row: Record<string, any> = {
       "#": idx + 1,
       "اسم الطالب": s.name,
-      "مجموع البونص": Math.min(bonusTotal, course.maxBonus),
       "اختبار أول": s.exam1,
       "اختبار ثاني": s.exam2,
       "نهائي": s.finalExam,
       "مشاركة": s.participation,
       "واجب": s.homework,
-      "المجموع الكلي": getTotal(s, course),
     };
+    for (const c of customs) {
+      row[c.label] = Math.max(0, Math.min(Number(s.customScores?.[c.key] || 0), c.max));
+    }
+    if (bonusOn) {
+      const bonusTotal = s.lectureBonus.reduce((a, b) => a + b, 0);
+      row["مجموع البونص"] = Math.min(bonusTotal, course.maxBonus);
+    }
+    row["المجموع الكلي"] = getTotal(s, course);
+    return row;
   });
 
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "النتائج");
-  
+
   const fileName = `${course.name}_نتائج.xlsx`;
   const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
   const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const file = new File([blob], fileName, { type: blob.type });
 
-  // Try Web Share API first (works well on mobile)
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     navigator.share({ files: [file], title: fileName }).catch(() => {
-      // Fallback to download if share is cancelled
       downloadBlob(blob, fileName);
     });
   } else {
@@ -92,14 +113,16 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-export function getTotal(student: Student, course?: Partial<Pick<Course, "maxBonus" | "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework">>): number {
-  const bonusTotal = getBonusTotal(student, course?.maxBonus);
+export function getTotal(student: Student, course?: Partial<Pick<Course, "maxBonus" | "maxExam1" | "maxExam2" | "maxFinal" | "maxParticipation" | "maxHomework" | "bonusEnabled" | "customComponents">>): number {
+  const bonusOn = course ? course.bonusEnabled !== false : true;
+  const bonusTotal = bonusOn ? getBonusTotal(student, course?.maxBonus) : 0;
   const base = student.exam1 + student.exam2 + student.finalExam + student.participation + (student.homework || 0);
+  const customSum = course ? getCustomTotal(student, course as Course) : 0;
   if (course && course.maxExam1 !== undefined) {
     const maxTotal = getMaxTotal(course as Course);
-    return Math.min(maxTotal, base + bonusTotal);
+    return Math.min(maxTotal + (bonusOn ? (course.maxBonus || 0) : 0), base + customSum + bonusTotal);
   }
-  return base + bonusTotal;
+  return base + customSum + bonusTotal;
 }
 
 export function createStudent(name: string, lectureCount: number): Student {
@@ -113,5 +136,6 @@ export function createStudent(name: string, lectureCount: number): Student {
     finalExam: 0,
     participation: 0,
     homework: 0,
+    customScores: {},
   };
 }

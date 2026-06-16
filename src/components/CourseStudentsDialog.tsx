@@ -1,14 +1,10 @@
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Users, X, Save, Award } from "lucide-react";
-import { toast } from "sonner";
-import { Course, ComponentLabels, DEFAULT_COMPONENT_LABELS } from "@/types/student";
+import { AnimatePresence, motion } from "framer-motion";
+import { Users, X } from "lucide-react";
+import { Course } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
-import NumberInput from "@/components/NumberInput";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useBonusEnabled } from "@/hooks/useBonusEnabled";
 
 interface Props {
   open: boolean;
@@ -25,53 +21,8 @@ export default function CourseStudentsDialog({
   course,
   onAddStudents,
   onDeleteStudent,
-  onUpdateCourse,
 }: Props) {
   const { t, dir, lang } = useLanguage();
-  const [bonusEnabled, setBonusEnabled] = useBonusEnabled();
-  const [maxExam1, setMaxExam1] = useState(course.maxExam1);
-  const [maxExam2, setMaxExam2] = useState(course.maxExam2);
-  const [maxFinal, setMaxFinal] = useState(course.maxFinal);
-  const [maxParticipation, setMaxParticipation] = useState(course.maxParticipation);
-  const [maxHomework, setMaxHomework] = useState(course.maxHomework ?? 10);
-  const [maxBonus, setMaxBonus] = useState(course.maxBonus);
-  const [labels, setLabels] = useState<Required<ComponentLabels>>({
-    ...DEFAULT_COMPONENT_LABELS,
-    ...(course.componentLabels || {}),
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    setMaxExam1(course.maxExam1);
-    setMaxExam2(course.maxExam2);
-    setMaxFinal(course.maxFinal);
-    setMaxParticipation(course.maxParticipation);
-    setMaxHomework(course.maxHomework ?? 10);
-    setMaxBonus(course.maxBonus);
-    setLabels({ ...DEFAULT_COMPONENT_LABELS, ...(course.componentLabels || {}) });
-  }, [open, course]);
-
-  const saveWeights = () => {
-    onUpdateCourse({
-      maxExam1,
-      maxExam2,
-      maxFinal,
-      maxParticipation,
-      maxHomework,
-      maxBonus,
-      componentLabels: labels,
-    } as any);
-    toast.success(t("maxGradesSaved"));
-  };
-
-  const fields = [
-    { key: "exam1" as const, value: maxExam1, set: setMaxExam1 },
-    { key: "exam2" as const, value: maxExam2, set: setMaxExam2 },
-    { key: "finalExam" as const, value: maxFinal, set: setMaxFinal },
-    { key: "participation" as const, value: maxParticipation, set: setMaxParticipation },
-    { key: "homework" as const, value: maxHomework, set: setMaxHomework },
-    { key: "bonus" as const, value: maxBonus, set: setMaxBonus },
-  ];
 
   return (
     <AnimatePresence>
@@ -97,7 +48,7 @@ export default function CourseStudentsDialog({
                   <Users size={18} />
                 </div>
                 <div>
-                  <h3 className="font-display text-base font-bold">{t("manageStudentsGrades")}</h3>
+                  <h3 className="font-display text-base font-bold">{t("manageStudents")}</h3>
                   <p className="text-[11px] text-muted-foreground">{course.name}</p>
                 </div>
               </div>
@@ -110,7 +61,6 @@ export default function CourseStudentsDialog({
             </div>
 
             <div className="flex-1 space-y-5 overflow-y-auto p-4">
-              {/* Students section */}
               <section className="rounded-xl border border-border bg-background/40 p-4">
                 <h4 className="mb-1 font-display text-sm font-bold">{t("addRemoveStudents")}</h4>
                 <p className="mb-3 text-[11px] text-muted-foreground">
@@ -126,81 +76,10 @@ export default function CourseStudentsDialog({
                 </div>
               </section>
 
-              {/* Bonus toggle */}
-              <section className="rounded-xl border border-border bg-background/40 p-4">
-                <div className="mb-1 flex items-center gap-2">
-                  <Award className="text-primary" size={16} />
-                  <h4 className="font-display text-sm font-bold">
-                    {lang === "ar" ? "البونص (نقاط إضافية)" : "Bonus (extra points)"}
-                  </h4>
-                </div>
-                <p className="mb-3 text-[11px] text-muted-foreground">
-                  {lang === "ar"
-                    ? "عند التفعيل يظهر جدول البونص داخل صفحة الحضور. عند التعطيل يختفي."
-                    : "When enabled, the bonus table appears inside the attendance page. When disabled, it is hidden."}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setBonusEnabled(true)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
-                      bonusEnabled
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {lang === "ar" ? "مُفعّل" : "Enabled"}
-                  </button>
-                  <button
-                    onClick={() => setBonusEnabled(false)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
-                      !bonusEnabled
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {lang === "ar" ? "مُعطّل" : "Disabled"}
-                  </button>
-                </div>
-              </section>
-
-              {/* Max marks section */}
-              <section className="rounded-xl border border-border bg-background/40 p-4">
-                <h4 className="mb-1 font-display text-sm font-bold">
-                  {t("maxGradesWeights")}
-                </h4>
-                <p className="mb-3 text-[11px] text-muted-foreground">
-                  {t("editEachComponent")}
-                </p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {fields.map((f) => (
-                    <div key={f.key} className="rounded-lg border border-border bg-card p-2">
-                      <input
-                        type="text"
-                        value={labels[f.key]}
-                        onChange={(e) =>
-                          setLabels((prev) => ({ ...prev, [f.key]: e.target.value }))
-                        }
-                        placeholder={DEFAULT_COMPONENT_LABELS[f.key]}
-                        className="mb-1 w-full rounded-md border border-input bg-background px-2 py-1 text-center text-xs outline-none focus:border-primary"
-                      />
-                      <NumberInput
-                        value={f.value}
-                        onChange={(v) => f.set(v)}
-                        min={0}
-                        showZero
-                        className="w-full px-2 py-1 text-sm font-bold"
-                      />
-
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={saveWeights}
-                  className="mt-3 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110"
-                >
-                  <Save size={14} />
-                  {t("saveMaxGrades")}
-                </button>
+              <section className="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-xs text-muted-foreground leading-relaxed">
+                {lang === "ar"
+                  ? "إعدادات الدرجات القصوى، أوزان المكونات، تفعيل البونص، والمكونات المخصصة انتقلت إلى صفحة الإعدادات → \"إعدادات المقررات\"."
+                  : "Max grades, component weights, bonus toggle, and custom components have moved to Settings → \"Course settings\"."}
               </section>
             </div>
 
