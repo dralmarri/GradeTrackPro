@@ -48,6 +48,8 @@ import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useBonusEnabled } from "@/hooks/useBonusEnabled";
 import { tf } from "@/lib/translations";
+import AppStoreBanner from "@/components/AppStoreBanner";
+
 
 type CourseTab = "attendance" | "exams" | "status";
 type MainView = "courses" | "settings";
