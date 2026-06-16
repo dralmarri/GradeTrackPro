@@ -71,7 +71,7 @@ export default function AppStoreBanner() {
             className="h-20 w-20 sm:h-24 sm:w-24"
           />
           <p className="mt-0.5 text-center text-[9px] font-semibold text-neutral-600">
-            {ar ? "امسح بالجوال" : "Scan with phone"}
+            {ar ? "امسح بالموبايل" : "Scan with phone"}
           </p>
         </div>
       </div>
