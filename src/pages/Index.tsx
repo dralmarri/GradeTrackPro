@@ -506,6 +506,14 @@ export default function Index() {
             }
           }}
         />
+
+        <BottomNav
+          active="home"
+          hasActiveCourse={!!activeCourseId}
+          onHome={goHome}
+          onCourseTab={goCourseTab}
+          onSettings={goSettings}
+        />
       </div>
     );
   }
