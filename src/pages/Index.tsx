@@ -159,7 +159,7 @@ export default function Index() {
   if (mainView === "settings") {
     return (
       <div className="min-h-screen bg-background pb-24">
-        <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+        <header className="border-b border-border bg-card/80 backdrop-blur-sm" style={{ paddingTop: "env(safe-area-inset-top)" }}>
           <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
             <button
               onClick={() => setMainView("courses")}
@@ -223,7 +223,7 @@ export default function Index() {
   if (!activeCourse) {
     return (
       <div className="min-h-screen bg-background pb-24">
-        <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+        <header className="border-b border-border bg-card/80 backdrop-blur-sm" style={{ paddingTop: "env(safe-area-inset-top)" }}>
           <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-4 py-6">
             {/* App icon + name centered on top */}
             <div className="flex flex-col items-center gap-2 text-center">
@@ -508,7 +508,7 @@ export default function Index() {
   // Course detail view
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm">
+      <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm" style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4">
           <button
             onClick={() => { setActiveCourseId(null); setCourseTab("attendance"); }}

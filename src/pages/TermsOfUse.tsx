@@ -236,7 +236,7 @@ export default function TermsOfUse() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm" style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-5">
           <button
             onClick={() => navigate(-1)}

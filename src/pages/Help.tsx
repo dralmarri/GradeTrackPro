@@ -267,7 +267,7 @@ export default function Help() {
 
   return (
     <div dir={dir} className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm" style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-5">
           <Link
             to="/"
