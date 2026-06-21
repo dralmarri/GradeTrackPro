@@ -159,7 +159,7 @@ export default function Index() {
   if (mainView === "settings") {
     return (
       <div className="flex h-dvh flex-col overflow-hidden bg-background">
-        <header className="flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-sm safe-top">
+        <header className="flex-shrink-0 border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
           <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-5">
             <button
               onClick={() => setMainView("courses")}
@@ -224,7 +224,7 @@ export default function Index() {
   if (!activeCourse) {
     return (
       <div className="flex h-dvh flex-col overflow-hidden bg-background">
-        <header className="flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-sm safe-top">
+        <header className="flex-shrink-0 border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
           <div className="flex flex-col items-center gap-2 px-4 py-4 text-center">
             <img
               src={appIcon}
@@ -504,7 +504,7 @@ export default function Index() {
   // Course detail view
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
-      <header className="flex-shrink-0 border-b border-border bg-card/90 backdrop-blur-sm safe-top">
+      <header className="flex-shrink-0 border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4">
           <button
             onClick={() => { setActiveCourseId(null); setCourseTab("attendance"); }}

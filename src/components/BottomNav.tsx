@@ -40,7 +40,7 @@ export default function BottomNav({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md shadow-[0_-2px_12px_rgba(0,0,0,0.06)]"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-sky-200 dark:border-sky-800 bg-sky-100/95 dark:bg-sky-950/95 backdrop-blur-md shadow-[0_-2px_12px_rgba(0,0,0,0.06)]"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto flex max-w-5xl items-stretch justify-between px-1">
