@@ -72,7 +72,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div className="flex h-dvh flex-col overflow-hidden bg-sky-100 dark:bg-sky-950" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-6">
         <div className="mb-4 flex justify-end">
           <button
