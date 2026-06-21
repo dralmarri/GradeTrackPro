@@ -225,20 +225,15 @@ export default function Index() {
     return (
       <div className="flex h-dvh flex-col overflow-hidden bg-background">
         <header className="flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-sm safe-top">
-          <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-4 py-6">
-            {/* App icon + name centered on top */}
-            <div className="flex flex-col items-center gap-2 text-center">
-              <img
-                src={appIcon}
-                alt="GradeTrackPro"
-                className="h-24 w-24 rounded-2xl shadow-md sm:h-28 sm:w-28"
-              />
-              <div>
-                <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
-                  GradeTrackPro
-                </h1>
-                <p className="text-xs text-muted-foreground sm:text-sm">{t("appTagline")}</p>
-              </div>
+          <div className="flex flex-col items-center gap-2 px-4 py-4 text-center">
+            <img
+              src={appIcon}
+              alt="GradeTrackPro"
+              className="h-16 w-16 rounded-2xl shadow-md"
+            />
+            <div>
+              <h1 className="font-display text-xl font-bold text-foreground">GradeTrackPro</h1>
+              <p className="text-xs text-muted-foreground">{t("appTagline")}</p>
             </div>
           </div>
         </header>

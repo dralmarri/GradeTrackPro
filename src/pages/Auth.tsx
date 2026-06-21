@@ -5,7 +5,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import appIcon from "@/assets/app-icon.png";
-import { Mail, Lock, LogIn, UserPlus, Loader2, Languages } from "lucide-react";
+import { Mail, Lock, LogIn, UserPlus, Loader2, Languages, Eye, EyeOff } from "lucide-react";
 import AppStoreBanner from "@/components/AppStoreBanner";
 
 
@@ -16,6 +16,7 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (loading) {
     return (
@@ -113,13 +114,20 @@ export default function Auth() {
             <div className="relative">
               <Lock size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-input bg-background py-2.5 pr-10 pl-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-input bg-background py-2.5 pr-10 pl-10 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 dir="ltr"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 
