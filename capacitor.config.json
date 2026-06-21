@@ -3,7 +3,8 @@
   "appName": "GradeTrackPro",
   "webDir": "dist",
   "ios": {
-    "contentInset": "always",
+    "contentInset": "never",
+    "scrollEnabled": false,
     "limitsNavigationsToAppBoundDomains": true
   },
   "android": {
