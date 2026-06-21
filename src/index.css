@@ -2,10 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Safe area for iOS - handled per-component, not on body */
-html, body {
+/* Prevent iOS rubber-band bounce on the page shell */
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
   box-sizing: border-box;
   overscroll-behavior: none;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
 }
 
 @layer utilities {
