@@ -525,7 +525,7 @@ export default function SettingsPage({ courses, onUpdateCourse }: SettingsPagePr
             Developed by <span className="text-base font-bold text-foreground">Prof. Ayedh Almarri</span>
           </p>
           <p className="text-sm text-muted-foreground" dir="ltr">
-            Version <strong className="text-foreground">v2.0.0</strong>
+            Version <strong className="text-foreground">v2.0.1</strong>
           </p>
         </div>
       </div>
