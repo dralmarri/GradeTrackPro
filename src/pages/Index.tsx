@@ -173,39 +173,40 @@ export default function Index() {
           </div>
         </header>
 
-        {/* Course Manager (collapsible) */}
-        <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 pb-24 pt-6">
-          <div className="rounded-2xl border border-border bg-card shadow-sm">
-            <button
-              type="button"
-              onClick={() => setCoursesManageOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 p-6"
-            >
-              <div className="flex items-center gap-2">
-                <BookOpen className="text-primary" size={20} />
-                <h2 className="font-display text-lg font-bold">{t("coursesManage")}</h2>
-              </div>
-              <ChevronDown
-                size={18}
-                className={`text-muted-foreground transition-transform ${coursesManageOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-            {coursesManageOpen && (
-              <div className="px-6 pb-6">
-                <CourseManager
-                  courses={courses}
-                  onDeleteCourse={deleteCourse}
-                  onUpdateCourse={updateCourse}
-                  onAddStudents={addStudentsToCourse}
-                  onDeleteStudent={deleteStudent}
-                  onSelectCourse={(id) => { setActiveCourseId(id); setMainView("courses"); }}
+        {/* Scrollable content: Course Manager + Settings */}
+        <div className="flex-1 overflow-y-auto pb-24">
+          <div className="mx-auto max-w-3xl px-4 pt-6">
+            <div className="rounded-2xl border border-border bg-card shadow-sm">
+              <button
+                type="button"
+                onClick={() => setCoursesManageOpen((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 p-6"
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen className="text-primary" size={20} />
+                  <h2 className="font-display text-lg font-bold">{t("coursesManage")}</h2>
+                </div>
+                <ChevronDown
+                  size={18}
+                  className={`text-muted-foreground transition-transform ${coursesManageOpen ? "rotate-180" : ""}`}
                 />
-              </div>
-            )}
+              </button>
+              {coursesManageOpen && (
+                <div className="px-6 pb-6">
+                  <CourseManager
+                    courses={courses}
+                    onDeleteCourse={deleteCourse}
+                    onUpdateCourse={updateCourse}
+                    onAddStudents={addStudentsToCourse}
+                    onDeleteStudent={deleteStudent}
+                    onSelectCourse={(id) => { setActiveCourseId(id); setMainView("courses"); }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
+          <SettingsPage courses={courses} onUpdateCourse={updateCourse} />
         </div>
-
-        <SettingsPage courses={courses} onUpdateCourse={updateCourse} />
 
         <BottomNav
           active="settings"
