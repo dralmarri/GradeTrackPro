@@ -1,26 +1,28 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import appIcon from "@/assets/app-icon.png";
-import { Mail, Lock, LogIn, UserPlus, Loader2, Languages, Eye, EyeOff } from "lucide-react";
-import AppStoreBanner from "@/components/AppStoreBanner";
-
+import { Mail, Lock, LogIn, UserPlus, Loader2, Languages, Eye, EyeOff, UserCircle } from "lucide-react";
 
 export default function Auth() {
   const { user, loading } = useAuth();
   const { t, lang, toggleLang } = useLanguage();
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex h-dvh items-center justify-center bg-sky-100 dark:bg-sky-950">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -30,18 +32,22 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error(t("enterEmailPass"));
+    if (!email || !password) { toast.error(t("enterEmailPass")); return; }
+
+    if (!isLogin && password !== confirmPassword) {
+      toast.error(lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords do not match");
       return;
     }
+    if (!isLogin && password.length < 6) {
+      toast.error(lang === "ar" ? "كلمة المرور يجب أن تكون 6 أحرف على الأقل" : "Password must be at least 6 characters");
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          console.error("Login error:", error.message, error.status, error);
-          throw error;
-        }
+        if (error) throw error;
         toast.success(t("signInSuccess"));
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -49,31 +55,51 @@ export default function Auth() {
           password,
           options: { emailRedirectTo: window.location.origin },
         });
-        if (error) {
-          console.error("Signup error:", error.message, error.status, error);
-          throw error;
-        }
-        console.log("Signup result:", data);
+        if (error) throw error;
         if (data.user && !data.session) {
           toast.success(
-            "تم إنشاء الحساب! تحقق من بريدك الإلكتروني للتأكيد. إذا لم تجد الرسالة في صندوق الوارد فابحث عنها في مجلد الرسائل غير المرغوب فيها (Junk / Spam).",
+            lang === "ar"
+              ? "تم إنشاء الحساب! تحقق من بريدك الإلكتروني للتأكيد. إذا لم تجد الرسالة تحقق من مجلد Spam."
+              : "Account created! Check your email to confirm. If not found, check your Spam folder.",
             { duration: 10000 },
           );
         } else {
-          toast.success("تم إنشاء الحساب وتسجيل الدخول بنجاح");
+          toast.success(lang === "ar" ? "تم إنشاء الحساب وتسجيل الدخول بنجاح" : "Account created and signed in successfully");
         }
       }
     } catch (err: any) {
-      console.error("Auth error details:", JSON.stringify(err));
       toast.error(err.message || "حدث خطأ");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    try {
+      const { error } = await supabase.auth.signInAnonymously();
+      if (error) throw error;
+      navigate("/");
+    } catch (err: any) {
+      toast.error(lang === "ar" ? "تعذّر الدخول كضيف" : "Guest sign-in failed");
+    } finally {
+      setGuestLoading(false);
+    }
+  };
+
+  const switchMode = () => {
+    setIsLogin((v) => !v);
+    setPassword("");
+    setConfirmPassword("");
+  };
+
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-sky-100 dark:bg-sky-950" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-6">
+    <div
+      className="flex h-dvh flex-col overflow-hidden bg-sky-100 dark:bg-sky-950"
+      style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-4 overflow-y-auto">
+        {/* Language toggle */}
         <div className="mb-4 flex justify-end">
           <button
             onClick={toggleLang}
@@ -83,15 +109,19 @@ export default function Auth() {
             {lang === "ar" ? "English" : "العربية"}
           </button>
         </div>
-        <div className="mb-8 flex flex-col items-center">
-          <img src={appIcon} alt="GradeTrackPro" className="mb-4 h-16 w-16 rounded-2xl shadow-lg" />
+
+        {/* Logo */}
+        <div className="mb-6 flex flex-col items-center">
+          <img src={appIcon} alt="GradeTrackPro" className="mb-3 h-16 w-16 rounded-2xl shadow-lg" />
           <h1 className="font-display text-2xl font-bold text-foreground">GradeTrackPro</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isLogin ? t("signInTitle") : t("signUpTitle")}
           </p>
         </div>
 
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
+          {/* Email */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("email")}</label>
             <div className="relative">
@@ -107,6 +137,7 @@ export default function Auth() {
             </div>
           </div>
 
+          {/* Password */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("password")}</label>
             <div className="relative">
@@ -129,18 +160,45 @@ export default function Auth() {
             </div>
           </div>
 
+          {/* Confirm Password - signup only */}
+          {!isLogin && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
+                {lang === "ar" ? "تأكيد كلمة المرور" : "Confirm Password"}
+              </label>
+              <div className="relative">
+                <Lock size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-lg border border-input bg-background py-2.5 pr-10 pl-10 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {confirmPassword && password !== confirmPassword && (
+                <p className="mt-1 text-xs text-destructive">
+                  {lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords do not match"}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Submit */}
           <button
             type="submit"
             disabled={submitting}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110 disabled:opacity-50"
           >
-            {submitting ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : isLogin ? (
-              <LogIn size={16} />
-            ) : (
-              <UserPlus size={16} />
-            )}
+            {submitting ? <Loader2 size={16} className="animate-spin" /> : isLogin ? <LogIn size={16} /> : <UserPlus size={16} />}
             {isLogin ? t("signIn") : t("signUp")}
           </button>
 
@@ -154,10 +212,7 @@ export default function Auth() {
             <button
               type="button"
               onClick={async () => {
-                if (!email) {
-                  toast.error(t("enterEmailFirst"));
-                  return;
-                }
+                if (!email) { toast.error(t("enterEmailFirst")); return; }
                 try {
                   const { error } = await supabase.auth.resetPasswordForEmail(email, {
                     redirectTo: `${window.location.origin}/reset-password`,
@@ -175,15 +230,33 @@ export default function Auth() {
           )}
         </form>
 
+        {/* Switch mode */}
         <p className="mt-4 text-center text-sm text-muted-foreground">
           {isLogin ? t("noAccount") : t("haveAccount")}{" "}
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="font-semibold text-primary hover:underline"
-          >
+          <button onClick={switchMode} className="font-semibold text-primary hover:underline">
             {isLogin ? t("signUp") : t("signIn")}
           </button>
         </p>
+
+        {/* Guest login */}
+        <div className="mt-3">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">{lang === "ar" ? "أو" : "or"}</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          <button
+            onClick={handleGuestLogin}
+            disabled={guestLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {guestLoading ? <Loader2 size={16} className="animate-spin" /> : <UserCircle size={16} />}
+            {lang === "ar" ? "الدخول كضيف" : "Continue as Guest"}
+          </button>
+          <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+            {lang === "ar" ? "البيانات محفوظة على الجهاز فقط ولا تُزامن" : "Data stays on device only, no sync"}
+          </p>
+        </div>
       </div>
     </div>
   );
