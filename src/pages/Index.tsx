@@ -575,6 +575,7 @@ export default function Index() {
             <AttendancePerLecture
               students={activeCourse.students}
               lectures={activeCourse.lectures}
+              course={activeCourse}
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
             />
 
