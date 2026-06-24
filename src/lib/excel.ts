@@ -43,18 +43,65 @@ export function parseExcelFile(file: File): Promise<string[]> {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { header: 1 });
+        const rows = XLSX.utils.sheet_to_json<unknown[]>(firstSheet, { header: 1, defval: "" }) as string[][];
 
-        const names: string[] = [];
-        for (let i = 0; i < jsonData.length; i++) {
-          const row = jsonData[i] as unknown as unknown[];
-          if (row && row.length > 0) {
-            const name = String(row[0]).trim();
-            if (name && name !== "الاسم" && name !== "اسم الطالب" && name !== "Name" && name !== "undefined") {
-              names.push(name);
+        if (!rows.length) { resolve([]); return; }
+
+        const HEADER_SKIP = new Set([
+          "الاسم", "اسم الطالب", "اسم", "الطالب", "الطالبة",
+          "name", "student", "#", "م", "الرقم", "رقم",
+        ]);
+
+        // detect name column: prefer header keyword match, otherwise pick column
+        // with most Arabic-word cells (≥2 tokens, non-numeric)
+        const isArabicName = (v: string) => {
+          const s = String(v ?? "").trim();
+          if (!s || /^\d+$/.test(s)) return false;          // pure number → ID
+          if (s.length < 4) return false;                   // too short
+          const arabicTokens = s.split(/\s+/).filter((t) => /[؀-ۿ]/.test(t));
+          return arabicTokens.length >= 2;                  // at least 2 Arabic tokens
+        };
+
+        const colCount = Math.max(...rows.map((r) => r.length));
+        let nameColIdx = -1;
+
+        // 1. look for a header row in first 5 rows
+        for (let r = 0; r < Math.min(5, rows.length) && nameColIdx === -1; r++) {
+          for (let c = 0; c < rows[r].length; c++) {
+            const cell = String(rows[r][c] ?? "").trim().toLowerCase();
+            if (["الاسم", "اسم الطالب", "اسم", "الطالب", "الطالبة", "name", "student"].includes(cell)) {
+              nameColIdx = c;
+              break;
             }
           }
         }
+
+        // 2. fallback: pick column with most Arabic-name cells
+        if (nameColIdx === -1) {
+          let bestCount = 0;
+          for (let c = 0; c < colCount; c++) {
+            const count = rows.filter((r) => isArabicName(String(r[c] ?? ""))).length;
+            if (count > bestCount) { bestCount = count; nameColIdx = c; }
+          }
+        }
+
+        if (nameColIdx === -1) { resolve([]); return; }
+
+        const seen = new Set<string>();
+        const names: string[] = [];
+
+        for (const row of rows) {
+          const raw = String(row[nameColIdx] ?? "").trim();
+          if (!raw) continue;
+          const lower = raw.toLowerCase();
+          if (HEADER_SKIP.has(lower)) continue;
+          if (/^\d+$/.test(raw)) continue;           // skip pure numbers (civil IDs)
+          if (raw.length < 4) continue;
+          if (seen.has(raw)) continue;               // deduplicate
+          seen.add(raw);
+          names.push(raw);
+        }
+
         resolve(names);
       } catch {
         reject(new Error("فشل في قراءة ملف Excel"));

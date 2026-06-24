@@ -67,8 +67,16 @@ export default function CourseStudentsDialog({
                   {t("currentStudentsCount")}: {course.students.length}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <ExcelImport onImport={(names) => onAddStudents(names)} />
-                  <ManualAddStudents onAdd={(names) => onAddStudents(names)} />
+                  <ExcelImport onImport={(names) => {
+                    const existing = new Set(course.students.map((s) => s.name.trim()));
+                    const fresh = names.filter((n) => !existing.has(n.trim()));
+                    if (fresh.length) onAddStudents(fresh);
+                  }} />
+                  <ManualAddStudents onAdd={(names) => {
+                    const existing = new Set(course.students.map((s) => s.name.trim()));
+                    const fresh = names.filter((n) => !existing.has(n.trim()));
+                    if (fresh.length) onAddStudents(fresh);
+                  }} />
                   <ManualDeleteStudents
                     students={course.students}
                     onDelete={(id) => onDeleteStudent(id)}
