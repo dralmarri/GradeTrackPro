@@ -53,14 +53,15 @@ export function parseExcelFile(file: File): Promise<string[]> {
         ]);
 
         // detect name column: prefer header keyword match, otherwise pick column
-        // with most Arabic-word cells (≥2 tokens, non-numeric)
-        const isArabicName = (v: string) => {
+        // with most 3-part Arabic names (≥3 tokens) to avoid headers/titles
+        const arabicTokenCount = (v: string) => {
           const s = String(v ?? "").trim();
-          if (!s || /^\d+$/.test(s)) return false;          // pure number → ID
-          if (s.length < 4) return false;                   // too short
-          const arabicTokens = s.split(/\s+/).filter((t) => /[؀-ۿ]/.test(t));
-          return arabicTokens.length >= 2;                  // at least 2 Arabic tokens
+          if (!s || /^\d+$/.test(s)) return 0;
+          if (s.length < 4) return 0;
+          return s.split(/\s+/).filter((t) => /[؀-ۿ]/.test(t)).length;
         };
+        const isArabicName = (v: string) => arabicTokenCount(v) >= 2;
+        const isThreePartName = (v: string) => arabicTokenCount(v) >= 3;
 
         const colCount = Math.max(...rows.map((r) => r.length));
         let nameColIdx = -1;
@@ -76,19 +77,27 @@ export function parseExcelFile(file: File): Promise<string[]> {
           }
         }
 
-        // 2. fallback: pick column with most Arabic-name cells
+        // 2. fallback: prefer column with most 3-part names, else most 2-part names
         if (nameColIdx === -1) {
-          let bestCount = 0;
+          let bestThree = 0, bestTwo = 0, bestThreeCol = -1, bestTwoCol = -1;
           for (let c = 0; c < colCount; c++) {
-            const count = rows.filter((r) => isArabicName(String(r[c] ?? ""))).length;
-            if (count > bestCount) { bestCount = count; nameColIdx = c; }
+            const threeCount = rows.filter((r) => isThreePartName(String(r[c] ?? ""))).length;
+            const twoCount = rows.filter((r) => isArabicName(String(r[c] ?? ""))).length;
+            if (threeCount > bestThree) { bestThree = threeCount; bestThreeCol = c; }
+            if (twoCount > bestTwo) { bestTwo = twoCount; bestTwoCol = c; }
           }
+          // prefer 3-part column if it has at least 2 such names, otherwise fall back to 2-part
+          nameColIdx = (bestThree >= 2) ? bestThreeCol : bestTwoCol;
         }
 
         if (nameColIdx === -1) { resolve([]); return; }
 
         const seen = new Set<string>();
         const names: string[] = [];
+
+        // check if column has any 3-part names; if so, require ≥3 parts to filter noise
+        const threePartCount = rows.filter((r) => isThreePartName(String(r[nameColIdx] ?? ""))).length;
+        const minParts = threePartCount >= 2 ? 3 : 2;
 
         for (const row of rows) {
           const raw = String(row[nameColIdx] ?? "").trim();
@@ -97,6 +106,7 @@ export function parseExcelFile(file: File): Promise<string[]> {
           if (HEADER_SKIP.has(lower)) continue;
           if (/^\d+$/.test(raw)) continue;           // skip pure numbers (civil IDs)
           if (raw.length < 4) continue;
+          if (arabicTokenCount(raw) < minParts) continue;  // require enough name parts
           if (seen.has(raw)) continue;               // deduplicate
           seen.add(raw);
           names.push(raw);
