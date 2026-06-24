@@ -222,6 +222,31 @@ export function useCourses() {
     else await fetchCourses();
   }, [fetchCourses]);
 
+  const syncStudentsToCourse = useCallback(async (courseId: string, names: string[]) => {
+    if (!user) return;
+    const course = courses.find((c) => c.id === courseId);
+    if (!course) return;
+    const lc = course.lectureCount || 0;
+
+    const incomingSet = new Set(names.map((n) => n.trim()));
+    const toDelete = course.students.filter((s) => !incomingSet.has(s.name.trim())).map((s) => s.id);
+    const existingNames = new Set(course.students.map((s) => s.name.trim()));
+    const toAdd = names.filter((n) => !existingNames.has(n.trim()));
+
+    if (toDelete.length > 0) {
+      await db.from("students").delete().in("id", toDelete);
+    }
+    if (toAdd.length > 0) {
+      const rows = toAdd.map((name) => ({
+        course_id: courseId, user_id: user.id, name,
+        lecture_bonus: new Array(lc).fill(0), attendance: new Array(lc).fill(true),
+        exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
+      }));
+      await db.from("students").insert(rows);
+    }
+    await fetchCourses();
+  }, [user, courses, fetchCourses]);
+
   const addLecture = useCallback(async (courseId: string) => {
     const DAYS_AR: Record<number, string> = {
       0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء",
@@ -302,7 +327,7 @@ export function useCourses() {
   }, [user, fetchCourses]);
 
   return {
-    courses, loading, addCourse, updateCourse, addStudentsToCourse,
+    courses, loading, addCourse, updateCourse, addStudentsToCourse, syncStudentsToCourse,
     updateStudent, updateLectureBonus, updateAttendance,
     deleteCourse, deleteStudent, addLecture, deleteAllData, exportAllData, importAllData,
   };

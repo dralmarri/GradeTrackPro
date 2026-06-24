@@ -63,6 +63,7 @@ export default function Index() {
     addCourse,
     updateCourse,
     addStudentsToCourse,
+    syncStudentsToCourse,
     updateStudent,
     updateLectureBonus,
     updateAttendance,
@@ -606,6 +607,7 @@ export default function Index() {
         onOpenChange={setStudentsDialogOpen}
         course={activeCourse}
         onAddStudents={(names) => addStudentsToCourse(activeCourse.id, names)}
+        onSyncStudents={(names) => syncStudentsToCourse(activeCourse.id, names)}
         onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
         onUpdateCourse={(u) => updateCourse(activeCourse.id, u)}
       />

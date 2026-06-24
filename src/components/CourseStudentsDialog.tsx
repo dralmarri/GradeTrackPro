@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Users, X } from "lucide-react";
+import { Users, X, RefreshCw, PlusCircle } from "lucide-react";
+import { useState } from "react";
 import { Course } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
@@ -11,6 +12,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   course: Course;
   onAddStudents: (names: string[]) => void;
+  onSyncStudents: (names: string[]) => void;
   onDeleteStudent: (studentId: string) => void;
   onUpdateCourse: (updates: Partial<Omit<Course, "id" | "students">>) => void;
 }
@@ -20,9 +22,11 @@ export default function CourseStudentsDialog({
   onOpenChange,
   course,
   onAddStudents,
+  onSyncStudents,
   onDeleteStudent,
 }: Props) {
   const { t, dir, lang } = useLanguage();
+  const [pendingNames, setPendingNames] = useState<string[] | null>(null);
 
   return (
     <AnimatePresence>
@@ -67,11 +71,7 @@ export default function CourseStudentsDialog({
                   {t("currentStudentsCount")}: {course.students.length}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <ExcelImport onImport={(names) => {
-                    const existing = new Set(course.students.map((s) => s.name.trim()));
-                    const fresh = names.filter((n) => !existing.has(n.trim()));
-                    if (fresh.length) onAddStudents(fresh);
-                  }} />
+                  <ExcelImport onImport={(names) => setPendingNames(names)} />
                   <ManualAddStudents onAdd={(names) => {
                     const existing = new Set(course.students.map((s) => s.name.trim()));
                     const fresh = names.filter((n) => !existing.has(n.trim()));
@@ -103,5 +103,76 @@ export default function CourseStudentsDialog({
         </motion.div>
       )}
     </AnimatePresence>
+
+      {/* Import mode dialog */}
+      <AnimatePresence>
+        {pendingNames && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+            onClick={() => setPendingNames(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              dir={dir}
+              className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-2xl"
+            >
+              <h3 className="mb-1 font-display text-base font-bold">
+                {lang === "ar" ? "طريقة الاستيراد" : "Import mode"}
+              </h3>
+              <p className="mb-5 text-xs text-muted-foreground">
+                {lang === "ar"
+                  ? `تم العثور على ${pendingNames.length} اسم. كيف تريد المتابعة؟`
+                  : `Found ${pendingNames.length} names. How do you want to proceed?`}
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    const existing = new Set(course.students.map((s) => s.name.trim()));
+                    const fresh = (pendingNames ?? []).filter((n) => !existing.has(n.trim()));
+                    if (fresh.length) onAddStudents(fresh);
+                    setPendingNames(null);
+                  }}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-muted"
+                >
+                  <PlusCircle size={18} className="shrink-0 text-primary" />
+                  <div className="text-start">
+                    <p className="font-semibold">{lang === "ar" ? "إضافة الجدد فقط" : "Add new only"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {lang === "ar" ? "يضيف الأسماء الجديدة ويحتفظ بالموجودين" : "Adds new names, keeps existing students"}
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    onSyncStudents(pendingNames ?? []);
+                    setPendingNames(null);
+                  }}
+                  className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm font-medium transition-colors hover:bg-destructive/10"
+                >
+                  <RefreshCw size={18} className="shrink-0 text-destructive" />
+                  <div className="text-start">
+                    <p className="font-semibold text-destructive">{lang === "ar" ? "تحديث القائمة" : "Sync roster"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {lang === "ar" ? "يحذف من سحب المقرر ويضيف المستجدين" : "Removes dropped students, adds new ones"}
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setPendingNames(null)}
+                  className="rounded-lg py-2 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  {lang === "ar" ? "إلغاء" : "Cancel"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
   );
 }
