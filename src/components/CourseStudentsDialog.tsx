@@ -29,6 +29,7 @@ export default function CourseStudentsDialog({
   const [pendingNames, setPendingNames] = useState<string[] | null>(null);
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <motion.div
@@ -174,5 +175,6 @@ export default function CourseStudentsDialog({
           </motion.div>
         )}
       </AnimatePresence>
+    </>
   );
 }
