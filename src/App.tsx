@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import DeleteAccount from "./pages/DeleteAccount";
 import TermsOfUse from "./pages/TermsOfUse";
 import ContactUs from "./pages/ContactUs";
 import ResetPassword from "./pages/ResetPassword";
@@ -40,6 +41,7 @@ const AppRoutes = () => (
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
     <Route path="/privacy" element={<PrivacyPolicy />} />
+    <Route path="/delete-account" element={<DeleteAccount />} />
     <Route path="/terms" element={<TermsOfUse />} />
     <Route path="/contact" element={<ContactUs />} />
     <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
