@@ -1,4 +1,4 @@
-import { Course, Student } from "@/types/student";
+import { Course } from "@/types/student";
 
 export interface ValidationIssue {
   studentId: string;

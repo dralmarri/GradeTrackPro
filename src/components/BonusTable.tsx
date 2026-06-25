@@ -15,9 +15,6 @@ interface BonusTableProps {
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
 }
 
-function clamp(val: number, max: number) {
-  return Math.max(-max, Math.min(val, max));
-}
 
 export default function BonusTable({
   students,
@@ -131,7 +128,7 @@ export default function BonusTable({
 
       {/* Mobile card layout */}
       <div className="space-y-2 sm:hidden">
-        {filteredStudents.map((student, idx) => {
+        {filteredStudents.map((student) => {
           const bonusTotal = (student.lectureBonus || []).reduce((a, b) => a + b, 0);
           const currentBonus = student.lectureBonus?.[selectedLecture] || 0;
           const isPresent = student.attendance?.[selectedLecture] !== false;

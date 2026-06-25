@@ -8,6 +8,10 @@ Outputs to ./playstore-screenshots/
   - feature-graphic.png  1024x500
 """
 from pathlib import Path
+import subprocess
+
+import arabic_reshaper
+from bidi.algorithm import get_display
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,35 +48,50 @@ def fit_on_canvas(src_path: Path, size: tuple[int, int], bg=BG, margin=0.04) -> 
 def make_feature_graphic(path: Path):
     W, H = 1024, 500
     img = Image.new("RGB", (W, H), BG)
-    # Simple radial-ish gradient overlay using rectangles
     draw = ImageDraw.Draw(img, "RGBA")
-    for i in range(80):
-        alpha = int(120 * (1 - i / 80))
-        r = 600 - i * 6
-        cx, cy = 780, 250
-        draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(59, 130, 246, alpha))
 
-    # Title (Arabic) — fallback to default if font missing
-    title_ar = "GradeTrackPro"
-    subtitle_ar = "إدارة درجات وحضور الطلاب"
-    import subprocess
+    # Soft blue radial glow on the right side
+    for i in range(80):
+        alpha = int(100 * (1 - i / 80))
+        r = 700 - i * 8
+        cx, cy = 850, 250
+        draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(*ACCENT, alpha))
+
     def find_font(query: str) -> str | None:
         try:
             out = subprocess.check_output(["fc-match", "-f", "%{file}", query], text=True).strip()
             return out or None
         except Exception:
             return None
-    title_path = find_font("Noto Sans Arabic UI:weight=200")
-    sub_path = find_font("Noto Sans Arabic UI")
-    title_font = ImageFont.truetype(title_path, 84) if title_path else None
-    subtitle_font = ImageFont.truetype(sub_path, 42) if sub_path else None
-    if title_font is None:
-        title_font = ImageFont.load_default()
-    if subtitle_font is None:
-        subtitle_font = ImageFont.load_default()
 
-    draw.text((60, 170), title_ar, fill=(255, 255, 255), font=title_font)
-    draw.text((62, 280), subtitle_ar, fill=(203, 213, 225), font=subtitle_font)
+    # Latin title font — GradeTrackPro needs Latin glyphs
+    title_path = (
+        find_font("DejaVu Sans:weight=700")
+        or find_font("Noto Sans:weight=700")
+        or find_font("DejaVu Sans")
+    )
+    # Arabic subtitle font
+    subtitle_path = (
+        find_font("Noto Sans Arabic UI:weight=600")
+        or find_font("Noto Sans Arabic UI")
+        or find_font("Noto Sans Arabic")
+    )
+
+    title_font = ImageFont.truetype(title_path, 96) if title_path else ImageFont.load_default()
+    subtitle_font = ImageFont.truetype(subtitle_path, 46) if subtitle_path else ImageFont.load_default()
+
+    title = "GradeTrackPro"
+    subtitle_ar = "إدارة درجات وحضور الطلاب"
+    # Reshape Arabic text and apply bidirectional algorithm so it renders correctly
+    reshaped = arabic_reshaper.reshape(subtitle_ar)
+    subtitle = get_display(reshaped)
+
+    # Position text with comfortable margins
+    x = 70
+    y_title = 180
+    y_subtitle = 300
+    draw.text((x, y_title), title, fill=(255, 255, 255), font=title_font)
+    draw.text((x, y_subtitle), subtitle, fill=(203, 213, 225), font=subtitle_font)
 
     img.save(path, "PNG", optimize=True)
 
