@@ -55,21 +55,17 @@ def make_feature_graphic(path: Path):
     # Title (Arabic) — fallback to default if font missing
     title_ar = "GradeTrackPro"
     subtitle_ar = "إدارة درجات وحضور الطلاب"
-    title_font = subtitle_font = None
-    for candidate in [
-        "/usr/share/fonts/truetype/noto/NotoSansArabic-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    ]:
-        if Path(candidate).exists():
-            title_font = ImageFont.truetype(candidate, 84)
-            break
-    for candidate in [
-        "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    ]:
-        if Path(candidate).exists():
-            subtitle_font = ImageFont.truetype(candidate, 42)
-            break
+    import subprocess
+    def find_font(query: str) -> str | None:
+        try:
+            out = subprocess.check_output(["fc-match", "-f", "%{file}", query], text=True).strip()
+            return out or None
+        except Exception:
+            return None
+    title_path = find_font("Noto Sans Arabic UI:weight=200")
+    sub_path = find_font("Noto Sans Arabic UI")
+    title_font = ImageFont.truetype(title_path, 84) if title_path else None
+    subtitle_font = ImageFont.truetype(sub_path, 42) if sub_path else None
     if title_font is None:
         title_font = ImageFont.load_default()
     if subtitle_font is None:
