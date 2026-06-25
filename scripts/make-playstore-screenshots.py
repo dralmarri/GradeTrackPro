@@ -8,6 +8,10 @@ Outputs to ./playstore-screenshots/
   - feature-graphic.png  1024x500
 """
 from pathlib import Path
+import subprocess
+
+import arabic_reshaper
+from bidi.algorithm import get_display
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
