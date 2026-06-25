@@ -142,7 +142,7 @@ function importGradesFromSheet(
   students: { id: string; name: string }[],
   studentTokens: { id: string; name: string; toks: string[]; compact: string }[],
   maxScore: number,
-  examKey: string | undefined,
+  examKey: ExcelGradeKey | undefined,
 ): { result: ExcelImportResult; scoreColFound: boolean } {
   let scoreCol = -1;
   let nameCol = -1;
@@ -222,7 +222,7 @@ export async function importGradesFromExcel(
   file: File,
   students: { id: string; name: string }[],
   maxScore: number,
-  examKey?: string,
+  examKey?: ExcelGradeKey,
 ): Promise<ExcelImportResult> {
   const sheets = await allSheetsRows(file);
   if (!sheets.length || sheets.every((s) => !s.length)) {
