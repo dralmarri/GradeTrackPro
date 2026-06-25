@@ -36,22 +36,6 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
     return { tier: getTierFor(pct, tiers), letter: getLetterFor(pct, letterTiers) };
   };
 
-  const getTaqdeer = (letter: string): string => {
-    const map: Record<string, string> = {
-      "A": "ممتاز مرتفع",
-      "A-": "ممتاز",
-      "B+": "جيد جداً مرتفع",
-      "B": "جيد جداً",
-      "B-": "جيد جداً منخفض",
-      "C+": "جيد مرتفع",
-      "C": "جيد",
-      "C-": "جيد منخفض",
-      "D+": "مقبول مرتفع",
-      "D": "مقبول",
-      "F": "راسب",
-    };
-    return map[letter] || letter;
-  };
 
 
   if (students.length === 0) {

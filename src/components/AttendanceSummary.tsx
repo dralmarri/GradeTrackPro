@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Student, LectureInfo } from "@/types/student";
 import { cn } from "@/lib/utils";
-import { Search, UserX } from "lucide-react";
+import { Search } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 
 

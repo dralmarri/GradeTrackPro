@@ -101,7 +101,7 @@ const EXAM_LABELS: Record<ExcelGradeKey, string> = {
   homework: "الواجب",
 };
 
-function headerMatchesExam(header: string, examKey?: string): boolean {
+function headerMatchesExam(header: string, examKey?: ExcelGradeKey): boolean {
   if (!examKey) return false;
   const list = EXAM_KEYWORDS[examKey];
   if (!list) return false;
@@ -240,7 +240,8 @@ export async function importGradesFromExcel(
   }
 
   if (examKey && !anyScoreCol) {
-    throw new Error(`لم أجد عمود "${EXAM_LABELS[examKey] || "الدرجة"}" في أي ورقة من الملف. تأكد من عنوان العمود ثم أعد الاستيراد.`);
+    const label = EXAM_LABELS[examKey] || "الدرجة";
+    throw new Error(`لم أجد عمود "${label}" في أي ورقة من الملف. تأكد من عنوان العمود ثم أعد الاستيراد.`);
   }
   return best || { matches: [], unmatchedRows: [], missingStudents: students };
 }
