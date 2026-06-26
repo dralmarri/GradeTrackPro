@@ -8,7 +8,14 @@
     "limitsNavigationsToAppBoundDomains": true
   },
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor",
+    "cleartext": false
   },
   "plugins": {
     "SplashScreen": {
@@ -18,7 +25,9 @@
       "showSpinner": false,
       "iosSpinnerStyle": "small",
       "splashFullScreen": true,
-      "splashImmersive": true
+      "splashImmersive": true,
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP"
     }
   }
 }
