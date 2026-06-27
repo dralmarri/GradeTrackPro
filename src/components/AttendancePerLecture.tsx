@@ -1,28 +1,20 @@
-import { useRef, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Student, LectureInfo, Course } from "@/types/student";
-import { ChevronRight, ChevronLeft, Search, Download, Upload, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
-import { exportAttendanceTemplate, parseAttendanceFile, parsePaaetAttendanceFile } from "@/lib/excel";
-import { toast } from "sonner";
 
 interface Props {
   students: Student[];
   lectures: LectureInfo[];
   course: Course;
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
-  onImportPaaet: (
-    matched: { studentId: string; attendance: boolean[] }[],
-    newStudents: { name: string; attendance: boolean[] }[],
-  ) => Promise<void>;
 }
 
-export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onImportPaaet }: Props) {
-  const { t, lang } = useLanguage();
+export default function AttendancePerLecture({ students, lectures, onUpdateAttendance }: Props) {
+  const { t } = useLanguage();
   const safeStudents = students || [];
   const safeLectures = lectures || [];
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [importing, setImporting] = useState(false);
 
   const [selectedLecture, setSelectedLecture] = useState(() => {
     if (safeLectures.length === 0) return 0;
@@ -75,46 +67,6 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
   const subtitle = dateObj.toLocaleDateString("ar-EG-u-nu-latn", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const title = `المحاضرة ${selectedLecture + 1}`;
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    setImporting(true);
-    try {
-      // 1) try PAAET (نظام الكلية) aggregate format first
-      const paaet = await parsePaaetAttendanceFile(file, course);
-      if (paaet.matchedCount > 0 || paaet.newCount > 0) {
-        await onImportPaaet(paaet.matched, paaet.newStudents);
-        const msg = lang === "ar"
-          ? `تم استيراد الحضور: ${paaet.matchedCount} طالب${paaet.newCount > 0 ? ` · ${paaet.newCount} طالب جديد أُضيف` : ""}`
-          : `Attendance imported: ${paaet.matchedCount} students${paaet.newCount > 0 ? ` · ${paaet.newCount} new added` : ""}`;
-        toast.success(msg, { duration: 5000 });
-        return;
-      }
-
-      // 2) fall back to the per-lecture template format
-      const result = await parseAttendanceFile(file, course);
-      if (result.updates.length === 0) {
-        toast.error(lang === "ar" ? "لم يتم التعرف على بيانات حضور في الملف" : "No attendance data found in file");
-        return;
-      }
-      result.updates.forEach(({ studentId, lectureIndex, present }) => {
-        onUpdateAttendance(studentId, lectureIndex, present);
-      });
-      const msg = lang === "ar"
-        ? `تم استيراد ${result.updates.length} سجل حضور بنجاح${result.unmatched.length > 0 ? ` · ${result.unmatched.length} اسم لم يُطابَق` : ""}`
-        : `Imported ${result.updates.length} attendance records${result.unmatched.length > 0 ? ` · ${result.unmatched.length} unmatched` : ""}`;
-      toast.success(msg, { duration: 5000 });
-      if (result.unmatched.length > 0) {
-        console.warn("Unmatched students:", result.unmatched);
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل الاستيراد");
-    } finally {
-      setImporting(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
       {/* Lecture nav */}
@@ -155,32 +107,6 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
           <p className="font-display text-2xl sm:text-3xl font-extrabold text-primary">{pct}%</p>
           <p className="mt-1 text-xs text-muted-foreground">{t("attendanceRate")}</p>
         </div>
-      </div>
-
-      {/* Import / Export attendance */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => exportAttendanceTemplate(course)}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-        >
-          <Download size={14} />
-          {lang === "ar" ? "تصدير قالب الحضور" : "Export Template"}
-        </button>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={importing}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
-        >
-          {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-          {lang === "ar" ? "استيراد الحضور (Excel / نظام الكلية)" : "Import (Excel / College system)"}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          className="hidden"
-          onChange={handleImport}
-        />
       </div>
 
       {/* Search */}
