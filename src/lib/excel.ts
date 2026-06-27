@@ -304,6 +304,107 @@ export function parseAttendanceFile(
   });
 }
 
+// --- PAAET (نظام الكلية) aggregate attendance import ---
+// The PAAET "تقرير الطلبة المسجلين" export gives, per student, total
+// present (حضور) and total absent (غياب) counts — not per-lecture detail.
+// We match students by name and distribute the absences onto the LAST N
+// lectures so the present/absent totals shown in GradeTrackPro match PAAET.
+
+export interface PaaetImportResult {
+  matched: { studentId: string; attendance: boolean[] }[];
+  newStudents: { name: string; attendance: boolean[] }[];
+  matchedCount: number;
+  newCount: number;
+}
+
+function buildAttendanceFromAbsences(absentCount: number, lectureCount: number): boolean[] {
+  const att = new Array(Math.max(0, lectureCount)).fill(true);
+  const absent = Math.max(0, Math.min(absentCount, lectureCount));
+  // mark the last `absent` lectures as absent
+  for (let i = lectureCount - absent; i < lectureCount; i++) att[i] = false;
+  return att;
+}
+
+export function parsePaaetAttendanceFile(
+  file: File,
+  course: Course,
+): Promise<PaaetImportResult> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" }) as unknown[][];
+
+        // locate the header row that contains both حضور and غياب columns
+        let headerRowIdx = -1, presentCol = -1, absentCol = -1, nameCol = -1;
+        for (let r = 0; r < rows.length; r++) {
+          const cells = rows[r].map((c) => String(c ?? "").trim());
+          const pi = cells.findIndex((c) => c === "حضور" || c.toLowerCase() === "present");
+          const ai = cells.findIndex((c) => c === "غياب" || c.toLowerCase() === "absent");
+          if (pi !== -1 && ai !== -1) {
+            headerRowIdx = r; presentCol = pi; absentCol = ai;
+            nameCol = cells.findIndex((c) =>
+              ["اسم الطالب", "الاسم", "اسم", "الطالب", "الطالبة", "name", "student"].includes(c.toLowerCase())
+            );
+            break;
+          }
+        }
+
+        // not a PAAET-format file
+        if (headerRowIdx === -1) {
+          resolve({ matched: [], newStudents: [], matchedCount: 0, newCount: 0 });
+          return;
+        }
+
+        const lectureCount = course.lectureCount || course.lectures.length || 0;
+        const matched: PaaetImportResult["matched"] = [];
+        const newStudents: PaaetImportResult["newStudents"] = [];
+        const usedStudentIds = new Set<string>();
+
+        for (let r = headerRowIdx + 1; r < rows.length; r++) {
+          const row = rows[r];
+          const name = nameCol >= 0 ? String(row[nameCol] ?? "").trim() : "";
+          if (!name || /^\d+$/.test(name)) continue;
+
+          const absentRaw = Number(String(row[absentCol] ?? "").trim());
+          const absentCount = Number.isFinite(absentRaw) ? absentRaw : 0;
+          const attendance = buildAttendanceFromAbsences(absentCount, lectureCount);
+
+          // match by name (exact first, then contains) — skip already-matched
+          const student = course.students.find(
+            (s) =>
+              !usedStudentIds.has(s.id) &&
+              (s.name.trim() === name ||
+                s.name.trim().includes(name) ||
+                name.includes(s.name.trim()))
+          );
+
+          if (student) {
+            usedStudentIds.add(student.id);
+            matched.push({ studentId: student.id, attendance });
+          } else {
+            newStudents.push({ name, attendance });
+          }
+        }
+
+        resolve({
+          matched,
+          newStudents,
+          matchedCount: matched.length,
+          newCount: newStudents.length,
+        });
+      } catch {
+        reject(new Error("فشل في قراءة ملف الحضور"));
+      }
+    };
+    reader.onerror = () => reject(new Error("فشل في قراءة الملف"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 export function createStudent(name: string, lectureCount: number): Student {
   return {
     id: crypto.randomUUID(),

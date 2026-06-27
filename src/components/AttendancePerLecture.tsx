@@ -3,7 +3,7 @@ import { Student, LectureInfo, Course } from "@/types/student";
 import { ChevronRight, ChevronLeft, Search, Download, Upload, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
-import { exportAttendanceTemplate, parseAttendanceFile } from "@/lib/excel";
+import { exportAttendanceTemplate, parseAttendanceFile, parsePaaetAttendanceFile } from "@/lib/excel";
 import { toast } from "sonner";
 
 interface Props {
@@ -11,9 +11,13 @@ interface Props {
   lectures: LectureInfo[];
   course: Course;
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
+  onImportPaaet: (
+    matched: { studentId: string; attendance: boolean[] }[],
+    newStudents: { name: string; attendance: boolean[] }[],
+  ) => Promise<void>;
 }
 
-export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance }: Props) {
+export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onImportPaaet }: Props) {
   const { t, lang } = useLanguage();
   const safeStudents = students || [];
   const safeLectures = lectures || [];
@@ -77,6 +81,18 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
     e.target.value = "";
     setImporting(true);
     try {
+      // 1) try PAAET (نظام الكلية) aggregate format first
+      const paaet = await parsePaaetAttendanceFile(file, course);
+      if (paaet.matchedCount > 0 || paaet.newCount > 0) {
+        await onImportPaaet(paaet.matched, paaet.newStudents);
+        const msg = lang === "ar"
+          ? `تم استيراد الحضور: ${paaet.matchedCount} طالب${paaet.newCount > 0 ? ` · ${paaet.newCount} طالب جديد أُضيف` : ""}`
+          : `Attendance imported: ${paaet.matchedCount} students${paaet.newCount > 0 ? ` · ${paaet.newCount} new added` : ""}`;
+        toast.success(msg, { duration: 5000 });
+        return;
+      }
+
+      // 2) fall back to the per-lecture template format
       const result = await parseAttendanceFile(file, course);
       if (result.updates.length === 0) {
         toast.error(lang === "ar" ? "لم يتم التعرف على بيانات حضور في الملف" : "No attendance data found in file");
@@ -156,7 +172,7 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
         >
           {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-          {lang === "ar" ? "استيراد الحضور من Excel" : "Import from Excel"}
+          {lang === "ar" ? "استيراد الحضور (Excel / نظام الكلية)" : "Import (Excel / College system)"}
         </button>
         <input
           ref={fileInputRef}
