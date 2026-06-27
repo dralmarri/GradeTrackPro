@@ -331,7 +331,7 @@ export function useCourses() {
 
   return {
     courses, loading, addCourse, updateCourse, addStudentsToCourse, syncStudentsToCourse,
-    updateStudent, updateLectureBonus, updateAttendance, importPaaetAttendance,
+    updateStudent, updateLectureBonus, updateAttendance,
     deleteCourse, deleteStudent, addLecture, deleteAllData, exportAllData, importAllData,
   };
 }
