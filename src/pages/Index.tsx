@@ -55,7 +55,7 @@ export default function Index() {
     syncStudentsToCourse,
     updateStudent,
     updateAttendance,
-    importPaaetAttendance,
+    
     deleteCourse,
     deleteStudent,
   } = useCourses();
