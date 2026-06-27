@@ -210,34 +210,8 @@ export function useCourses() {
     else await fetchCourses();
   }, [courses, fetchCourses]);
 
-  const importPaaetAttendance = useCallback(async (
-    courseId: string,
-    matched: { studentId: string; attendance: boolean[] }[],
-    newStudents: { name: string; attendance: boolean[] }[],
-  ) => {
-    if (!user) return;
-    const course = courses.find((c) => c.id === courseId);
-    if (!course) return;
-    const lc = course.lectureCount || 0;
-    // update attendance for matched students (one write each)
-    for (const m of matched) {
-      const attendance = m.attendance.length ? m.attendance : new Array(lc).fill(true);
-      const { error } = await db.from("students").update({ attendance }).eq("id", m.studentId);
-      if (error) console.error("Error updating attendance:", error);
-    }
-    // insert new students with their attendance
-    if (newStudents.length) {
-      const rows = newStudents.map((s) => ({
-        course_id: courseId, user_id: user.id, name: s.name,
-        lecture_bonus: new Array(lc).fill(0),
-        attendance: s.attendance.length ? s.attendance : new Array(lc).fill(true),
-        exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
-      }));
-      const { error } = await db.from("students").insert(rows);
-      if (error) console.error("Error adding students:", error);
-    }
-    await fetchCourses();
-  }, [user, courses, fetchCourses]);
+
+
 
   const deleteCourse = useCallback(async (courseId: string) => {
     const { error } = await db.from("courses").delete().eq("id", courseId);
