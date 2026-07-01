@@ -9,6 +9,7 @@ import { LectureInfo } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ExamsPage from "@/components/ExamsPage";
+import OmrExamsPage from "@/components/OmrExamsPage";
 import StudentStatus from "@/components/StudentStatus";
 import AttendanceSummary from "@/components/AttendanceSummary";
 import AttendancePerLecture from "@/components/AttendancePerLecture";
@@ -538,22 +539,25 @@ export default function Index() {
       <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto px-4 py-6 pb-24">
 
         {courseTab === "exams" && (
-          <ExamsPage
-            students={activeCourse.students}
-            courseId={activeCourse.id}
-            maxExam1={activeCourse.maxExam1}
-            maxExam2={activeCourse.maxExam2}
-            maxFinal={activeCourse.maxFinal}
-            maxParticipation={activeCourse.maxParticipation}
-            maxHomework={activeCourse.maxHomework}
-            maxBonus={activeCourse.maxBonus}
-            bonusEnabled={activeCourse.bonusEnabled !== false}
-            lectureCount={activeCourse.lectureCount}
-            componentLabels={activeCourse.componentLabels}
-            customComponents={activeCourse.customComponents}
-            hiddenComponents={activeCourse.hiddenComponents}
-            onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
-          />
+          <div className="space-y-6">
+            <ExamsPage
+              students={activeCourse.students}
+              courseId={activeCourse.id}
+              maxExam1={activeCourse.maxExam1}
+              maxExam2={activeCourse.maxExam2}
+              maxFinal={activeCourse.maxFinal}
+              maxParticipation={activeCourse.maxParticipation}
+              maxHomework={activeCourse.maxHomework}
+              maxBonus={activeCourse.maxBonus}
+              bonusEnabled={activeCourse.bonusEnabled !== false}
+              lectureCount={activeCourse.lectureCount}
+              componentLabels={activeCourse.componentLabels}
+              customComponents={activeCourse.customComponents}
+              hiddenComponents={activeCourse.hiddenComponents}
+              onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
+            />
+            <OmrExamsPage course={activeCourse} />
+          </div>
         )}
 
         {courseTab === "attendance" && (

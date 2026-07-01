@@ -49,6 +49,9 @@ export function buildAnswerSheetHtml(exam: OmrExam): string {
   .head { text-align: center; margin: 4mm 0 3mm; }
   .head h1 { font-size: 16pt; margin: 0 0 2mm; }
   .head .meta { font-size: 10pt; color: #333; }
+  .namebox { display: flex; align-items: flex-end; gap: 3mm; margin: 0 auto 3mm; width: 150mm; }
+  .namelbl { font-size: 11pt; font-weight: bold; white-space: nowrap; }
+  .nameline { flex: 1; border-bottom: 1.2px solid #000; height: 9mm; }
   .idbox { border: 1.5px solid #000; border-radius: 3mm; padding: 3mm; margin: 0 auto 4mm; width: fit-content; }
   .idbox .lbl { font-size: 9pt; text-align: center; margin-bottom: 2mm; font-weight: bold; }
   .idgrid { display: flex; gap: 2.5mm; direction: ltr; }
@@ -75,6 +78,11 @@ export function buildAnswerSheetHtml(exam: OmrExam): string {
   <div class="head">
     <h1>${exam.title}</h1>
     <div class="meta">عدد الأسئلة: ${exam.questionCount} · الخيارات: ${exam.choiceCount}</div>
+  </div>
+
+  <div class="namebox">
+    <span class="namelbl">اسم الطالب:</span>
+    <span class="nameline"></span>
   </div>
 
   <div class="idbox">
