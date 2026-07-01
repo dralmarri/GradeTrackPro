@@ -1,4 +1,4 @@
-project_id = "apaakkzasfipuhgkezej"
+project_id = "ovgivzzyqmswyelnywvh"
 
 [functions.ocr-exam-grades]
 verify_jwt = false
