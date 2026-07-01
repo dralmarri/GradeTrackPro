@@ -65,6 +65,18 @@ export function useOmrExams(courseId: string | null) {
     return data.id;
   }, [user, courseId, fetchExams]);
 
+  const updateExam = useCallback(async (examId: string, updates: {
+    title?: string; maxScore?: number; targetComponent?: string;
+  }) => {
+    const u: any = { updated_at: new Date().toISOString() };
+    if (updates.title !== undefined) u.title = updates.title;
+    if (updates.maxScore !== undefined) u.max_score = updates.maxScore;
+    if (updates.targetComponent !== undefined) u.target_component = updates.targetComponent;
+    const { error } = await db.from("omr_exams").update(u).eq("id", examId);
+    if (error) console.error("Error updating omr exam:", error);
+    else await fetchExams();
+  }, [fetchExams]);
+
   const updateAnswerKey = useCallback(async (examId: string, answerKey: number[]) => {
     const { error } = await db.from("omr_exams")
       .update({ answer_key: answerKey, updated_at: new Date().toISOString() })
@@ -79,5 +91,5 @@ export function useOmrExams(courseId: string | null) {
     else await fetchExams();
   }, [fetchExams]);
 
-  return { exams, loading, addExam, updateAnswerKey, deleteExam, refetch: fetchExams };
+  return { exams, loading, addExam, updateExam, updateAnswerKey, deleteExam, refetch: fetchExams };
 }

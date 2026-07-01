@@ -7,7 +7,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, ChevronDown, CheckCircle2,
+  Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, CheckCircle2, Pencil,
 } from "lucide-react";
 
 const LETTERS = ["A", "B", "C", "D", "E"];
@@ -19,7 +19,7 @@ interface Props {
 export default function OmrExamsPage({ course }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { exams, loading, addExam, updateAnswerKey, deleteExam } = useOmrExams(course.id);
+  const { exams, loading, addExam, updateExam, updateAnswerKey, deleteExam } = useOmrExams(course.id);
 
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
@@ -31,6 +31,11 @@ export default function OmrExamsPage({ course }: Props) {
   const [openKeyExamId, setOpenKeyExamId] = useState<string | null>(null);
   const [draftKey, setDraftKey] = useState<number[]>([]);
   const [savingKey, setSavingKey] = useState(false);
+  const [editExamId, setEditExamId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editMaxScore, setEditMaxScore] = useState(20);
+  const [editTarget, setEditTarget] = useState("exam1");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const componentOptions = [
     { key: "exam1", label: ar ? "اختبار أول" : "Exam 1" },
@@ -190,6 +195,22 @@ export default function OmrExamsPage({ course }: Props) {
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 <button
+                  onClick={() => {
+                    if (editExamId === exam.id) { setEditExamId(null); return; }
+                    setEditExamId(exam.id);
+                    setEditTitle(exam.title);
+                    setEditMaxScore(exam.maxScore);
+                    setEditTarget(exam.targetComponent);
+                  }}
+                  title={ar ? "تعديل الاختبار" : "Edit exam"}
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-xl border transition-colors",
+                    editExamId === exam.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted",
+                  )}
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
                   onClick={() => { if (!printAnswerSheet(exam)) toast.error(ar ? "اسمح بالنوافذ المنبثقة للطباعة" : "Allow pop-ups to print"); }}
                   title={ar ? "طباعة ورقة الإجابة" : "Print sheet"}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted"
@@ -215,6 +236,55 @@ export default function OmrExamsPage({ course }: Props) {
                 </button>
               </div>
             </div>
+
+            {/* edit exam panel */}
+            {editExamId === exam.id && (
+              <div className="mt-4 space-y-3 border-t border-border pt-4">
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder={ar ? "عنوان الاختبار" : "Exam title"}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="space-y-1 text-xs text-muted-foreground">
+                    {ar ? "الدرجة القصوى" : "Max score"}
+                    <input
+                      type="number" min={1} value={editMaxScore}
+                      onChange={(e) => setEditMaxScore(Number(e.target.value) || 1)}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                    />
+                  </label>
+                  <label className="space-y-1 text-xs text-muted-foreground">
+                    {ar ? "تُرصد في" : "Maps to"}
+                    <select
+                      value={editTarget}
+                      onChange={(e) => setEditTarget(e.target.value)}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                    >
+                      {componentOptions.map((o) => (
+                        <option key={o.key} value={o.key}>{o.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!editTitle.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
+                    setSavingEdit(true);
+                    await updateExam(exam.id, { title: editTitle.trim(), maxScore: editMaxScore, targetComponent: editTarget });
+                    setSavingEdit(false);
+                    setEditExamId(null);
+                    toast.success(ar ? "تم حفظ التعديلات" : "Changes saved");
+                  }}
+                  disabled={savingEdit}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+                >
+                  {savingEdit ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                  {ar ? "حفظ التعديلات" : "Save changes"}
+                </button>
+              </div>
+            )}
 
             {/* answer key editor */}
             {keyOpen && (
