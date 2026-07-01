@@ -3,6 +3,8 @@ import { Course } from "@/types/student";
 import { OmrExam, ChoiceCount } from "@/types/exam";
 import { useOmrExams } from "@/hooks/useOmrExams";
 import { printAnswerSheet } from "@/lib/omr/sheet";
+import { MAX_QUESTIONS } from "@/lib/omr/layout";
+import OmrScanDialog from "@/components/OmrScanDialog";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -14,9 +16,10 @@ const LETTERS = ["A", "B", "C", "D", "E"];
 
 interface Props {
   course: Course;
+  onApplyScore: (studentId: string, targetComponent: string, score: number) => Promise<void>;
 }
 
-export default function OmrExamsPage({ course }: Props) {
+export default function OmrExamsPage({ course, onApplyScore }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const { exams, loading, addExam, updateExam, updateAnswerKey, deleteExam } = useOmrExams(course.id);
@@ -36,6 +39,7 @@ export default function OmrExamsPage({ course }: Props) {
   const [editMaxScore, setEditMaxScore] = useState(20);
   const [editTarget, setEditTarget] = useState("exam1");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [scanExam, setScanExam] = useState<OmrExam | null>(null);
 
   const componentOptions = [
     { key: "exam1", label: ar ? "اختبار أول" : "Exam 1" },
@@ -46,8 +50,8 @@ export default function OmrExamsPage({ course }: Props) {
 
   const handleCreate = async () => {
     if (!title.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
-    if (questionCount < 1 || questionCount > 100) {
-      toast.error(ar ? "عدد الأسئلة بين 1 و 100" : "Questions must be 1–100"); return;
+    if (questionCount < 1 || questionCount > MAX_QUESTIONS) {
+      toast.error(ar ? `عدد الأسئلة بين 1 و ${MAX_QUESTIONS}` : `Questions must be 1–${MAX_QUESTIONS}`); return;
     }
     setCreating(true);
     const id = await addExam({
@@ -326,18 +330,33 @@ export default function OmrExamsPage({ course }: Props) {
               </div>
             )}
 
-            {/* scan placeholder (Phase 3) */}
+            {/* scan & grade */}
             <button
-              disabled
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-2.5 text-xs font-semibold text-muted-foreground"
-              title={ar ? "قريباً" : "Coming soon"}
+              onClick={() => {
+                if (keyDone === 0) {
+                  toast.error(ar ? "أدخل مفتاح الإجابة أولاً" : "Set the answer key first");
+                  return;
+                }
+                setScanExam(exam);
+              }}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-success/10 py-2.5 text-xs font-bold text-success transition-colors hover:bg-success/20"
             >
               <ScanLine size={14} />
-              {ar ? "تصحيح بالكاميرا (المرحلة القادمة)" : "Scan & grade (next phase)"}
+              {ar ? "تصحيح بالكاميرا" : "Scan & grade"}
             </button>
           </div>
         );
       })}
+
+      {scanExam && (
+        <OmrScanDialog
+          exam={scanExam}
+          course={course}
+          open={!!scanExam}
+          onClose={() => setScanExam(null)}
+          onApplyScore={onApplyScore}
+        />
+      )}
     </div>
   );
 }

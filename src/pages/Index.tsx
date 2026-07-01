@@ -556,7 +556,20 @@ export default function Index() {
               hiddenComponents={activeCourse.hiddenComponents}
               onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
             />
-            <OmrExamsPage course={activeCourse} />
+            <OmrExamsPage
+              course={activeCourse}
+              onApplyScore={async (studentId, targetComponent, score) => {
+                const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
+                if (standard.includes(targetComponent)) {
+                  await updateStudent(activeCourse.id, studentId, { [targetComponent]: score } as any);
+                } else {
+                  const st = activeCourse.students.find((s) => s.id === studentId);
+                  await updateStudent(activeCourse.id, studentId, {
+                    customScores: { ...(st?.customScores || {}), [targetComponent]: score },
+                  } as any);
+                }
+              }}
+            />
           </div>
         )}
 

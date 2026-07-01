@@ -1,114 +1,96 @@
-// Generates a printable OMR (bubble) answer sheet as self-contained HTML.
-// Includes four corner registration marks so the scanner (Phase 3) can
-// detect the sheet and correct perspective. No external dependencies.
+// Generates the printable OMR answer sheet as exact-geometry SVG.
+// Bubble positions come from layout.ts — the SAME source the scanner
+// uses — so print and scan always agree.
 
 import { OmrExam } from "@/types/exam";
+import {
+  PAGE_W, PAGE_H, MARK_SIZE, MARKS, BUBBLE_R,
+  idBubble, questionBubble, questionRows, questionNumberX,
+} from "@/lib/omr/layout";
 
 const CHOICE_LETTERS = ["A", "B", "C", "D", "E"];
 
-function bubble(label: string): string {
-  return `<span class="bub">${label}</span>`;
-}
-
-function questionRow(qIndex: number, choiceCount: number): string {
-  const bubbles = Array.from({ length: choiceCount }, (_, c) => bubble(CHOICE_LETTERS[c])).join("");
+function circle(x: number, y: number, r: number, letter: string): string {
+  // letter drawn in light gray so it thresholds out during scanning
   return `
-    <div class="qrow">
-      <span class="qnum">${qIndex + 1}</span>
-      <div class="bubs">${bubbles}</div>
-    </div>`;
+    <circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#000" stroke-width="0.35"/>
+    <text x="${x}" y="${y + 1.05}" font-size="2.6" fill="#aaa" text-anchor="middle" font-family="Arial">${letter}</text>`;
 }
 
-function idColumn(colIndex: number): string {
-  const digits = Array.from({ length: 10 }, (_, d) => bubble(String(d))).join("");
-  return `<div class="idcol"><span class="idhead">${colIndex + 1}</span>${digits}</div>`;
+export function buildAnswerSheetSvg(exam: OmrExam): string {
+  const parts: string[] = [];
+
+  // registration marks
+  for (const m of MARKS) {
+    parts.push(`<rect x="${m.x - MARK_SIZE / 2}" y="${m.y - MARK_SIZE / 2}" width="${MARK_SIZE}" height="${MARK_SIZE}" fill="#000"/>`);
+  }
+
+  // header
+  parts.push(`<text x="${PAGE_W / 2}" y="20" font-size="6" font-weight="bold" text-anchor="middle" font-family="Arial">${escapeXml(exam.title)}</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="27" font-size="3.2" fill="#444" text-anchor="middle" font-family="Arial">عدد الأسئلة: ${exam.questionCount} · ظلّل الدائرة كاملة بقلم داكن</text>`);
+
+  // handwritten name line
+  parts.push(`<text x="${PAGE_W - 22}" y="35" font-size="3.6" font-weight="bold" text-anchor="end" font-family="Arial">اسم الطالب:</text>`);
+  parts.push(`<line x1="22" y1="36" x2="${PAGE_W - 60}" y2="36" stroke="#000" stroke-width="0.3"/>`);
+
+  // student-ID grid
+  parts.push(`<text x="${PAGE_W / 2}" y="${42}" font-size="3.4" font-weight="bold" text-anchor="middle" font-family="Arial">رقم الطالب</text>`);
+  for (let col = 0; col < exam.studentIdDigits; col++) {
+    for (let d = 0; d <= 9; d++) {
+      const p = idBubble(exam, col, d);
+      parts.push(circle(p.x, p.y, BUBBLE_R, String(d)));
+    }
+  }
+  // ID grid frame
+  {
+    const first = idBubble(exam, 0, 0);
+    const last = idBubble(exam, exam.studentIdDigits - 1, 9);
+    parts.push(`<rect x="${first.x - 5}" y="${first.y - 5}" width="${last.x - first.x + 10}" height="${last.y - first.y + 10}" fill="none" stroke="#000" stroke-width="0.4" rx="2"/>`);
+  }
+
+  // questions
+  const rows = questionRows(exam);
+  for (let q = 0; q < exam.questionCount; q++) {
+    const colBlock = Math.floor(q / rows);
+    const numPos = questionBubble(exam, q, 0);
+    parts.push(`<text x="${questionNumberX(colBlock)}" y="${numPos.y + 1.1}" font-size="3.2" font-weight="bold" text-anchor="end" font-family="Arial">${q + 1}</text>`);
+    for (let c = 0; c < exam.choiceCount; c++) {
+      const p = questionBubble(exam, q, c);
+      parts.push(circle(p.x, p.y, BUBBLE_R, CHOICE_LETTERS[c]));
+    }
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}">${parts.join("")}</svg>`;
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 export function buildAnswerSheetHtml(exam: OmrExam): string {
-  const half = Math.ceil(exam.questionCount / 2);
-  const col1 = Array.from({ length: half }, (_, i) => questionRow(i, exam.choiceCount)).join("");
-  const col2 = Array.from({ length: exam.questionCount - half }, (_, i) =>
-    questionRow(half + i, exam.choiceCount),
-  ).join("");
-  const idCols = Array.from({ length: exam.studentIdDigits }, (_, i) => idColumn(i)).join("");
-
   return `<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
 <meta charset="utf-8" />
-<title>${exam.title}</title>
+<title>${escapeXml(exam.title)}</title>
 <style>
-  @page { size: A4; margin: 12mm; }
-  * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; color: #000; margin: 0; }
-  .mark { position: fixed; width: 10mm; height: 10mm; background: #000; }
-  .mark.tl { top: 6mm; left: 6mm; }
-  .mark.tr { top: 6mm; right: 6mm; }
-  .mark.bl { bottom: 6mm; left: 6mm; }
-  .mark.br { bottom: 6mm; right: 6mm; }
-  .head { text-align: center; margin: 4mm 0 3mm; }
-  .head h1 { font-size: 16pt; margin: 0 0 2mm; }
-  .head .meta { font-size: 10pt; color: #333; }
-  .namebox { display: flex; align-items: flex-end; gap: 3mm; margin: 0 auto 3mm; width: 150mm; }
-  .namelbl { font-size: 11pt; font-weight: bold; white-space: nowrap; }
-  .nameline { flex: 1; border-bottom: 1.2px solid #000; height: 9mm; }
-  .idbox { border: 1.5px solid #000; border-radius: 3mm; padding: 3mm; margin: 0 auto 4mm; width: fit-content; }
-  .idbox .lbl { font-size: 9pt; text-align: center; margin-bottom: 2mm; font-weight: bold; }
-  .idgrid { display: flex; gap: 2.5mm; direction: ltr; }
-  .idcol { display: flex; flex-direction: column; align-items: center; gap: 1mm; }
-  .idhead { font-size: 8pt; color: #666; margin-bottom: 1mm; }
-  .cols { display: flex; gap: 8mm; direction: ltr; justify-content: center; }
-  .qrow { display: flex; align-items: center; gap: 2mm; margin-bottom: 1.6mm; }
-  .qnum { width: 8mm; text-align: right; font-size: 10pt; font-weight: bold; }
-  .bubs { display: flex; gap: 2mm; }
-  .bub {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 6mm; height: 6mm; border: 1.2px solid #000; border-radius: 50%;
-    font-size: 8pt; color: #000;
-  }
-  .note { text-align: center; font-size: 8pt; color: #555; margin-top: 3mm; }
+  @page { size: A4; margin: 0; }
+  html, body { margin: 0; padding: 0; }
+  svg { display: block; }
 </style>
 </head>
-<body>
-  <div class="mark tl"></div>
-  <div class="mark tr"></div>
-  <div class="mark bl"></div>
-  <div class="mark br"></div>
-
-  <div class="head">
-    <h1>${exam.title}</h1>
-    <div class="meta">عدد الأسئلة: ${exam.questionCount} · الخيارات: ${exam.choiceCount}</div>
-  </div>
-
-  <div class="namebox">
-    <span class="namelbl">اسم الطالب:</span>
-    <span class="nameline"></span>
-  </div>
-
-  <div class="idbox">
-    <div class="lbl">رقم الطالب</div>
-    <div class="idgrid">${idCols}</div>
-  </div>
-
-  <div class="cols">
-    <div>${col1}</div>
-    <div>${col2}</div>
-  </div>
-
-  <div class="note">ظلّل الدائرة كاملةً بقلم رصاص أو حبر داكن. لا تخرج عن حدود الدائرة.</div>
-</body>
+<body>${buildAnswerSheetSvg(exam)}</body>
 </html>`;
 }
 
 // Open the sheet in a new window and trigger the print dialog.
-export function printAnswerSheet(exam: OmrExam) {
+export function printAnswerSheet(exam: OmrExam): boolean {
   const html = buildAnswerSheetHtml(exam);
   const w = window.open("", "_blank");
   if (!w) return false;
   w.document.write(html);
   w.document.close();
   w.focus();
-  // give layout a tick before printing
   setTimeout(() => w.print(), 300);
   return true;
 }
