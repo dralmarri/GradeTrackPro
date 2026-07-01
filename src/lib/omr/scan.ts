@@ -8,7 +8,7 @@
 //   6. decide marked / blank / ambiguous per question and per ID digit
 
 import { OmrExam } from "@/types/exam";
-import { PAGE_W, PAGE_H, MARKS, BUBBLE_R, idBubble, questionBubble } from "@/lib/omr/layout";
+import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble } from "@/lib/omr/layout";
 
 export interface OmrScanRaw {
   studentNumber: string;      // "" digits that were readable, in order
@@ -31,11 +31,31 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   const corners = findCornerMarks(dark, w, h);
   if (!corners) throw new Error("لم يتم العثور على علامات المحاذاة الأربع — صوّر الورقة كاملة بإضاءة جيدة");
 
-  // homography: sheet(mm) -> image(px)
-  const H = solveHomography(
-    MARKS.map((m) => [m.x, m.y] as [number, number]),
-    corners.map((c) => [c.x, c.y] as [number, number]),
-  );
+  // --- resolve orientation ---
+  // Four identical corner squares are rotationally ambiguous: an upside-down
+  // photo still yields a valid homography. Try all 4 rotation assignments and
+  // keep the one where the orientation anchor (next to the sheet's TL mark)
+  // actually reads dark.
+  const src = MARKS.map((m) => [m.x, m.y] as [number, number]);
+  // image corners in [TL,TR,BL,BR] order → sheet corners under each rotation
+  const ROTATIONS: number[][] = [
+    [0, 1, 2, 3], // 0°
+    [1, 3, 0, 2], // 90°  (sheet TL appears at image TR)
+    [3, 2, 1, 0], // 180°
+    [2, 0, 3, 1], // 270°
+  ];
+  let H: number[] | null = null;
+  let bestDot = 0;
+  for (const perm of ROTATIONS) {
+    const dst = perm.map((i) => [corners[i].x, corners[i].y] as [number, number]);
+    let Hc: number[];
+    try { Hc = solveHomography(src, dst); } catch { continue; }
+    const dot = sampleSquare(dark, w, h, Hc, ORIENT_MARK.x, ORIENT_MARK.y, ORIENT_MARK.size * 0.35);
+    if (dot > bestDot) { bestDot = dot; H = Hc; }
+  }
+  if (!H || bestDot < 0.5) {
+    throw new Error("تعذّر تحديد اتجاه الورقة — تأكد أن المربع الصغير بجانب علامة الزاوية ظاهر");
+  }
 
   // --- sample bubbles ---
   const fillAt = (mmX: number, mmY: number): number => {
@@ -80,7 +100,26 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     answers.push(pickOne(ratios));
   }
 
-  return { studentNumber, answers, markQuality: corners.length === 4 ? 1 : 0 };
+  return { studentNumber, answers, markQuality: bestDot };
+}
+
+// mean darkness of a small square patch (sheet-mm space) under homography H
+function sampleSquare(
+  dark: Uint8Array, w: number, h: number,
+  H: number[], mmX: number, mmY: number, halfSize: number,
+): number {
+  let darkCount = 0, total = 0;
+  const steps = 5;
+  for (let dy = -steps; dy <= steps; dy++) {
+    for (let dx = -steps; dx <= steps; dx++) {
+      const [px, py] = applyH(H, mmX + (dx / steps) * halfSize, mmY + (dy / steps) * halfSize);
+      const ix = Math.round(px), iy = Math.round(py);
+      if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+      total++;
+      if (dark[iy * w + ix]) darkCount++;
+    }
+  }
+  return total > 0 ? darkCount / total : 0;
 }
 
 // pick the single filled bubble: index, or -1 blank, -2 ambiguous
@@ -163,6 +202,8 @@ function findCornerMarks(dark: Uint8Array, w: number, h: number): Pt[] | null {
   ];
   const out: Pt[] = [];
   const visited = new Uint8Array(w * h);
+  const minSize = (w * h) * 0.0002; // mark ≈ 0.16% of page area
+  const maxSize = (w * h) * 0.02;
 
   for (const r of regions) {
     let best: { size: number; cx: number; cy: number } | null = null;
@@ -172,6 +213,7 @@ function findCornerMarks(dark: Uint8Array, w: number, h: number): Pt[] | null {
         if (!dark[idx] || visited[idx]) continue;
         // BFS flood fill
         let size = 0, sx = 0, sy = 0;
+        let runaway = false;
         const stack = [idx];
         visited[idx] = 1;
         while (stack.length) {
@@ -187,10 +229,9 @@ function findCornerMarks(dark: Uint8Array, w: number, h: number): Pt[] | null {
             visited[n] = 1;
             stack.push(n);
           }
-          if (size > 40000) break; // runaway guard (page border shadow)
+          if (size >= maxSize) { runaway = true; break; } // border shadow / binding — reject blob
         }
-        const minSize = (w * h) * 0.0002; // mark ≈ 0.16% of page area
-        const maxSize = (w * h) * 0.02;
+        if (runaway) continue;
         if (size > minSize && size < maxSize && (!best || size > best.size)) {
           best = { size, cx: sx / size, cy: sy / size };
         }

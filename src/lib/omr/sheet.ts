@@ -4,7 +4,7 @@
 
 import { OmrExam } from "@/types/exam";
 import {
-  PAGE_W, PAGE_H, MARK_SIZE, MARKS, BUBBLE_R,
+  PAGE_W, PAGE_H, MARK_SIZE, MARKS, ORIENT_MARK, BUBBLE_R,
   idBubble, questionBubble, questionRows, questionNumberX,
 } from "@/lib/omr/layout";
 
@@ -24,6 +24,8 @@ export function buildAnswerSheetSvg(exam: OmrExam): string {
   for (const m of MARKS) {
     parts.push(`<rect x="${m.x - MARK_SIZE / 2}" y="${m.y - MARK_SIZE / 2}" width="${MARK_SIZE}" height="${MARK_SIZE}" fill="#000"/>`);
   }
+  // orientation anchor (small square beside the TL mark — breaks 180° ambiguity)
+  parts.push(`<rect x="${ORIENT_MARK.x - ORIENT_MARK.size / 2}" y="${ORIENT_MARK.y - ORIENT_MARK.size / 2}" width="${ORIENT_MARK.size}" height="${ORIENT_MARK.size}" fill="#000"/>`);
 
   // header
   parts.push(`<text x="${PAGE_W / 2}" y="20" font-size="6" font-weight="bold" text-anchor="middle" font-family="Arial">${escapeXml(exam.title)}</text>`);

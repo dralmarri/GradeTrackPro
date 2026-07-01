@@ -19,6 +19,12 @@ export const MARKS = [
   { x: PAGE_W - 11, y: PAGE_H - 11 },
 ] as const;
 
+// Orientation anchor: a small filled square next to the TL mark only.
+// Four identical corner squares are rotationally ambiguous — an upside-down
+// photo would otherwise solve a "valid" homography and misread every bubble.
+// The scanner tries all 4 rotations and keeps the one where this dot is dark.
+export const ORIENT_MARK = { x: 22.5, y: 11, size: 5 } as const;
+
 export const BUBBLE_R = 2.5;      // bubble radius (mm)
 
 // Student-ID grid
@@ -50,6 +56,9 @@ export function questionBubble(exam: OmrExam, q: number, c: number): BubblePos {
   // fill column by column: q 0..rows-1 in col 0, etc.
   const col = Math.floor(q / rows);
   const row = q % rows;
+  if (col >= Q_COL_XS.length) {
+    throw new Error(`عدد الأسئلة يتجاوز الحد الأقصى (${MAX_QUESTIONS})`);
+  }
   return { x: Q_COL_XS[col] + c * Q_CHOICE_PITCH, y: Q_TOP_Y + row * Q_ROW_PITCH };
 }
 
