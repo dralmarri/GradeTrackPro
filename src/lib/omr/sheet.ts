@@ -127,7 +127,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   // light separators between question column blocks
   const blocks = Math.ceil(exam.questionCount / rows);
   for (let b = 1; b < blocks; b++) {
-    const x = questionNumberX(b) - 6.5;
+    const x = questionNumberX(exam, b) - 6.5;
     const yTop = questionBubble(exam, 0, 0).y - 4;
     const lastQ = Math.min(exam.questionCount, rows * blocks) - 1;
     const yBot = questionBubble(exam, Math.min(rows - 1, lastQ % rows), 0).y + 4;
@@ -139,7 +139,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     const numPos = questionBubble(exam, q, 0);
     const labels = choiceLabelsFor(exam, q);
     const qChoices = choiceCountFor(exam, q);
-    parts.push(`<text x="${questionNumberX(colBlock)}" y="${numPos.y + 1.1}" font-size="3" font-weight="bold" fill="#333" text-anchor="end" font-family="${FONT}">${q + 1}</text>`);
+    parts.push(`<text x="${questionNumberX(exam, colBlock)}" y="${numPos.y + 1.1}" font-size="3" font-weight="bold" fill="#333" text-anchor="end" font-family="${FONT}">${q + 1}</text>`);
     for (let c = 0; c < qChoices; c++) {
       const p = questionBubble(exam, q, c);
       parts.push(circle(p.x, p.y, BUBBLE_R, labels[c]));

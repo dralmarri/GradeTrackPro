@@ -68,22 +68,47 @@ export function idBubble(exam: OmrExam, col: number, digit: number): BubblePos {
   return { x: startX + col * ID_COL_PITCH, y: ID_TOP_Y + digit * ID_ROW_PITCH };
 }
 
+// Question-grid spec: uses as FEW columns as possible and stretches the row
+// pitch so the questions fill the page instead of crowding the top.
+// Deterministic from the exam fields, so sheet and scanner always agree.
+type GridExam = Pick<OmrExam, "questionCount" | "idMode">;
+
+export interface GridSpec { cols: number; rows: number; pitch: number; colXs: number[] }
+
+const COL_X_SETS: Record<number, number[]> = {
+  1: [88],
+  2: [48, 128],
+  3: [28, 93, 158],
+};
+
+export function gridSpec(exam: GridExam): GridSpec {
+  const maxR = maxRowsPerCol(exam);
+  const n = Math.max(1, exam.questionCount);
+  const cols = n <= maxR ? 1 : n <= 2 * maxR ? 2 : 3;
+  const rows = Math.ceil(n / cols);
+  const avail = Q_BOTTOM_Y - qTopY(exam);
+  const pitch = rows > 1
+    ? Math.max(Q_ROW_PITCH, Math.min(12, avail / (rows - 1)))
+    : Q_ROW_PITCH;
+  return { cols, rows, pitch, colXs: COL_X_SETS[cols] };
+}
+
 // Center of the bubble for question q (0-based) and choice c (0-based).
 export function questionBubble(exam: OmrExam, q: number, c: number): BubblePos {
-  const rows = questionRows(exam);
+  const spec = gridSpec(exam);
   // fill column by column: q 0..rows-1 in col 0, etc.
-  const col = Math.floor(q / rows);
-  const row = q % rows;
-  if (col >= Q_COL_XS.length) {
+  const col = Math.floor(q / spec.rows);
+  const row = q % spec.rows;
+  if (col >= spec.colXs.length) {
     throw new Error(`عدد الأسئلة يتجاوز الحد الأقصى (${maxQuestions(exam)})`);
   }
-  return { x: Q_COL_XS[col] + c * Q_CHOICE_PITCH, y: qTopY(exam) + row * Q_ROW_PITCH };
+  return { x: spec.colXs[col] + c * Q_CHOICE_PITCH, y: qTopY(exam) + row * spec.pitch };
 }
 
 export function questionRows(exam: OmrExam): number {
-  return Math.min(maxRowsPerCol(exam), Math.ceil(exam.questionCount / Q_COL_XS.length) || 1);
+  return gridSpec(exam).rows;
 }
 
-export function questionNumberX(colIndex: number): number {
-  return Q_COL_XS[colIndex] - 9;
+export function questionNumberX(exam: GridExam, colIndex: number): number {
+  return gridSpec(exam).colXs[colIndex] - 9;
 }
