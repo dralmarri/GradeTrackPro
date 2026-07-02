@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Course } from "@/types/student";
 import { OmrExam, ChoiceCount, choiceLabels } from "@/types/exam";
 import {
-  BankQuestion, Difficulty, DIFFICULTY_LABELS, GeneratedForm, generateForms,
+  BankQuestion, Difficulty, DIFFICULTY_LABELS, GeneratedForm, generateForms, seededShuffle,
 } from "@/types/questionBank";
 import { useQuestionBank } from "@/hooks/useQuestionBank";
 import { printQuestionPaper } from "@/lib/omr/questionPaper";
@@ -95,9 +95,9 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
     }
     setGenerating(true);
     try {
-      // pick genCount questions deterministically from the filtered pool
+      // pick genCount questions fairly across all types (no MCQ/TF bias)
       const seedBase = (genTitle.trim().length * 2654435761) ^ pool.length;
-      const picked = generateForms(pool, 1, seedBase)[0].questions.slice(0, genCount);
+      const picked = seededShuffle(pool, seedBase).slice(0, genCount);
       const forms = generateForms(picked, genForms, seedBase + 17);
 
       const out: { exam: OmrExam; form: GeneratedForm }[] = [];

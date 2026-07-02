@@ -56,10 +56,16 @@ export function generateForms(pool: BankQuestion[], formsCount: number, seedBase
   const forms: GeneratedForm[] = [];
   for (let v = 0; v < formsCount; v++) {
     const seed = seedBase + v * 7919;
-    // group so mixed sheets have clean sections: MCQ (3-5 choices) first, then T/F
-    const mcq = seededShuffle(pool.filter((q) => q.choices.length > 2), seed);
+    // group by EXACT choice count (5,4,3 then 2) so every question's printed
+    // bubbles match its real choices — no phantom D/E bubbles on 3-choice items
+    const widths = Array.from(new Set(pool.map((q) => q.choices.length)))
+      .sort((a, b) => b - a)
+      .filter((w) => w > 2);
+    const groups = widths.map((w) =>
+      seededShuffle(pool.filter((q) => q.choices.length === w), seed + w * 31),
+    );
     const tf = seededShuffle(pool.filter((q) => q.choices.length === 2), seed + 13);
-    const ordered = [...mcq, ...tf];
+    const ordered = [...groups.flat(), ...tf];
 
     const choiceOrders: number[][] = [];
     const answerKey: number[] = [];
@@ -71,11 +77,9 @@ export function generateForms(pool: BankQuestion[], formsCount: number, seedBase
     });
 
     const sections: GeneratedForm["sections"] = [];
-    if (mcq.length) {
-      // MCQ block may mix 3/4/5-choice questions; use the max as the section width
-      const width = Math.max(...mcq.map((q) => q.choices.length)) as 3 | 4 | 5;
-      sections.push({ questionCount: mcq.length, choiceCount: width });
-    }
+    groups.forEach((g, gi) => {
+      if (g.length) sections.push({ questionCount: g.length, choiceCount: widths[gi] as 3 | 4 | 5 });
+    });
     if (tf.length) sections.push({ questionCount: tf.length, choiceCount: 2 });
 
     forms.push({ version: VERSION_LETTERS[v] || String(v + 1), questions: ordered, choiceOrders, answerKey, sections });

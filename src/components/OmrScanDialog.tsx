@@ -76,8 +76,8 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       if (cleanNum && s && s.studentNumber !== cleanNum) {
         await onLearnNumber(s.id, cleanNum);
       }
-      // archive the sheet photo + result for later review (best-effort)
-      addScan({
+      // archive the sheet photo + result for later review
+      const archived = await addScan({
         examId: exam.id,
         studentId: selectedStudentId,
         studentName: s?.name || "",
@@ -86,7 +86,10 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         rawCorrect: result.rawCorrect,
         answers: result.answers,
         photo,
-      }).catch(() => {});
+      }).catch(() => false);
+      if (!archived) {
+        toast.warning(ar ? "رُصدت الدرجة لكن تعذّرت أرشفة صورة الورقة" : "Score saved, but archiving the sheet photo failed");
+      }
       toast.success(
         ar
           ? `رُصدت الدرجة ${result.score}/${exam.maxScore} للطالب ${s?.name ?? ""}`
