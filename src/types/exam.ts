@@ -2,7 +2,36 @@
 // This is a native, integrated grading system — not a ZipGrade clone.
 // Scores flow straight into the student's course record.
 
-export type ChoiceCount = 4 | 5; // A–D or A–E
+export type ChoiceCount = 2 | 3 | 4 | 5; // 2 = صح/خطأ, 3 = A–C, 4 = A–D, 5 = A–E
+
+// display letters per choice count — true/false exams show ✓ / ✗
+export function choiceLabels(choiceCount: ChoiceCount): string[] {
+  if (choiceCount === 2) return ["✓", "✗"];
+  return ["A", "B", "C", "D", "E"].slice(0, choiceCount);
+}
+
+// A mixed exam is made of consecutive sections, each with its own choice
+// count — e.g. section 1: 10 MCQ (A–D), section 2: 5 true/false.
+export interface OmrSection {
+  questionCount: number;
+  choiceCount: ChoiceCount;
+}
+
+// choice count for question q (0-based), honouring sections when present
+export function choiceCountFor(exam: Pick<OmrExam, "choiceCount" | "sections">, q: number): ChoiceCount {
+  if (exam.sections && exam.sections.length > 0) {
+    let acc = 0;
+    for (const s of exam.sections) {
+      acc += s.questionCount;
+      if (q < acc) return s.choiceCount;
+    }
+  }
+  return exam.choiceCount;
+}
+
+export function choiceLabelsFor(exam: Pick<OmrExam, "choiceCount" | "sections">, q: number): string[] {
+  return choiceLabels(choiceCountFor(exam, q));
+}
 
 export interface OmrExam {
   id: string;
@@ -15,6 +44,7 @@ export interface OmrExam {
   maxScore: number;            // full mark for this exam
   answerKey: number[];         // per question: index of correct choice (0=A), -1 = not set
   studentIdDigits: number;     // how many digits the student number box has
+  sections?: OmrSection[];     // optional mixed-type sections (T/F + MCQ…)
   createdAt: string;
   updatedAt: string;
 }

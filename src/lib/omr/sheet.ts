@@ -2,13 +2,12 @@
 // Bubble positions come from layout.ts — the SAME source the scanner
 // uses — so print and scan always agree.
 
-import { OmrExam } from "@/types/exam";
+import { OmrExam, choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import {
   PAGE_W, PAGE_H, MARK_SIZE, MARKS, ORIENT_MARK, BUBBLE_R,
   idBubble, questionBubble, questionRows, questionNumberX,
 } from "@/lib/omr/layout";
 
-const CHOICE_LETTERS = ["A", "B", "C", "D", "E"];
 
 function circle(x: number, y: number, r: number, letter: string): string {
   // letter drawn in light gray so it thresholds out during scanning
@@ -50,15 +49,17 @@ export function buildAnswerSheetSvg(exam: OmrExam): string {
     parts.push(`<rect x="${first.x - 5}" y="${first.y - 5}" width="${last.x - first.x + 10}" height="${last.y - first.y + 10}" fill="none" stroke="#000" stroke-width="0.4" rx="2"/>`);
   }
 
-  // questions
+  // questions (choice count may differ per section in mixed exams)
   const rows = questionRows(exam);
   for (let q = 0; q < exam.questionCount; q++) {
     const colBlock = Math.floor(q / rows);
     const numPos = questionBubble(exam, q, 0);
+    const labels = choiceLabelsFor(exam, q);
+    const qChoices = choiceCountFor(exam, q);
     parts.push(`<text x="${questionNumberX(colBlock)}" y="${numPos.y + 1.1}" font-size="3.2" font-weight="bold" text-anchor="end" font-family="Arial">${q + 1}</text>`);
-    for (let c = 0; c < exam.choiceCount; c++) {
+    for (let c = 0; c < qChoices; c++) {
       const p = questionBubble(exam, q, c);
-      parts.push(circle(p.x, p.y, BUBBLE_R, CHOICE_LETTERS[c]));
+      parts.push(circle(p.x, p.y, BUBBLE_R, labels[c]));
     }
   }
 

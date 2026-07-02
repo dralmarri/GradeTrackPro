@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Course, Student } from "@/types/student";
-import { OmrExam, gradeOmr, OmrScanResult } from "@/types/exam";
+import { OmrExam, gradeOmr, OmrScanResult, choiceLabelsFor } from "@/types/exam";
 import { scanAnswerSheet } from "@/lib/omr/scan";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
@@ -9,7 +9,6 @@ import {
   Camera, Loader2, X, CheckCircle2, AlertTriangle, UserRound, RotateCcw,
 } from "lucide-react";
 
-const LETTERS = ["A", "B", "C", "D", "E"];
 
 interface Props {
   exam: OmrExam;
@@ -186,9 +185,9 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                   >
                     <span>{r.questionIndex + 1}</span>
                     <span>
-                      {r.marked >= 0 ? LETTERS[r.marked] : r.marked === -1 ? "—" : "؟"}
+                      {r.marked >= 0 ? choiceLabelsFor(exam, r.questionIndex)[r.marked] : r.marked === -1 ? "—" : "؟"}
                       {" / "}
-                      {exam.answerKey[r.questionIndex] >= 0 ? LETTERS[exam.answerKey[r.questionIndex]] : "؟"}
+                      {exam.answerKey[r.questionIndex] >= 0 ? choiceLabelsFor(exam, r.questionIndex)[exam.answerKey[r.questionIndex]] : "؟"}
                     </span>
                   </div>
                 ))}

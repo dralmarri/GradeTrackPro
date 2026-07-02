@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { OmrExam, ChoiceCount } from "@/types/exam";
+import { OmrExam, ChoiceCount, OmrSection } from "@/types/exam";
 
 // any-typed client: omr_exams isn't in the generated types yet (v2 branch)
 const db = supabase as any;
@@ -12,11 +12,12 @@ function rowToExam(row: any): OmrExam {
     courseId: row.course_id,
     title: row.title,
     questionCount: Number(row.question_count) || 20,
-    choiceCount: (Number(row.choice_count) === 5 ? 5 : 4) as ChoiceCount,
+    choiceCount: ([2, 3, 4, 5].includes(Number(row.choice_count)) ? Number(row.choice_count) : 4) as ChoiceCount,
     targetComponent: row.target_component || "exam1",
     maxScore: Number(row.max_score) || 20,
     answerKey: (row.answer_key || []) as number[],
     studentIdDigits: Number(row.student_id_digits) || 6,
+    sections: Array.isArray(row.sections) && row.sections.length ? (row.sections as OmrSection[]) : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -47,6 +48,7 @@ export function useOmrExams(courseId: string | null) {
     targetComponent: string;
     maxScore: number;
     studentIdDigits: number;
+    sections?: OmrSection[];
   }): Promise<string> => {
     if (!user || !courseId) return "";
     const { data, error } = await db.from("omr_exams").insert({
@@ -59,6 +61,7 @@ export function useOmrExams(courseId: string | null) {
       max_score: input.maxScore,
       answer_key: new Array(input.questionCount).fill(-1),
       student_id_digits: input.studentIdDigits,
+      sections: input.sections && input.sections.length > 1 ? input.sections : null,
     }).select().single();
     if (error || !data) { console.error("Error adding omr exam:", error); return ""; }
     await fetchExams();

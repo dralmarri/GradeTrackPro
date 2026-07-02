@@ -7,7 +7,7 @@
 //   5. sample every bubble's fill ratio at its exact layout position
 //   6. decide marked / blank / ambiguous per question and per ID digit
 
-import { OmrExam } from "@/types/exam";
+import { OmrExam, choiceCountFor } from "@/types/exam";
 import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble } from "@/lib/omr/layout";
 
 export interface OmrScanRaw {
@@ -102,7 +102,8 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   const answers: number[] = [];
   for (let q = 0; q < exam.questionCount; q++) {
     const ratios: number[] = [];
-    for (let c = 0; c < exam.choiceCount; c++) {
+    const qChoices = choiceCountFor(exam, q);
+    for (let c = 0; c < qChoices; c++) {
       const p = questionBubble(exam, q, c);
       ratios.push(fillAt(p.x, p.y));
     }

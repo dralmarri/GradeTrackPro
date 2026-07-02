@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Course } from "@/types/student";
-import { OmrExam, ChoiceCount } from "@/types/exam";
+import { OmrExam, ChoiceCount, OmrSection, choiceLabels, choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import { useOmrExams } from "@/hooks/useOmrExams";
 import { printAnswerSheet } from "@/lib/omr/sheet";
 import { MAX_QUESTIONS } from "@/lib/omr/layout";
@@ -12,7 +12,6 @@ import {
   Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, CheckCircle2, Pencil,
 } from "lucide-react";
 
-const LETTERS = ["A", "B", "C", "D", "E"];
 
 interface Props {
   course: Course;
@@ -26,8 +25,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
 
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
-  const [questionCount, setQuestionCount] = useState(20);
-  const [choiceCount, setChoiceCount] = useState<ChoiceCount>(4);
+  const [sections, setSections] = useState<OmrSection[]>([{ questionCount: 20, choiceCount: 4 }]);
   const [targetComponent, setTargetComponent] = useState("exam1");
   const [maxScore, setMaxScore] = useState(20);
   const [creating, setCreating] = useState(false);
@@ -48,22 +46,27 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
     ...(course.customComponents || []).map((c) => ({ key: c.key, label: c.label })),
   ];
 
+  const totalQuestions = sections.reduce((a, s) => a + (Number(s.questionCount) || 0), 0);
+
   const handleCreate = async () => {
     if (!title.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
-    if (questionCount < 1 || questionCount > MAX_QUESTIONS) {
+    if (totalQuestions < 1 || totalQuestions > MAX_QUESTIONS) {
       toast.error(ar ? `عدد الأسئلة بين 1 و ${MAX_QUESTIONS}` : `Questions must be 1–${MAX_QUESTIONS}`); return;
     }
     setCreating(true);
     const id = await addExam({
-      title: title.trim(), questionCount, choiceCount,
+      title: title.trim(),
+      questionCount: totalQuestions,
+      choiceCount: sections[0].choiceCount,
       targetComponent, maxScore, studentIdDigits: 6,
+      sections: sections.length > 1 ? sections : undefined,
     });
     setCreating(false);
     if (id) {
       toast.success(ar ? "تم إنشاء الاختبار" : "Exam created");
-      setShowCreate(false); setTitle(""); setQuestionCount(20); setMaxScore(20);
+      setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4 }]); setMaxScore(20);
       setOpenKeyExamId(id);
-      setDraftKey(new Array(questionCount).fill(-1));
+      setDraftKey(new Array(totalQuestions).fill(-1));
     }
   };
 
@@ -120,15 +123,55 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
             placeholder={ar ? "عنوان الاختبار (مثال: اختبار الفصل الأول)" : "Exam title"}
             className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
           />
+          {/* sections: each has its own question type */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-muted-foreground">
+              {ar ? "أقسام الاختبار" : "Exam sections"}
+            </p>
+            {sections.map((sec, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="w-5 text-center text-xs font-bold text-muted-foreground">{i + 1}</span>
+                <select
+                  value={sec.choiceCount}
+                  onChange={(e) => setSections((prev) => prev.map((s, j) => j === i ? { ...s, choiceCount: Number(e.target.value) as ChoiceCount } : s))}
+                  className="flex-1 rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+                >
+                  <option value={2}>{ar ? "صح / خطأ" : "True / False"}</option>
+                  <option value={3}>A – C</option>
+                  <option value={4}>A – D</option>
+                  <option value={5}>A – E</option>
+                </select>
+                <input
+                  type="number" min={1} max={MAX_QUESTIONS} value={sec.questionCount}
+                  onChange={(e) => setSections((prev) => prev.map((s, j) => j === i ? { ...s, questionCount: Number(e.target.value) || 1 } : s))}
+                  className="w-20 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm text-foreground outline-none focus:border-primary"
+                  title={ar ? "عدد الأسئلة" : "Questions"}
+                />
+                {sections.length > 1 && (
+                  <button
+                    onClick={() => setSections((prev) => prev.filter((_, j) => j !== i))}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setSections((prev) => [...prev, { questionCount: 5, choiceCount: 2 }])}
+                className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+              >
+                <Plus size={13} />
+                {ar ? "إضافة قسم (نوع آخر)" : "Add section"}
+              </button>
+              <span className="text-xs text-muted-foreground">
+                {ar ? `المجموع: ${totalQuestions} سؤالاً` : `Total: ${totalQuestions} questions`}
+              </span>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "عدد الأسئلة" : "Questions"}
-              <input
-                type="number" min={1} max={100} value={questionCount}
-                onChange={(e) => setQuestionCount(Number(e.target.value) || 1)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              />
-            </label>
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "الدرجة القصوى" : "Max score"}
               <input
@@ -136,17 +179,6 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
                 onChange={(e) => setMaxScore(Number(e.target.value) || 1)}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
-            </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "عدد الخيارات" : "Choices"}
-              <select
-                value={choiceCount}
-                onChange={(e) => setChoiceCount(Number(e.target.value) as ChoiceCount)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              >
-                <option value={4}>A – D</option>
-                <option value={5}>A – E</option>
-              </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "تُرصد في" : "Maps to"}
@@ -190,7 +222,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
               <div className="min-w-0">
                 <p className="truncate font-display text-base font-bold text-foreground">{exam.title}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {exam.questionCount} {ar ? "سؤال" : "Qs"} · {LETTERS.slice(0, exam.choiceCount).join(" ")} · {exam.maxScore} {ar ? "درجة" : "pts"}
+                  {exam.questionCount} {ar ? "سؤال" : "Qs"} · {exam.sections?.length ? (ar ? "مختلط" : "Mixed") : choiceLabels(exam.choiceCount).join(" ")} · {exam.maxScore} {ar ? "درجة" : "pts"}
                   {" · "}
                   <span className={cn(keyDone === exam.questionCount ? "text-success" : "text-amber-600")}>
                     {ar ? `المفتاح: ${keyDone}/${exam.questionCount}` : `Key: ${keyDone}/${exam.questionCount}`}
@@ -301,7 +333,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
                     <div key={q} className="flex items-center gap-2 rounded-lg bg-muted/40 px-2 py-1.5">
                       <span className="w-6 text-center text-xs font-bold text-muted-foreground">{q + 1}</span>
                       <div className="flex gap-1">
-                        {Array.from({ length: exam.choiceCount }, (_, c) => (
+                        {Array.from({ length: choiceCountFor(exam, q) }, (_, c) => (
                           <button
                             key={c}
                             onClick={() => setKeyChoice(q, c)}
@@ -312,7 +344,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
                                 : "border-border text-muted-foreground hover:border-primary/50",
                             )}
                           >
-                            {LETTERS[c]}
+                            {choiceLabelsFor(exam, q)[c]}
                           </button>
                         ))}
                       </div>
