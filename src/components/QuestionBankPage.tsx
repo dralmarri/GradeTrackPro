@@ -2,16 +2,18 @@ import { useMemo, useState } from "react";
 import { Course } from "@/types/student";
 import { OmrExam, ChoiceCount, choiceLabels } from "@/types/exam";
 import {
-  BankQuestion, Difficulty, DIFFICULTY_LABELS, GeneratedForm, generateForms, seededShuffle,
+  BankQuestion, Difficulty, DIFFICULTY_LABELS, GeneratedForm, generateForms, seededShuffle, parseQuestionRows,
 } from "@/types/questionBank";
+import * as XLSX from "xlsx";
 import { useQuestionBank } from "@/hooks/useQuestionBank";
 import { printQuestionPaper } from "@/lib/omr/questionPaper";
 import { printAnswerSheet, SheetHeader } from "@/lib/omr/sheet";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useRef } from "react";
 import {
-  Plus, Trash2, Loader2, Library, Wand2, Printer, FileText, ChevronDown,
+  Plus, Trash2, Loader2, Library, Wand2, Printer, FileText, ChevronDown, Upload, Download,
 } from "lucide-react";
 
 interface Props {
@@ -32,7 +34,9 @@ interface Props {
 export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, componentOptions, onCreateExam, onSetAnswerKey, buildExam }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { questions, loading, addQuestion, deleteQuestion } = useQuestionBank(course.id, bankCourseIds);
+  const { questions, loading, addQuestion, addQuestions, deleteQuestion } = useQuestionBank(course.id, bankCourseIds);
+  const importRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
 
   // --- add question form ---
   const [showAdd, setShowAdd] = useState(false);
@@ -84,6 +88,53 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
       toast.success(ar ? "أُضيف السؤال إلى البنك" : "Question added");
       setQText(""); setQCorrect(0);
       if (qType !== 2) setQChoices(new Array(qType).fill(""));
+    }
+  };
+
+  const downloadTemplate = () => {
+    const rows = [
+      { "السؤال": "عاصمة الكويت هي مدينة الكويت", "أ": "", "ب": "", "ج": "", "د": "", "هـ": "", "الإجابة": "صح", "الموضوع": "الفصل الأول", "الصعوبة": "سهل" },
+      { "السؤال": "ما ناتج 2 + 3 ؟", "أ": "4", "ب": "5", "ج": "6", "د": "7", "هـ": "", "الإجابة": "ب", "الموضوع": "الفصل الأول", "الصعوبة": "متوسط" },
+      { "السؤال": "أي مما يلي عدد أولي؟", "أ": "4", "ب": "6", "ج": "7", "د": "", "هـ": "", "الإجابة": "ج", "الموضوع": "الفصل الثاني", "الصعوبة": "صعب" },
+    ];
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "الأسئلة");
+    XLSX.writeFile(wb, "قالب_بنك_الأسئلة.xlsx");
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImporting(true);
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+      const { questions: parsed, skipped } = parseQuestionRows(rows);
+      if (!parsed.length) {
+        toast.error(ar ? "لم يُتعرف على أي سؤال — تأكد من أعمدة القالب" : "No questions recognised — check the template columns");
+        if (skipped.length) console.warn("Skipped rows:", skipped);
+        return;
+      }
+      const added = await addQuestions(parsed);
+      if (added > 0) {
+        toast.success(
+          ar
+            ? `استُورد ${added} سؤالاً${skipped.length ? ` · تم تخطي ${skipped.length} صفاً (راجع التنسيق)` : ""}`
+            : `Imported ${added} questions${skipped.length ? ` · ${skipped.length} rows skipped` : ""}`,
+          { duration: 6000 },
+        );
+        if (skipped.length) console.warn("Skipped rows:", skipped);
+      } else {
+        toast.error(ar ? "فشل الاستيراد — حاول مجدداً" : "Import failed");
+      }
+    } catch {
+      toast.error(ar ? "تعذّرت قراءة الملف" : "Could not read file");
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -155,7 +206,24 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             </span>
           )}
         </h3>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={downloadTemplate}
+            title={ar ? "تحميل قالب Excel" : "Download Excel template"}
+            className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted"
+          >
+            <Download size={14} />
+            {ar ? "القالب" : "Template"}
+          </button>
+          <button
+            onClick={() => importRef.current?.click()}
+            disabled={importing}
+            className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+          >
+            {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            {ar ? "استيراد Excel" : "Import Excel"}
+          </button>
+          <input ref={importRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
           <button
             onClick={() => { setShowGen((v) => !v); setShowAdd(false); }}
             disabled={questions.length === 0}

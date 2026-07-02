@@ -41,7 +41,7 @@ import { tf } from "@/lib/translations";
 import AppStoreBanner from "@/components/AppStoreBanner";
 
 
-type CourseTab = "attendance" | "exams" | "status";
+type CourseTab = "attendance" | "exams" | "omr" | "status";
 type MainView = "courses" | "settings";
 
 export default function Index() {
@@ -556,23 +556,26 @@ export default function Index() {
               hiddenComponents={activeCourse.hiddenComponents}
               onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
             />
-            <OmrExamsPage
-              course={activeCourse}
-              bankCourseIds={courses.filter((c) => c.name.trim() === activeCourse.name.trim()).map((c) => c.id)}
-              onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
-              onApplyScore={async (studentId, targetComponent, score) => {
-                const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
-                if (standard.includes(targetComponent)) {
-                  await updateStudent(activeCourse.id, studentId, { [targetComponent]: score } as any);
-                } else {
-                  const st = activeCourse.students.find((s) => s.id === studentId);
-                  await updateStudent(activeCourse.id, studentId, {
-                    customScores: { ...(st?.customScores || {}), [targetComponent]: score },
-                  } as any);
-                }
-              }}
-            />
           </div>
+        )}
+
+        {courseTab === "omr" && (
+          <OmrExamsPage
+            course={activeCourse}
+            bankCourseIds={courses.filter((c) => c.name.trim() === activeCourse.name.trim()).map((c) => c.id)}
+            onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
+            onApplyScore={async (studentId, targetComponent, score) => {
+              const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
+              if (standard.includes(targetComponent)) {
+                await updateStudent(activeCourse.id, studentId, { [targetComponent]: score } as any);
+              } else {
+                const st = activeCourse.students.find((s) => s.id === studentId);
+                await updateStudent(activeCourse.id, studentId, {
+                  customScores: { ...(st?.customScores || {}), [targetComponent]: score },
+                } as any);
+              }
+            }}
+          />
         )}
 
         {courseTab === "attendance" && (

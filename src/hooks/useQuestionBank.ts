@@ -60,11 +60,30 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
     return true;
   }, [user, courseId, fetchQuestions]);
 
+  const addQuestions = useCallback(async (items: {
+    text: string; choices: string[]; correct: number; topic?: string; difficulty?: Difficulty;
+  }[]): Promise<number> => {
+    if (!user || !courseId || !items.length) return 0;
+    const rows = items.map((q) => ({
+      user_id: user.id,
+      course_id: courseId,
+      text: q.text,
+      choices: q.choices,
+      correct: q.correct,
+      topic: q.topic || null,
+      difficulty: q.difficulty || null,
+    }));
+    const { error } = await db.from("omr_questions").insert(rows);
+    if (error) { console.error("Bulk insert failed:", error); return 0; }
+    await fetchQuestions();
+    return rows.length;
+  }, [user, courseId, fetchQuestions]);
+
   const deleteQuestion = useCallback(async (id: string) => {
     const { error } = await db.from("omr_questions").delete().eq("id", id);
     if (error) console.error("Error deleting question:", error);
     else await fetchQuestions();
   }, [fetchQuestions]);
 
-  return { questions, loading, addQuestion, deleteQuestion, refetch: fetchQuestions };
+  return { questions, loading, addQuestion, addQuestions, deleteQuestion, refetch: fetchQuestions };
 }
