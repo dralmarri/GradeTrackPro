@@ -192,10 +192,12 @@ export function parseQuestionsText(text: string): BulkParseResult {
 
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
 
-  const CHOICE_RE = /^([أابجدهabcde]|هـ)[\)\-\.:،]\s*(.+)$/i;
+  // choices may start with a dash/bullet: "- أ. خيار" / "– ب) خيار" / "• ج: خيار"
+  const CHOICE_RE = /^[-–—•*]?\s*([أابجدهabcde]|هـ)\s*[\)\-\.:،]\s*(.+)$/i;
   const Q_RE = /^(?:س\s*[:.]|سؤال\s*[:.]?|\d+\s*[\)\-\.:،])\s*(.+)$/;
-  const ANS_RE = /^(?:الإجابة|الاجابة|الجواب|answer)\s*[:：]?\s*(.+)$/i;
-  const TOPIC_RE = /^(?:الموضوع|الفصل|topic)\s*[:：]?\s*(.+)$/i;
+  const ANS_RE = /^[-–—•*]?\s*(?:الإجابة|الاجابة|الجواب|answer)\s*(?:الصحيحة)?\s*(?:هي)?\s*[:：]?\s*(.+)$/i;
+  const CHAPTER_RE = /^(?:الفصل|الوحدة|chapter)\s*[:：]\s*(.+)$/i;
+  const TOPIC_RE = /^(?:الموضوع|العنوان|topic)\s*[:：]\s*(.+)$/i;
 
   const CH_IDX: Record<string, number> = { "أ": 0, "ا": 0, "a": 0, "ب": 1, "b": 1, "ج": 2, "c": 2, "د": 3, "d": 3, "هـ": 4, "ه": 4, "e": 4 };
 
@@ -206,7 +208,8 @@ export function parseQuestionsText(text: string): BulkParseResult {
   const flush = (ansRaw: string | null, lineNo: number) => {
     if (!cur) return;
     if (ansRaw === null) { skipped.push({ row: cur.line, reason: "سؤال بدون سطر إجابة" }); cur = null; return; }
-    const a = ansRaw.trim().toLowerCase();
+    // tolerate "أ)" / "ب." / "صح." — keep only the leading token
+    const a = ansRaw.trim().toLowerCase().replace(/[\)\-\.:،]+$/, "").split(/\s+/)[0] || "";
     const tf = ["صح", "ص", "true", "صواب"].includes(a) ? 0 : ["خطأ", "خ", "false", "خاطئ"].includes(a) ? 1 : -1;
     if (cur.choices.length === 0) {
       if (tf === -1) { skipped.push({ row: cur.line, reason: `إجابة غير مفهومة: ${ansRaw}` }); cur = null; return; }

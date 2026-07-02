@@ -38,7 +38,18 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const importRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
+  const [showExcel, setShowExcel] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  // الفصل/الموضوع يُختاران هنا ويُطبَّقان على كل الأسئلة المستوردة (لصقاً أو Excel)
+  const [importChapter, setImportChapter] = useState("");
+  const [importTopic, setImportTopic] = useState("");
+
+  const applyImportMeta = <T extends { chapter?: string; topic?: string }>(qs: T[]): T[] =>
+    qs.map((q) => ({
+      ...q,
+      chapter: q.chapter || importChapter.trim() || undefined,
+      topic: q.topic || importTopic.trim() || undefined,
+    }));
 
   // --- add question form ---
   const [showAdd, setShowAdd] = useState(false);
@@ -71,6 +82,35 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
     () => Array.from(new Set(questions.map((q) => q.chapter).filter(Boolean))) as string[],
     [questions],
   );
+
+  // chapter/topic pickers for imports — datalists suggest existing values so
+  // later batches can be added to the same chapter/topic
+  const importMetaFields = (
+    <div className="grid grid-cols-2 gap-3">
+      <label className="space-y-1 text-xs text-muted-foreground">
+        {ar ? "الفصل / الوحدة" : "Chapter"}
+        <input
+          list="bank-chapters"
+          value={importChapter}
+          onChange={(e) => setImportChapter(e.target.value)}
+          placeholder={ar ? "مثال: الفصل الأول" : "e.g. Chapter 1"}
+          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+        />
+      </label>
+      <label className="space-y-1 text-xs text-muted-foreground">
+        {ar ? "الموضوع / العنوان" : "Topic"}
+        <input
+          list="bank-topics"
+          value={importTopic}
+          onChange={(e) => setImportTopic(e.target.value)}
+          placeholder={ar ? "مثال: مقدمة" : "e.g. Introduction"}
+          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+        />
+      </label>
+      <datalist id="bank-chapters">{chapters.map((c) => <option key={c} value={c} />)}</datalist>
+      <datalist id="bank-topics">{topics.map((t) => <option key={t} value={t} />)}</datalist>
+    </div>
+);
 
   const setType = (t: ChoiceCount) => {
     setQType(t);
@@ -128,7 +168,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
         if (skipped.length) console.warn("Skipped rows:", skipped);
         return;
       }
-      const added = await addQuestions(parsed);
+      const added = await addQuestions(applyImportMeta(parsed));
       if (added > 0) {
         toast.success(
           ar
@@ -155,7 +195,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
       return;
     }
     setImporting(true);
-    const added = await addQuestions(parsed);
+    const added = await addQuestions(applyImportMeta(parsed));
     setImporting(false);
     if (added > 0) {
       toast.success(
@@ -248,7 +288,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             {ar ? "القالب" : "Template"}
           </button>
           <button
-            onClick={() => importRef.current?.click()}
+            onClick={() => { setShowExcel((v) => !v); setShowPaste(false); setShowAdd(false); setShowGen(false); }}
             disabled={importing}
             className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
           >
@@ -257,7 +297,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
           </button>
           <input ref={importRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
           <button
-            onClick={() => { setShowPaste((v) => !v); setShowAdd(false); setShowGen(false); }}
+            onClick={() => { setShowPaste((v) => !v); setShowExcel(false); setShowAdd(false); setShowGen(false); }}
             className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
           >
             <ClipboardPaste size={14} />
@@ -281,19 +321,44 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
         </div>
       </div>
 
+      {/* Excel import settings */}
+      {showExcel && (
+        <div className="space-y-3 rounded-2xl border border-primary/40 bg-primary/5 p-4 shadow-sm">
+          <p className="text-xs font-bold text-muted-foreground">
+            {ar
+              ? "اختر الفصل والموضوع هنا — سيُطبَّقان على كل الأسئلة المستوردة (لا حاجة لكتابتهما داخل الملف)"
+              : "Pick chapter/topic here — applied to all imported questions (no need to include them in the file)"}
+          </p>
+          {importMetaFields}
+          <button
+            onClick={() => importRef.current?.click()}
+            disabled={importing}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          >
+            {importing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+            {ar ? "اختيار ملف Excel واستيراده" : "Choose Excel file and import"}
+          </button>
+        </div>
+      )}
+
       {/* paste-from-Word import */}
       {showPaste && (
         <div className="space-y-3 rounded-2xl border border-primary/40 bg-primary/5 p-4 shadow-sm">
           <p className="text-xs font-bold text-muted-foreground">
-            {ar ? "انسخ أسئلتك من Word أو أي ملف والصقها هنا بهذا الشكل:" : "Copy questions from Word and paste in this format:"}
+            {ar
+              ? "اختر الفصل والموضوع لهذه الدفعة (يُطبَّقان على كل الأسئلة الملصقة):"
+              : "Pick chapter/topic for this batch (applied to all pasted questions):"}
           </p>
-          <pre className="overflow-x-auto rounded-lg bg-muted/60 p-3 text-[11px] leading-relaxed text-muted-foreground" dir="rtl">{`الفصل: الفصل الأول
-الموضوع: مقدمة في القانون
-
-1. ما تعريف القانون؟
-أ) مجموعة قواعد ملزمة
-ب) عادات اجتماعية
-ج) نصائح أخلاقية
+          {importMetaFields}
+          <p className="text-xs font-bold text-muted-foreground">
+            {ar
+              ? "ثم الصق الأسئلة — يفرز التطبيق تلقائياً صح/خطأ والاختيار من متعدد:"
+              : "Then paste your questions — T/F vs MCQ is detected automatically:"}
+          </p>
+          <pre className="overflow-x-auto rounded-lg bg-muted/60 p-3 text-[11px] leading-relaxed text-muted-foreground" dir="rtl">{`1. ما تعريف القانون؟
+- أ. مجموعة قواعد ملزمة
+- ب. عادات اجتماعية
+- ج. نصائح أخلاقية
 الإجابة: أ
 
 2. القانون التجاري فرع من القانون الخاص
