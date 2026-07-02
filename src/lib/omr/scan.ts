@@ -14,6 +14,13 @@ export interface OmrScanRaw {
   studentNumber: string;      // "" digits that were readable, in order
   answers: number[];          // per question: choice index, -1 blank, -2 ambiguous
   markQuality: number;        // 0..1 how well the corner marks were found
+  debug?: {
+    threshold: number;
+    corners: { x: number; y: number }[];
+    rotation: number;         // index of winning rotation (0=0°,1=90°,2=180°,3=270°)
+    orientDot: number;
+    sampleRatios: number[];   // fill ratios of the first question's choices
+  };
 }
 
 const MAX_DIM = 1700;
@@ -46,12 +53,14 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   ];
   let H: number[] | null = null;
   let bestDot = 0;
-  for (const perm of ROTATIONS) {
+  let bestRotation = -1;
+  for (let ri = 0; ri < ROTATIONS.length; ri++) {
+    const perm = ROTATIONS[ri];
     const dst = perm.map((i) => [corners[i].x, corners[i].y] as [number, number]);
     let Hc: number[];
     try { Hc = solveHomography(src, dst); } catch { continue; }
     const dot = sampleSquare(dark, w, h, Hc, ORIENT_MARK.x, ORIENT_MARK.y, ORIENT_MARK.size * 0.35);
-    if (dot > bestDot) { bestDot = dot; H = Hc; }
+    if (dot > bestDot) { bestDot = dot; H = Hc; bestRotation = ri; }
   }
   if (!H || bestDot < 0.5) {
     throw new Error("تعذّر تحديد اتجاه الورقة — تأكد أن المربع الصغير بجانب علامة الزاوية ظاهر");
@@ -100,7 +109,16 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     answers.push(pickOne(ratios));
   }
 
-  return { studentNumber, answers, markQuality: bestDot };
+  const debugRatios: number[] = [];
+  for (let c = 0; c < exam.choiceCount; c++) {
+    const p = questionBubble(exam, 0, c);
+    debugRatios.push(fillAt(p.x, p.y));
+  }
+
+  return {
+    studentNumber, answers, markQuality: bestDot,
+    debug: { threshold: thr, corners, rotation: bestRotation, orientDot: bestDot, sampleRatios: debugRatios },
+  };
 }
 
 // mean darkness of a small square patch (sheet-mm space) under homography H
@@ -211,15 +229,19 @@ function findCornerMarks(dark: Uint8Array, w: number, h: number): Pt[] | null {
       for (let x = r.x0; x < r.x0 + win.w; x += 2) {
         const idx = y * w + x;
         if (!dark[idx] || visited[idx]) continue;
-        // BFS flood fill
+        // BFS flood fill — always consume the WHOLE blob, even oversized ones.
+        // Breaking early would leave unvisited fragments of a huge background
+        // blob that later get picked up as fake "marks".
         let size = 0, sx = 0, sy = 0;
-        let runaway = false;
+        let minX = x, maxX = x, minY = y, maxY = y;
         const stack = [idx];
         visited[idx] = 1;
         while (stack.length) {
           const i = stack.pop()!;
           const iy = Math.floor(i / w), ix = i % w;
           size++; sx += ix; sy += iy;
+          if (ix < minX) minX = ix; if (ix > maxX) maxX = ix;
+          if (iy < minY) minY = iy; if (iy > maxY) maxY = iy;
           // 4-neighbours
           const nbs = [i - 1, i + 1, i - w, i + w];
           for (const n of nbs) {
@@ -229,10 +251,14 @@ function findCornerMarks(dark: Uint8Array, w: number, h: number): Pt[] | null {
             visited[n] = 1;
             stack.push(n);
           }
-          if (size >= maxSize) { runaway = true; break; } // border shadow / binding — reject blob
         }
-        if (runaway) continue;
-        if (size > minSize && size < maxSize && (!best || size > best.size)) {
+        if (size <= minSize || size >= maxSize) continue;
+        // shape check: registration marks are solid squares.
+        const bw = maxX - minX + 1, bh = maxY - minY + 1;
+        const aspect = bw / bh;
+        const density = size / (bw * bh);
+        if (aspect < 0.6 || aspect > 1.7 || density < 0.65) continue;
+        if (!best || size > best.size) {
           best = { size, cx: sx / size, cy: sy / size };
         }
       }
