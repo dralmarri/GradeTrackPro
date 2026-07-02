@@ -10,7 +10,8 @@ export interface BankQuestion {
   text: string;
   choices: string[];      // 2 = true/false (ص/خ), 3-5 = MCQ
   correct: number;        // index into choices
-  topic?: string;         // e.g. "الفصل الثالث"
+  chapter?: string;       // الفصل / الوحدة
+  topic?: string;         // الموضوع داخل الفصل
   difficulty?: Difficulty;
   createdAt: string;
 }
@@ -96,6 +97,7 @@ export interface ParsedQuestion {
   text: string;
   choices: string[];
   correct: number;
+  chapter?: string;
   topic?: string;
   difficulty?: Difficulty;
 }
@@ -151,7 +153,8 @@ export function parseQuestionRows(rows: Record<string, unknown>[]): BulkParseRes
     const ansRaw = val(r, ["الإجابة", "الاجابة", "answer", "الصحيح"]).toLowerCase();
     if (!ansRaw) { skipped.push({ row: rowNo, reason: "لا توجد إجابة" }); return; }
 
-    const topic = val(r, ["الموضوع", "topic", "الفصل"]) || undefined;
+    const chapter = val(r, ["الفصل", "الوحدة", "chapter"]) || undefined;
+    const topic = val(r, ["الموضوع", "topic"]) || undefined;
     const difficulty = DIFF_MAP[val(r, ["الصعوبة", "difficulty"]).toLowerCase()] || undefined;
 
     // true/false question?
@@ -160,7 +163,7 @@ export function parseQuestionRows(rows: Record<string, unknown>[]): BulkParseRes
       : -1;
     if (choices.length === 0) {
       if (tfAnswer === -1) { skipped.push({ row: rowNo, reason: "بدون خيارات والإجابة ليست صح/خطأ" }); return; }
-      questions.push({ text, choices: ["صح", "خطأ"], correct: tfAnswer, topic, difficulty });
+      questions.push({ text, choices: ["صح", "خطأ"], correct: tfAnswer, chapter, topic, difficulty });
       return;
     }
 
@@ -171,8 +174,72 @@ export function parseQuestionRows(rows: Record<string, unknown>[]): BulkParseRes
     if (correct < 0 || correct >= choices.length) {
       skipped.push({ row: rowNo, reason: `إجابة غير صالحة: ${ansRaw}` }); return;
     }
-    questions.push({ text, choices, correct, topic, difficulty });
+    questions.push({ text, choices, correct, chapter, topic, difficulty });
   });
+
+  return { questions, skipped };
+}
+
+// ---------- paste-from-Word / plain-text import ----------
+// Understands the common Arabic exam format:
+//   الموضوع: الفصل الأول            ← optional, applies to following questions
+//   1. نص السؤال  (or  س: نص السؤال)
+//   أ) خيار    ب) خيار    ج) خيار   (each on its own line, أ- أ. also accepted)
+//   الإجابة: ب                       (or: صح / خطأ for T/F)
+export function parseQuestionsText(text: string): BulkParseResult {
+  const questions: ParsedQuestion[] = [];
+  const skipped: BulkParseResult["skipped"] = [];
+
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+
+  const CHOICE_RE = /^([أابجدهabcde]|هـ)[\)\-\.:،]\s*(.+)$/i;
+  const Q_RE = /^(?:س\s*[:.]|سؤال\s*[:.]?|\d+\s*[\)\-\.:،])\s*(.+)$/;
+  const ANS_RE = /^(?:الإجابة|الاجابة|الجواب|answer)\s*[:：]?\s*(.+)$/i;
+  const TOPIC_RE = /^(?:الموضوع|الفصل|topic)\s*[:：]?\s*(.+)$/i;
+
+  const CH_IDX: Record<string, number> = { "أ": 0, "ا": 0, "a": 0, "ب": 1, "b": 1, "ج": 2, "c": 2, "د": 3, "d": 3, "هـ": 4, "ه": 4, "e": 4 };
+
+  let topic: string | undefined;
+  let chapter: string | undefined;
+  let cur: { text: string; choices: string[]; line: number } | null = null;
+
+  const flush = (ansRaw: string | null, lineNo: number) => {
+    if (!cur) return;
+    if (ansRaw === null) { skipped.push({ row: cur.line, reason: "سؤال بدون سطر إجابة" }); cur = null; return; }
+    const a = ansRaw.trim().toLowerCase();
+    const tf = ["صح", "ص", "true", "صواب"].includes(a) ? 0 : ["خطأ", "خ", "false", "خاطئ"].includes(a) ? 1 : -1;
+    if (cur.choices.length === 0) {
+      if (tf === -1) { skipped.push({ row: cur.line, reason: `إجابة غير مفهومة: ${ansRaw}` }); cur = null; return; }
+      questions.push({ text: cur.text, choices: ["صح", "خطأ"], correct: tf, chapter, topic });
+    } else {
+      const idx = CH_IDX[a] ?? -1;
+      if (idx < 0 || idx >= cur.choices.length) {
+        skipped.push({ row: cur.line, reason: `إجابة غير صالحة: ${ansRaw}` }); cur = null; return;
+      }
+      questions.push({ text: cur.text, choices: cur.choices, correct: idx, chapter, topic });
+    }
+    cur = null;
+  };
+
+  lines.forEach((line, i) => {
+    const chm = line.match(CHAPTER_RE);
+    if (chm && !line.match(Q_RE)) { chapter = chm[1].trim(); return; }
+    const tm = line.match(TOPIC_RE);
+    if (tm) { topic = tm[1].trim(); return; }
+    const qm = line.match(Q_RE);
+    if (qm) {
+      if (cur) flush(null, i); // previous question had no answer
+      cur = { text: qm[1].trim(), choices: [], line: i + 1 };
+      return;
+    }
+    const am = line.match(ANS_RE);
+    if (am) { flush(am[1], i); return; }
+    const cm = line.match(CHOICE_RE);
+    if (cm && cur) { cur.choices.push(cm[2].trim()); return; }
+    // continuation of question text
+    if (cur && cur.choices.length === 0) cur.text += " " + line;
+  });
+  if (cur) flush(null, lines.length);
 
   return { questions, skipped };
 }

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Course } from "@/types/student";
 import { OmrExam, ChoiceCount, choiceLabels } from "@/types/exam";
 import {
-  BankQuestion, Difficulty, DIFFICULTY_LABELS, GeneratedForm, generateForms, seededShuffle, parseQuestionRows,
+  BankQuestion, Difficulty, DIFFICULTY_LABELS, GeneratedForm, generateForms, seededShuffle, parseQuestionRows, parseQuestionsText,
 } from "@/types/questionBank";
 import * as XLSX from "xlsx";
 import { useQuestionBank } from "@/hooks/useQuestionBank";
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
 import {
-  Plus, Trash2, Loader2, Library, Wand2, Printer, FileText, ChevronDown, Upload, Download,
+  Plus, Trash2, Loader2, Library, Wand2, Printer, FileText, ChevronDown, Upload, Download, ClipboardPaste,
 } from "lucide-react";
 
 interface Props {
@@ -37,6 +37,8 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const { questions, loading, addQuestion, addQuestions, deleteQuestion } = useQuestionBank(course.id, bankCourseIds);
   const importRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [showPaste, setShowPaste] = useState(false);
+  const [pasteText, setPasteText] = useState("");
 
   // --- add question form ---
   const [showAdd, setShowAdd] = useState(false);
@@ -44,6 +46,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const [qType, setQType] = useState<ChoiceCount>(4);
   const [qChoices, setQChoices] = useState<string[]>(["", "", "", ""]);
   const [qCorrect, setQCorrect] = useState(0);
+  const [qChapter, setQChapter] = useState("");
   const [qTopic, setQTopic] = useState("");
   const [qDifficulty, setQDifficulty] = useState<Difficulty | "">("");
   const [saving, setSaving] = useState(false);
@@ -52,6 +55,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const [showGen, setShowGen] = useState(false);
   const [genTitle, setGenTitle] = useState("");
   const [genCount, setGenCount] = useState(10);
+  const [genChapter, setGenChapter] = useState("");
   const [genTopic, setGenTopic] = useState("");
   const [genForms, setGenForms] = useState(2);
   const [genTarget, setGenTarget] = useState("exam1");
@@ -61,6 +65,10 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
 
   const topics = useMemo(
     () => Array.from(new Set(questions.map((q) => q.topic).filter(Boolean))) as string[],
+    [questions],
+  );
+  const chapters = useMemo(
+    () => Array.from(new Set(questions.map((q) => q.chapter).filter(Boolean))) as string[],
     [questions],
   );
 
@@ -80,6 +88,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
       text: qText.trim(),
       choices: qType === 2 ? ["صح", "خطأ"] : qChoices.map((c) => c.trim()),
       correct: qCorrect,
+      chapter: qChapter.trim() || undefined,
       topic: qTopic.trim() || undefined,
       difficulty: (qDifficulty || undefined) as Difficulty | undefined,
     });
@@ -93,9 +102,9 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
 
   const downloadTemplate = () => {
     const rows = [
-      { "السؤال": "عاصمة الكويت هي مدينة الكويت", "أ": "", "ب": "", "ج": "", "د": "", "هـ": "", "الإجابة": "صح", "الموضوع": "الفصل الأول", "الصعوبة": "سهل" },
-      { "السؤال": "ما ناتج 2 + 3 ؟", "أ": "4", "ب": "5", "ج": "6", "د": "7", "هـ": "", "الإجابة": "ب", "الموضوع": "الفصل الأول", "الصعوبة": "متوسط" },
-      { "السؤال": "أي مما يلي عدد أولي؟", "أ": "4", "ب": "6", "ج": "7", "د": "", "هـ": "", "الإجابة": "ج", "الموضوع": "الفصل الثاني", "الصعوبة": "صعب" },
+      { "السؤال": "عاصمة الكويت هي مدينة الكويت", "أ": "", "ب": "", "ج": "", "د": "", "هـ": "", "الإجابة": "صح", "الفصل": "الفصل الأول", "الموضوع": "مقدمة", "الصعوبة": "سهل" },
+      { "السؤال": "ما ناتج 2 + 3 ؟", "أ": "4", "ب": "5", "ج": "6", "د": "7", "هـ": "", "الإجابة": "ب", "الفصل": "الفصل الأول", "الموضوع": "العمليات", "الصعوبة": "متوسط" },
+      { "السؤال": "أي مما يلي عدد أولي؟", "أ": "4", "ب": "6", "ج": "7", "د": "", "هـ": "", "الإجابة": "ج", "الفصل": "الفصل الثاني", "الموضوع": "الأعداد الأولية", "الصعوبة": "صعب" },
     ];
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -138,8 +147,31 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
     }
   };
 
+  const handlePasteImport = async () => {
+    const { questions: parsed, skipped } = parseQuestionsText(pasteText);
+    if (!parsed.length) {
+      toast.error(ar ? "لم يُتعرف على أي سؤال في النص الملصق" : "No questions recognised in pasted text");
+      if (skipped.length) console.warn("Skipped:", skipped);
+      return;
+    }
+    setImporting(true);
+    const added = await addQuestions(parsed);
+    setImporting(false);
+    if (added > 0) {
+      toast.success(
+        ar
+          ? `استُورد ${added} سؤالاً من النص${skipped.length ? ` · تم تخطي ${skipped.length}` : ""}`
+          : `Imported ${added} questions${skipped.length ? ` · ${skipped.length} skipped` : ""}`,
+        { duration: 6000 },
+      );
+      setPasteText(""); setShowPaste(false);
+    } else {
+      toast.error(ar ? "فشل الاستيراد" : "Import failed");
+    }
+  };
+
   const handleGenerate = async () => {
-    const pool = questions.filter((q) => !genTopic || q.topic === genTopic);
+    const pool = questions.filter((q) => (!genChapter || q.chapter === genChapter) && (!genTopic || q.topic === genTopic));
     if (!genTitle.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
     if (pool.length < genCount) {
       toast.error(ar ? `البنك يحتوي ${pool.length} سؤالاً فقط بهذا التصفية` : `Only ${pool.length} questions match`); return;
@@ -225,6 +257,13 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
           </button>
           <input ref={importRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
           <button
+            onClick={() => { setShowPaste((v) => !v); setShowAdd(false); setShowGen(false); }}
+            className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+          >
+            <ClipboardPaste size={14} />
+            {ar ? "لصق من Word" : "Paste"}
+          </button>
+          <button
             onClick={() => { setShowGen((v) => !v); setShowAdd(false); }}
             disabled={questions.length === 0}
             className="flex items-center gap-1.5 rounded-xl bg-success/15 px-3 py-2 text-xs font-bold text-success transition-colors hover:bg-success/25 disabled:opacity-40"
@@ -242,6 +281,42 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
         </div>
       </div>
 
+      {/* paste-from-Word import */}
+      {showPaste && (
+        <div className="space-y-3 rounded-2xl border border-primary/40 bg-primary/5 p-4 shadow-sm">
+          <p className="text-xs font-bold text-muted-foreground">
+            {ar ? "انسخ أسئلتك من Word أو أي ملف والصقها هنا بهذا الشكل:" : "Copy questions from Word and paste in this format:"}
+          </p>
+          <pre className="overflow-x-auto rounded-lg bg-muted/60 p-3 text-[11px] leading-relaxed text-muted-foreground" dir="rtl">{`الفصل: الفصل الأول
+الموضوع: مقدمة في القانون
+
+1. ما تعريف القانون؟
+أ) مجموعة قواعد ملزمة
+ب) عادات اجتماعية
+ج) نصائح أخلاقية
+الإجابة: أ
+
+2. القانون التجاري فرع من القانون الخاص
+الإجابة: صح`}</pre>
+          <textarea
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            rows={8}
+            placeholder={ar ? "الصق الأسئلة هنا…" : "Paste questions here…"}
+            className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+            dir="rtl"
+          />
+          <button
+            onClick={handlePasteImport}
+            disabled={importing || !pasteText.trim()}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          >
+            {importing ? <Loader2 size={16} className="animate-spin" /> : <ClipboardPaste size={16} />}
+            {ar ? "استيراد الأسئلة الملصقة" : "Import pasted questions"}
+          </button>
+        </div>
+      )}
+
       {/* add question */}
       {showAdd && (
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -252,7 +327,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             rows={2}
             className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
           />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "النوع" : "Type"}
               <select
@@ -265,6 +340,19 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                 <option value={4}>A – D</option>
                 <option value={5}>A – E</option>
               </select>
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              {ar ? "الفصل / الوحدة" : "Chapter"}
+              <input
+                value={qChapter}
+                onChange={(e) => setQChapter(e.target.value)}
+                list="gtp-chapters"
+                placeholder={ar ? "مثال: الفصل الأول" : "e.g. Chapter 1"}
+                className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+              />
+              <datalist id="gtp-chapters">
+                {chapters.map((c) => <option key={c} value={c} />)}
+              </datalist>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "الموضوع (اختياري)" : "Topic"}
@@ -354,6 +442,17 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                 onChange={(e) => setGenCount(Number(e.target.value) || 1)}
                 className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              {ar ? "الفصل" : "Chapter"}
+              <select
+                value={genChapter}
+                onChange={(e) => setGenChapter(e.target.value)}
+                className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+              >
+                <option value="">{ar ? "الكل" : "All"}</option>
+                {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "الموضوع" : "Topic"}
@@ -458,7 +557,17 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
               <ChevronDown size={14} />
             </summary>
             <div className="mt-3 space-y-2">
-              {questions.map((q, i) => (
+              {Array.from(new Set(questions.map((q) => q.chapter || ""))).map((ch) => (
+                <p key={"h" + ch} className="pt-2 text-xs font-extrabold text-primary first:pt-0">
+                  {ch || (ar ? "بدون فصل" : "No chapter")}
+                  <span className="ms-2 text-muted-foreground">({questions.filter((q) => (q.chapter || "") === ch).length})</span>
+                </p>
+              )).flatMap((header, hi, arr) => {
+                const ch = Array.from(new Set(questions.map((q) => q.chapter || "")))[hi];
+                const items = questions.filter((q) => (q.chapter || "") === ch);
+                return [header, ...items.map((q) => {
+                  const i = questions.indexOf(q);
+                  return (
                 <div key={q.id} className="flex items-start gap-2 rounded-xl bg-muted/40 px-3 py-2">
                   <span className="mt-0.5 w-6 shrink-0 text-center text-xs font-bold text-muted-foreground">{i + 1}</span>
                   <div className="min-w-0 flex-1">
@@ -477,7 +586,9 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                     <Trash2 size={14} />
                   </button>
                 </div>
-              ))}
+                  );
+                })];
+              })}
             </div>
           </details>
         )
