@@ -1,0 +1,27 @@
+{
+  "name": "GradeTrackPro - إدارة درجات وحضور الطلاب",
+  "short_name": "GradeTrackPro",
+  "description": "إدارة المقررات والطلاب: تسجيل الحضور والغياب، إدخال درجات الاختبارات والواجبات والمشاركة، حساب التقديرات النهائية، واستيراد وتصدير البيانات عبر Excel.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#0ea5e9",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
