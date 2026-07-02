@@ -5,23 +5,25 @@ import { useOmrExams } from "@/hooks/useOmrExams";
 import { printAnswerSheet } from "@/lib/omr/sheet";
 import { MAX_QUESTIONS } from "@/lib/omr/layout";
 import OmrScanDialog from "@/components/OmrScanDialog";
+import OmrScansDialog from "@/components/OmrScansDialog";
 import QuestionBankPage from "@/components/QuestionBankPage";
 import { GeneratedForm } from "@/types/questionBank";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, CheckCircle2, Pencil,
+  Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, CheckCircle2, Pencil, History,
 } from "lucide-react";
 
 
 interface Props {
   course: Course;
+  bankCourseIds: string[];
   onApplyScore: (studentId: string, targetComponent: string, score: number) => Promise<void>;
   onLearnNumber: (studentId: string, studentNumber: string) => Promise<void>;
 }
 
-export default function OmrExamsPage({ course, onApplyScore, onLearnNumber }: Props) {
+export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLearnNumber }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const { exams, loading, addExam, updateExam, updateAnswerKey, deleteExam } = useOmrExams(course.id);
@@ -41,6 +43,7 @@ export default function OmrExamsPage({ course, onApplyScore, onLearnNumber }: Pr
   const [editTarget, setEditTarget] = useState("exam1");
   const [savingEdit, setSavingEdit] = useState(false);
   const [scanExam, setScanExam] = useState<OmrExam | null>(null);
+  const [historyExam, setHistoryExam] = useState<OmrExam | null>(null);
   const [version, setVersion] = useState("");
   const [editVersion, setEditVersion] = useState("");
   const [idMode, setIdMode] = useState<"bubbles" | "written">("bubbles");
@@ -377,6 +380,13 @@ export default function OmrExamsPage({ course, onApplyScore, onLearnNumber }: Pr
                   <KeyRound size={15} />
                 </button>
                 <button
+                  onClick={() => setHistoryExam(exam)}
+                  title={ar ? "سجل المسح (الأوراق المؤرشفة)" : "Scan history"}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted"
+                >
+                  <History size={15} />
+                </button>
+                <button
                   onClick={async () => { await deleteExam(exam.id); toast.success(ar ? "حُذف الاختبار" : "Exam deleted"); }}
                   title={ar ? "حذف" : "Delete"}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-destructive transition-colors hover:bg-destructive/10"
@@ -506,6 +516,7 @@ export default function OmrExamsPage({ course, onApplyScore, onLearnNumber }: Pr
       <div className="border-t border-border pt-4">
         <QuestionBankPage
           course={course}
+          bankCourseIds={bankCourseIds}
           sheetHeader={sheetHeader}
           componentOptions={componentOptions}
           onCreateExam={addExam}
@@ -528,6 +539,14 @@ export default function OmrExamsPage({ course, onApplyScore, onLearnNumber }: Pr
           })}
         />
       </div>
+
+      {historyExam && (
+        <OmrScansDialog
+          exam={historyExam}
+          open={!!historyExam}
+          onClose={() => setHistoryExam(null)}
+        />
+      )}
 
       {scanExam && (
         <OmrScanDialog

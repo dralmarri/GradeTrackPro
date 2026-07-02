@@ -19,21 +19,24 @@ function rowToQuestion(row: any): BankQuestion {
   };
 }
 
-export function useQuestionBank(courseId: string | null) {
+// courseIds: the current course + its sibling sections (same course name),
+// so the bank is shared across sections of the same course.
+export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
   const { user } = useAuth();
   const [questions, setQuestions] = useState<BankQuestion[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchQuestions = useCallback(async () => {
     if (!user || !courseId) { setQuestions([]); setLoading(false); return; }
+    const ids = courseIds && courseIds.length ? courseIds : [courseId];
     const { data, error } = await db
       .from("omr_questions").select("*")
-      .eq("course_id", courseId)
+      .in("course_id", ids)
       .order("created_at", { ascending: true });
     if (error) { console.error("Error fetching questions:", error); setLoading(false); return; }
     setQuestions((data || []).map(rowToQuestion));
     setLoading(false);
-  }, [user, courseId]);
+  }, [user, courseId, courseIds]);
 
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 

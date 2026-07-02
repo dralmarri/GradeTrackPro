@@ -16,6 +16,7 @@ import {
 
 interface Props {
   course: Course;
+  bankCourseIds: string[];
   sheetHeader: () => SheetHeader;
   componentOptions: { key: string; label: string }[];
   onCreateExam: (input: {
@@ -28,10 +29,10 @@ interface Props {
   buildExam: (id: string, form: GeneratedForm, title: string, targetComponent: string, maxScore: number, idMode: "bubbles" | "written") => OmrExam;
 }
 
-export default function QuestionBankPage({ course, sheetHeader, componentOptions, onCreateExam, onSetAnswerKey, buildExam }: Props) {
+export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, componentOptions, onCreateExam, onSetAnswerKey, buildExam }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { questions, loading, addQuestion, deleteQuestion } = useQuestionBank(course.id);
+  const { questions, loading, addQuestion, deleteQuestion } = useQuestionBank(course.id, bankCourseIds);
 
   // --- add question form ---
   const [showAdd, setShowAdd] = useState(false);
@@ -148,6 +149,11 @@ export default function QuestionBankPage({ course, sheetHeader, componentOptions
           <Library size={18} className="text-primary" />
           {ar ? "بنك الأسئلة" : "Question Bank"}
           <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">{questions.length}</span>
+          {bankCourseIds.length > 1 && (
+            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+              {ar ? "مشترك بين الشعب" : "Shared across sections"}
+            </span>
+          )}
         </h3>
         <div className="flex gap-2">
           <button

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Course, Student } from "@/types/student";
 import { OmrExam, gradeOmr, OmrScanResult, choiceLabelsFor } from "@/types/exam";
 import { scanAnswerSheet } from "@/lib/omr/scan";
+import { useOmrScans } from "@/hooks/useOmrScans";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -27,16 +28,19 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [result, setResult] = useState<OmrScanResult | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [applying, setApplying] = useState(false);
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const { addScan } = useOmrScans(null); // used for recording only
 
   if (!open) return null;
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
     setScanning(true);
+    setPhoto(file);
     try {
       const raw = await scanAnswerSheet(file, exam);
       const graded = gradeOmr(exam, raw.answers);
@@ -72,6 +76,17 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       if (cleanNum && s && s.studentNumber !== cleanNum) {
         await onLearnNumber(s.id, cleanNum);
       }
+      // archive the sheet photo + result for later review (best-effort)
+      addScan({
+        examId: exam.id,
+        studentId: selectedStudentId,
+        studentName: s?.name || "",
+        studentNumber: cleanNum,
+        score: result.score,
+        rawCorrect: result.rawCorrect,
+        answers: result.answers,
+        photo,
+      }).catch(() => {});
       toast.success(
         ar
           ? `رُصدت الدرجة ${result.score}/${exam.maxScore} للطالب ${s?.name ?? ""}`

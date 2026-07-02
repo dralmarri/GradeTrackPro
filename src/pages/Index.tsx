@@ -558,6 +558,7 @@ export default function Index() {
             />
             <OmrExamsPage
               course={activeCourse}
+              bankCourseIds={courses.filter((c) => c.name.trim() === activeCourse.name.trim()).map((c) => c.id)}
               onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
               onApplyScore={async (studentId, targetComponent, score) => {
                 const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
