@@ -96,7 +96,7 @@ export function generateForms(pool: BankQuestion[], formsCount: number, seedBase
 export interface ParsedQuestion {
   text: string;
   choices: string[];
-  correct: number;
+  correct: number;         // -1 = answer not in the text; user picks it before saving
   chapter?: string;
   topic?: string;
   difficulty?: Difficulty;
@@ -186,7 +186,13 @@ export function parseQuestionRows(rows: Record<string, unknown>[]): BulkParseRes
 //   1. نص السؤال  (or  س: نص السؤال)
 //   أ) خيار    ب) خيار    ج) خيار   (each on its own line, أ- أ. also accepted)
 //   الإجابة: ب                       (or: صح / خطأ for T/F)
-export function parseQuestionsText(text: string): BulkParseResult {
+// forcedType:
+//   "auto" — classify by content (needs الإجابة: lines)
+//   "tf"   — every question is صح/خطأ; answer lines optional (correct=-1 if absent)
+//   "mcq"  — multiple choice; answer lines optional (correct=-1 if absent)
+export type PasteType = "auto" | "tf" | "mcq";
+
+export function parseQuestionsText(text: string, forcedType: PasteType = "auto"): BulkParseResult {
   const questions: ParsedQuestion[] = [];
   const skipped: BulkParseResult["skipped"] = [];
 
@@ -207,11 +213,21 @@ export function parseQuestionsText(text: string): BulkParseResult {
 
   const flush = (ansRaw: string | null, lineNo: number) => {
     if (!cur) return;
-    if (ansRaw === null) { skipped.push({ row: cur.line, reason: "سؤال بدون سطر إجابة" }); cur = null; return; }
+    if (ansRaw === null) {
+      // no answer line — allowed when the type is forced; the user picks answers before saving
+      if (forcedType === "tf") {
+        questions.push({ text: cur.text, choices: ["صح", "خطأ"], correct: -1, chapter, topic });
+      } else if (forcedType === "mcq" && cur.choices.length >= 2) {
+        questions.push({ text: cur.text, choices: cur.choices, correct: -1, chapter, topic });
+      } else {
+        skipped.push({ row: cur.line, reason: forcedType === "mcq" ? "خيارات ناقصة" : "سؤال بدون سطر إجابة" });
+      }
+      cur = null; return;
+    }
     // tolerate "أ)" / "ب." / "صح." — keep only the leading token
     const a = ansRaw.trim().toLowerCase().replace(/[\)\-\.:،]+$/, "").split(/\s+/)[0] || "";
     const tf = ["صح", "ص", "true", "صواب"].includes(a) ? 0 : ["خطأ", "خ", "false", "خاطئ"].includes(a) ? 1 : -1;
-    if (cur.choices.length === 0) {
+    if (forcedType === "tf" || cur.choices.length === 0) {
       if (tf === -1) { skipped.push({ row: cur.line, reason: `إجابة غير مفهومة: ${ansRaw}` }); cur = null; return; }
       questions.push({ text: cur.text, choices: ["صح", "خطأ"], correct: tf, chapter, topic });
     } else {

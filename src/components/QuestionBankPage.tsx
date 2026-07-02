@@ -3,6 +3,7 @@ import { Course } from "@/types/student";
 import { OmrExam, ChoiceCount, choiceLabels } from "@/types/exam";
 import {
   BankQuestion, Difficulty, DIFFICULTY_LABELS, GeneratedForm, generateForms, seededShuffle, parseQuestionRows, parseQuestionsText,
+  PasteType, ParsedQuestion,
 } from "@/types/questionBank";
 import * as XLSX from "xlsx";
 import { useQuestionBank } from "@/hooks/useQuestionBank";
@@ -40,6 +41,9 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const [showPaste, setShowPaste] = useState(false);
   const [showExcel, setShowExcel] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [pasteType, setPasteType] = useState<PasteType>("auto");
+  // parsed questions whose answers weren't in the text — user picks them here before saving
+  const [reviewList, setReviewList] = useState<ParsedQuestion[] | null>(null);
   // الفصل/الموضوع يُختاران هنا ويُطبَّقان على كل الأسئلة المستوردة (لصقاً أو Excel)
   const [importChapter, setImportChapter] = useState("");
   const [importTopic, setImportTopic] = useState("");
@@ -187,27 +191,40 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
     }
   };
 
-  const handlePasteImport = async () => {
-    const { questions: parsed, skipped } = parseQuestionsText(pasteText);
-    if (!parsed.length) {
-      toast.error(ar ? "لم يُتعرف على أي سؤال في النص الملصق" : "No questions recognised in pasted text");
-      if (skipped.length) console.warn("Skipped:", skipped);
-      return;
-    }
+  const savePastedQuestions = async (parsed: ParsedQuestion[], skippedCount: number) => {
     setImporting(true);
     const added = await addQuestions(applyImportMeta(parsed));
     setImporting(false);
     if (added > 0) {
       toast.success(
         ar
-          ? `استُورد ${added} سؤالاً من النص${skipped.length ? ` · تم تخطي ${skipped.length}` : ""}`
-          : `Imported ${added} questions${skipped.length ? ` · ${skipped.length} skipped` : ""}`,
+          ? `استُورد ${added} سؤالاً من النص${skippedCount ? ` · تم تخطي ${skippedCount}` : ""}`
+          : `Imported ${added} questions${skippedCount ? ` · ${skippedCount} skipped` : ""}`,
         { duration: 6000 },
       );
-      setPasteText(""); setShowPaste(false);
+      setPasteText(""); setShowPaste(false); setReviewList(null);
     } else {
       toast.error(ar ? "فشل الاستيراد" : "Import failed");
     }
+  };
+
+  const handlePasteImport = async () => {
+    const { questions: parsed, skipped } = parseQuestionsText(pasteText, pasteType);
+    if (!parsed.length) {
+      toast.error(ar ? "لم يُتعرف على أي سؤال في النص الملصق" : "No questions recognised in pasted text");
+      if (skipped.length) console.warn("Skipped:", skipped);
+      return;
+    }
+    if (parsed.some((q) => q.correct < 0)) {
+      // answers weren't in the text — let the professor pick them before saving
+      setReviewList(parsed);
+      toast.info(
+        ar ? "حدد الإجابة الصحيحة لكل سؤال ثم احفظ" : "Pick the correct answer for each question, then save",
+        { duration: 5000 },
+      );
+      return;
+    }
+    await savePastedQuestions(parsed, skipped.length);
   };
 
   const handleGenerate = async () => {
@@ -350,10 +367,22 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
               : "Pick chapter/topic for this batch (applied to all pasted questions):"}
           </p>
           {importMetaFields}
+          <label className="block space-y-1 text-xs text-muted-foreground">
+            {ar ? "نوع الأسئلة الملصقة" : "Type of pasted questions"}
+            <select
+              value={pasteType}
+              onChange={(e) => { setPasteType(e.target.value as PasteType); setReviewList(null); }}
+              className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+            >
+              <option value="auto">{ar ? "تلقائي (الإجابات مكتوبة داخل النص)" : "Auto (answers included in text)"}</option>
+              <option value="tf">{ar ? "صح وخطأ" : "True / False"}</option>
+              <option value="mcq">{ar ? "اختيار من متعدد" : "Multiple choice"}</option>
+            </select>
+          </label>
           <p className="text-xs font-bold text-muted-foreground">
             {ar
-              ? "ثم الصق الأسئلة — يفرز التطبيق تلقائياً صح/خطأ والاختيار من متعدد:"
-              : "Then paste your questions — T/F vs MCQ is detected automatically:"}
+              ? "الصق الأسئلة — إن لم تكن الإجابات داخل النص فستحددها هنا قبل الحفظ:"
+              : "Paste the questions — if answers aren't in the text you'll pick them here before saving:"}
           </p>
           <pre className="overflow-x-auto rounded-lg bg-muted/60 p-3 text-[11px] leading-relaxed text-muted-foreground" dir="rtl">{`1. ما تعريف القانون؟
 - أ. مجموعة قواعد ملزمة
@@ -362,22 +391,58 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
 الإجابة: أ
 
 2. القانون التجاري فرع من القانون الخاص
-الإجابة: صح`}</pre>
+الإجابة: صح
+
+(سطر «الإجابة» اختياري إذا اخترت نوع الأسئلة أعلاه)`}</pre>
           <textarea
             value={pasteText}
-            onChange={(e) => setPasteText(e.target.value)}
+            onChange={(e) => { setPasteText(e.target.value); setReviewList(null); }}
             rows={8}
             placeholder={ar ? "الصق الأسئلة هنا…" : "Paste questions here…"}
             className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
             dir="rtl"
           />
+          {reviewList && (
+            <div className="space-y-2 rounded-xl border border-warning/50 bg-warning/5 p-3">
+              <p className="text-xs font-bold text-foreground">
+                {ar
+                  ? `حدد الإجابة الصحيحة (${reviewList.filter((q) => q.correct >= 0).length}/${reviewList.length})`
+                  : `Pick the correct answers (${reviewList.filter((q) => q.correct >= 0).length}/${reviewList.length})`}
+              </p>
+              {reviewList.map((q, qi) => (
+                <div key={qi} className="rounded-lg bg-background p-2.5">
+                  <p className="mb-1.5 text-sm text-foreground">{qi + 1}. {q.text}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {q.choices.map((c, ci) => (
+                      <button
+                        key={ci}
+                        onClick={() => setReviewList((l) => l!.map((x, xi) => (xi === qi ? { ...x, correct: ci } : x)))}
+                        className={cn(
+                          "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
+                          q.correct === ci
+                            ? "border-success bg-success/15 text-success"
+                            : "border-border text-muted-foreground hover:bg-muted",
+                        )}
+                      >
+                        {q.choices.length === 2 ? c : `${["أ", "ب", "ج", "د", "هـ"][ci]}. ${c}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <button
-            onClick={handlePasteImport}
-            disabled={importing || !pasteText.trim()}
+            onClick={() =>
+              reviewList ? savePastedQuestions(reviewList, 0) : handlePasteImport()
+            }
+            disabled={importing || !pasteText.trim() || (reviewList !== null && reviewList.some((q) => q.correct < 0))}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
             {importing ? <Loader2 size={16} className="animate-spin" /> : <ClipboardPaste size={16} />}
-            {ar ? "استيراد الأسئلة الملصقة" : "Import pasted questions"}
+            {reviewList
+              ? (ar ? "حفظ الأسئلة في البنك" : "Save questions to bank")
+              : (ar ? "استيراد الأسئلة الملصقة" : "Import pasted questions")}
           </button>
         </div>
       )}
