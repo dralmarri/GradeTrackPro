@@ -1,0 +1,65 @@
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { BankQuestion, Difficulty } from "@/types/questionBank";
+
+// any-typed client: omr_questions isn't in the generated types yet (v2 branch)
+const db = supabase as any;
+
+function rowToQuestion(row: any): BankQuestion {
+  return {
+    id: row.id,
+    courseId: row.course_id,
+    text: row.text,
+    choices: (row.choices || []) as string[],
+    correct: Number(row.correct) || 0,
+    topic: row.topic || undefined,
+    difficulty: (row.difficulty as Difficulty) || undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export function useQuestionBank(courseId: string | null) {
+  const { user } = useAuth();
+  const [questions, setQuestions] = useState<BankQuestion[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchQuestions = useCallback(async () => {
+    if (!user || !courseId) { setQuestions([]); setLoading(false); return; }
+    const { data, error } = await db
+      .from("omr_questions").select("*")
+      .eq("course_id", courseId)
+      .order("created_at", { ascending: true });
+    if (error) { console.error("Error fetching questions:", error); setLoading(false); return; }
+    setQuestions((data || []).map(rowToQuestion));
+    setLoading(false);
+  }, [user, courseId]);
+
+  useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
+
+  const addQuestion = useCallback(async (input: {
+    text: string; choices: string[]; correct: number; topic?: string; difficulty?: Difficulty;
+  }): Promise<boolean> => {
+    if (!user || !courseId) return false;
+    const { error } = await db.from("omr_questions").insert({
+      user_id: user.id,
+      course_id: courseId,
+      text: input.text,
+      choices: input.choices,
+      correct: input.correct,
+      topic: input.topic || null,
+      difficulty: input.difficulty || null,
+    });
+    if (error) { console.error("Error adding question:", error); return false; }
+    await fetchQuestions();
+    return true;
+  }, [user, courseId, fetchQuestions]);
+
+  const deleteQuestion = useCallback(async (id: string) => {
+    const { error } = await db.from("omr_questions").delete().eq("id", id);
+    if (error) console.error("Error deleting question:", error);
+    else await fetchQuestions();
+  }, [fetchQuestions]);
+
+  return { questions, loading, addQuestion, deleteQuestion, refetch: fetchQuestions };
+}

@@ -5,6 +5,8 @@ import { useOmrExams } from "@/hooks/useOmrExams";
 import { printAnswerSheet } from "@/lib/omr/sheet";
 import { MAX_QUESTIONS } from "@/lib/omr/layout";
 import OmrScanDialog from "@/components/OmrScanDialog";
+import QuestionBankPage from "@/components/QuestionBankPage";
+import { GeneratedForm } from "@/types/questionBank";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -499,6 +501,33 @@ export default function OmrExamsPage({ course, onApplyScore, onLearnNumber }: Pr
           </div>
         );
       })}
+
+      {/* question bank + auto exam generation */}
+      <div className="border-t border-border pt-4">
+        <QuestionBankPage
+          course={course}
+          sheetHeader={sheetHeader}
+          componentOptions={componentOptions}
+          onCreateExam={addExam}
+          onSetAnswerKey={updateAnswerKey}
+          buildExam={(id, form: GeneratedForm, t, target, max, mode) => ({
+            id,
+            courseId: course.id,
+            title: t,
+            questionCount: form.questions.length,
+            choiceCount: form.sections[0].choiceCount,
+            targetComponent: target,
+            maxScore: max,
+            answerKey: form.answerKey,
+            studentIdDigits: 6,
+            sections: form.sections.length > 1 ? form.sections : undefined,
+            version: form.version,
+            idMode: mode,
+            createdAt: "",
+            updatedAt: "",
+          })}
+        />
+      </div>
 
       {scanExam && (
         <OmrScanDialog
