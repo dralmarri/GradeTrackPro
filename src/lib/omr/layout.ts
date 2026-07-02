@@ -36,10 +36,27 @@ export const ID_PITCH = ID_COL_PITCH;
 // Question grid
 const Q_ROW_PITCH = 6.5;
 const Q_CHOICE_PITCH = 8;
-const Q_TOP_Y = 122;              // first question row
+const Q_TOP_BUBBLES = 122;        // first question row when the bubble ID grid is present
+const Q_TOP_WRITTEN = 64;         // first question row when the ID is handwritten-only
 const Q_BOTTOM_Y = 278;
 const Q_COL_XS = [28, 93, 158];   // x of choice "A" bubble per column block
-export const MAX_ROWS_PER_COL = Math.floor((Q_BOTTOM_Y - Q_TOP_Y) / Q_ROW_PITCH) + 1; // 25
+
+type IdModeExam = Pick<OmrExam, "idMode">;
+
+function qTopY(exam: IdModeExam): number {
+  return exam.idMode === "written" ? Q_TOP_WRITTEN : Q_TOP_BUBBLES;
+}
+
+export function maxRowsPerCol(exam: IdModeExam): number {
+  return Math.floor((Q_BOTTOM_Y - qTopY(exam)) / Q_ROW_PITCH) + 1;
+}
+
+export function maxQuestions(exam: IdModeExam): number {
+  return maxRowsPerCol(exam) * Q_COL_XS.length;
+}
+
+// static cap used by the create-exam UI (bubble-grid mode, the smaller one)
+export const MAX_ROWS_PER_COL = Math.floor((Q_BOTTOM_Y - Q_TOP_BUBBLES) / Q_ROW_PITCH) + 1; // 25
 export const MAX_QUESTIONS = MAX_ROWS_PER_COL * Q_COL_XS.length; // 75
 
 export interface BubblePos { x: number; y: number }
@@ -53,18 +70,18 @@ export function idBubble(exam: OmrExam, col: number, digit: number): BubblePos {
 
 // Center of the bubble for question q (0-based) and choice c (0-based).
 export function questionBubble(exam: OmrExam, q: number, c: number): BubblePos {
-  const rows = Math.min(MAX_ROWS_PER_COL, Math.ceil(exam.questionCount / Q_COL_XS.length) || 1);
+  const rows = questionRows(exam);
   // fill column by column: q 0..rows-1 in col 0, etc.
   const col = Math.floor(q / rows);
   const row = q % rows;
   if (col >= Q_COL_XS.length) {
-    throw new Error(`عدد الأسئلة يتجاوز الحد الأقصى (${MAX_QUESTIONS})`);
+    throw new Error(`عدد الأسئلة يتجاوز الحد الأقصى (${maxQuestions(exam)})`);
   }
-  return { x: Q_COL_XS[col] + c * Q_CHOICE_PITCH, y: Q_TOP_Y + row * Q_ROW_PITCH };
+  return { x: Q_COL_XS[col] + c * Q_CHOICE_PITCH, y: qTopY(exam) + row * Q_ROW_PITCH };
 }
 
 export function questionRows(exam: OmrExam): number {
-  return Math.min(MAX_ROWS_PER_COL, Math.ceil(exam.questionCount / Q_COL_XS.length) || 1);
+  return Math.min(maxRowsPerCol(exam), Math.ceil(exam.questionCount / Q_COL_XS.length) || 1);
 }
 
 export function questionNumberX(colIndex: number): number {

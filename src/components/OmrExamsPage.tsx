@@ -40,6 +40,8 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
   const [scanExam, setScanExam] = useState<OmrExam | null>(null);
   const [version, setVersion] = useState("");
   const [editVersion, setEditVersion] = useState("");
+  const [idMode, setIdMode] = useState<"bubbles" | "written">("bubbles");
+  const [logo, setLogo] = useState(() => localStorage.getItem("gtp_logo") || "");
   const [institution, setInstitution] = useState(() => localStorage.getItem("gtp_institution") || "");
   const [college, setCollege] = useState(() => localStorage.getItem("gtp_college") || "");
   const [department, setDepartment] = useState(() => localStorage.getItem("gtp_department") || "");
@@ -49,7 +51,32 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
     college: college.trim() || undefined,
     department: department.trim() || undefined,
     courseName: course.name + (course.section ? ` — شعبة ${course.section}` : ""),
+    logoDataUrl: logo || undefined,
   });
+
+  const handleLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      // resize to a small data URL so localStorage stays light
+      const max = 256;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+      const dataUrl = c.toDataURL("image/png");
+      setLogo(dataUrl);
+      localStorage.setItem("gtp_logo", dataUrl);
+      toast.success(ar ? "تم حفظ الشعار" : "Logo saved");
+    };
+    img.onerror = () => toast.error(ar ? "تعذّر قراءة الصورة" : "Could not read image");
+    img.src = url;
+  };
 
   const componentOptions = [
     { key: "exam1", label: ar ? "اختبار أول" : "Exam 1" },
@@ -73,6 +100,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
       targetComponent, maxScore, studentIdDigits: 6,
       sections: sections.length > 1 ? sections : undefined,
       version: version.trim() || undefined,
+      idMode,
     });
     setCreating(false);
     if (id) {
@@ -194,6 +222,17 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
               />
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
+              {ar ? "رقم الطالب في الورقة" : "Student ID on sheet"}
+              <select
+                value={idMode}
+                onChange={(e) => setIdMode(e.target.value as "bubbles" | "written")}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              >
+                <option value="bubbles">{ar ? "فقاعات تُقرأ آلياً" : "Bubbles (auto-read)"}</option>
+                <option value="written">{ar ? "مستطيل رقم مدني (كتابة يدوية)" : "Civil-ID box (handwritten)"}</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "رقم النموذج (اختياري)" : "Form version (optional)"}
               <input
                 value={version}
@@ -251,8 +290,26 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
             className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
           />
         </div>
+        <div className="mt-2 flex items-center gap-2">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted">
+            <Plus size={13} />
+            {ar ? (logo ? "تغيير الشعار" : "إضافة شعار المؤسسة") : (logo ? "Change logo" : "Add logo")}
+            <input type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
+          </label>
+          {logo && (
+            <>
+              <img src={logo} alt="logo" className="h-8 w-8 rounded object-contain ring-1 ring-border" />
+              <button
+                onClick={() => { setLogo(""); localStorage.removeItem("gtp_logo"); }}
+                className="text-xs font-semibold text-destructive hover:underline"
+              >
+                {ar ? "إزالة" : "Remove"}
+              </button>
+            </>
+          )}
+        </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
-          {ar ? "تُحفظ هذه البيانات على جهازك وتظهر أعلى كل ورقة إجابة تطبعها." : "Saved on this device and printed at the top of every sheet."}
+          {ar ? "تُحفظ هذه البيانات على جهازك وتظهر أعلى كل ورقة إجابة تطبعها. إن تُرك الشعار فارغاً تبقى مساحته خالية." : "Saved on this device and printed at the top of every sheet."}
         </p>
       </details>
 

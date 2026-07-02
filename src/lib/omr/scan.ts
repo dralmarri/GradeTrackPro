@@ -86,8 +86,9 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     return total > 0 ? darkCount / total : 0;
   };
 
-  // student number
+  // student number (bubble grid only — "written" mode is read by eye/AI later)
   let studentNumber = "";
+  if (exam.idMode !== "written")
   for (let col = 0; col < exam.studentIdDigits; col++) {
     const ratios: number[] = [];
     for (let d = 0; d <= 9; d++) {

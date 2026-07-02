@@ -19,6 +19,7 @@ function rowToExam(row: any): OmrExam {
     studentIdDigits: Number(row.student_id_digits) || 6,
     sections: Array.isArray(row.sections) && row.sections.length ? (row.sections as OmrSection[]) : undefined,
     version: row.version || undefined,
+    idMode: row.id_mode === "written" ? "written" : "bubbles",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -51,6 +52,7 @@ export function useOmrExams(courseId: string | null) {
     studentIdDigits: number;
     sections?: OmrSection[];
     version?: string;
+    idMode?: "bubbles" | "written";
   }): Promise<string> => {
     if (!user || !courseId) return "";
     const { data, error } = await db.from("omr_exams").insert({
@@ -65,6 +67,7 @@ export function useOmrExams(courseId: string | null) {
       student_id_digits: input.studentIdDigits,
       sections: input.sections && input.sections.length > 1 ? input.sections : null,
       version: input.version || null,
+      id_mode: input.idMode || "bubbles",
     }).select().single();
     if (error || !data) { console.error("Error adding omr exam:", error); return ""; }
     await fetchExams();

@@ -14,6 +14,7 @@ export interface SheetHeader {
   college?: string;       // الكلية
   department?: string;    // القسم العلمي
   courseName?: string;    // اسم المقرر (+ الشعبة)
+  logoDataUrl?: string;   // شعار المؤسسة (اختياري)
 }
 
 const FONT = "'Segoe UI', Tahoma, Arial";
@@ -44,6 +45,11 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     parts.push(`<text x="${PAGE_W - 25}" y="${10.5 + i * 4}" font-size="${i === 0 ? 3.1 : 2.7}" ${i === 0 ? 'font-weight="bold"' : 'fill="#444"'} text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
   });
 
+  // institution logo — kept between the corner-mark search windows (x 64–146)
+  if (header?.logoDataUrl) {
+    parts.push(`<image href="${header.logoDataUrl}" x="128" y="5" width="18" height="14" preserveAspectRatio="xMidYMid meet"/>`);
+  }
+
   // exam version badge (top-left, prominent) — e.g. "نموذج أ"
   if (exam.version) {
     parts.push(`<rect x="29" y="7.5" width="24" height="9" fill="none" stroke="#000" stroke-width="0.6" rx="1.5"/>`);
@@ -51,7 +57,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   }
 
   // ---------- title block ----------
-  parts.push(`<text x="${PAGE_W / 2}" y="${instLines.length ? 25 : 18}" font-size="5.2" font-weight="bold" text-anchor="middle" font-family="${FONT}">${escapeXml(exam.title)}</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${instLines.length ? 25 : 18}" font-size="5.2" font-weight="bold" fill="#1e3a5f" text-anchor="middle" font-family="${FONT}">${escapeXml(exam.title)}</text>`);
   const infoBits = [
     header?.courseName ? `المقرر: ${header.courseName}` : "",
     `عدد الأسئلة: ${exam.questionCount}`,
@@ -65,6 +71,16 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   parts.push(`<line x1="30" y1="38.9" x2="152" y2="38.9" stroke="#bbb" stroke-width="0.25"/>`);
 
   // ---------- student number block ----------
+  if (exam.idMode === "written") {
+    // handwritten civil-ID strip: 12 joined cells inside a labelled rectangle
+    const cells = 12, cellW = 8, stripW = cells * cellW;
+    const sx = (PAGE_W - stripW) / 2, sy = 45, cellH = 9;
+    parts.push(`<text x="${sx + stripW}" y="${sy - 1.8}" direction="rtl" font-size="3.1" font-weight="bold" text-anchor="start" font-family="${FONT}">الرقم المدني للطالب:</text>`);
+    parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${cellH}" fill="none" stroke="#000" stroke-width="0.5" rx="1.5"/>`);
+    for (let i = 1; i < cells; i++) {
+      parts.push(`<line x1="${sx + i * cellW}" y1="${sy}" x2="${sx + i * cellW}" y2="${sy + cellH}" stroke="#000" stroke-width="0.3"/>`);
+    }
+  } else {
   const firstTop = idBubble(exam, 0, 0);
   const lastTop = idBubble(exam, exam.studentIdDigits - 1, 0);
   const lastBottom = idBubble(exam, exam.studentIdDigits - 1, 9);
@@ -89,9 +105,24 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
       parts.push(circle(p.x, p.y, BUBBLE_R, String(d)));
     }
   }
+  }
 
   // ---------- questions ----------
+  const NAVY = "#1e3a5f";
   const rows = questionRows(exam);
+  // group badge above each column block: "الأسئلة X - Y"
+  {
+    const blocksN = Math.ceil(exam.questionCount / rows);
+    for (let b = 0; b < blocksN; b++) {
+      const from = b * rows + 1;
+      const to = Math.min((b + 1) * rows, exam.questionCount);
+      const firstBubble = questionBubble(exam, b * rows, 0);
+      const bx = firstBubble.x + 14;
+      const by = firstBubble.y - 9;
+      parts.push(`<rect x="${bx - 16}" y="${by - 4.2}" width="32" height="6" fill="${NAVY}" rx="3"/>`);
+      parts.push(`<text x="${bx}" y="${by}" direction="rtl" font-size="2.9" font-weight="bold" fill="#fff" text-anchor="middle" font-family="${FONT}">الأسئلة ${from} - ${to}</text>`);
+    }
+  }
   // light separators between question column blocks
   const blocks = Math.ceil(exam.questionCount / rows);
   for (let b = 1; b < blocks; b++) {
@@ -115,7 +146,8 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   }
 
   // ---------- footer ----------
-  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 6.5}" font-size="2.4" fill="#999" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 11}" font-size="3" font-weight="bold" fill="#1e3a5f" text-anchor="middle" direction="rtl" font-family="${FONT}">تمنياتنا لكم بالتوفيق والنجاح</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 6.5}" font-size="2.2" fill="#999" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}">${parts.join("")}</svg>`;
 }

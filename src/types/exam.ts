@@ -46,6 +46,7 @@ export interface OmrExam {
   studentIdDigits: number;     // how many digits the student number box has
   sections?: OmrSection[];     // optional mixed-type sections (T/F + MCQ…)
   version?: string;            // exam form letter/number (نموذج أ/ب…) printed on the sheet
+  idMode?: "bubbles" | "written"; // student number: bubble grid (auto-read) or handwritten civil-ID box
   createdAt: string;
   updatedAt: string;
 }
