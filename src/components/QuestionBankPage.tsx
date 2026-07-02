@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Course } from "@/types/student";
 import { OmrExam, ChoiceCount, choiceLabels } from "@/types/exam";
 import {
@@ -208,24 +208,19 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
     }
   };
 
-  const handlePasteImport = async () => {
-    const { questions: parsed, skipped } = parseQuestionsText(pasteText, pasteType);
-    if (!parsed.length) {
-      toast.error(ar ? "لم يُتعرف على أي سؤال في النص الملصق" : "No questions recognised in pasted text");
-      if (skipped.length) console.warn("Skipped:", skipped);
-      return;
-    }
-    if (parsed.some((q) => q.correct < 0)) {
-      // answers weren't in the text — let the professor pick them before saving
-      setReviewList(parsed);
-      toast.info(
-        ar ? "حدد الإجابة الصحيحة لكل سؤال ثم احفظ" : "Pick the correct answer for each question, then save",
-        { duration: 5000 },
-      );
-      return;
-    }
-    await savePastedQuestions(parsed, skipped.length);
-  };
+  // live parse: as soon as text is pasted (or the type changes) the questions
+  // appear below with answer buttons — answers found in the text are pre-selected
+  const pasteSkipped = useRef(0);
+  useEffect(() => {
+    if (!showPaste || !pasteText.trim()) { setReviewList(null); pasteSkipped.current = 0; return; }
+    const t = setTimeout(() => {
+      const { questions: parsed, skipped } = parseQuestionsText(pasteText, pasteType);
+      pasteSkipped.current = skipped.length;
+      setReviewList(parsed.length ? parsed : null);
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pasteText, pasteType, showPaste]);
 
   const handleGenerate = async () => {
     const pool = questions.filter((q) => (!genChapter || q.chapter === genChapter) && (!genTopic || q.topic === genTopic));
@@ -371,7 +366,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             {ar ? "نوع الأسئلة الملصقة" : "Type of pasted questions"}
             <select
               value={pasteType}
-              onChange={(e) => { setPasteType(e.target.value as PasteType); setReviewList(null); }}
+              onChange={(e) => setPasteType(e.target.value as PasteType)}
               className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
             >
               <option value="auto">{ar ? "تلقائي (الإجابات مكتوبة داخل النص)" : "Auto (answers included in text)"}</option>
@@ -396,12 +391,17 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
 (سطر «الإجابة» اختياري إذا اخترت نوع الأسئلة أعلاه)`}</pre>
           <textarea
             value={pasteText}
-            onChange={(e) => { setPasteText(e.target.value); setReviewList(null); }}
+            onChange={(e) => setPasteText(e.target.value)}
             rows={8}
             placeholder={ar ? "الصق الأسئلة هنا…" : "Paste questions here…"}
             className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
             dir="rtl"
           />
+          {!reviewList && pasteText.trim() && (
+            <p className="text-xs font-bold text-destructive">
+              {ar ? "لم يُتعرف على أي سؤال — تأكد من ترقيم الأسئلة (1. 2. …)" : "No questions recognised — number them (1. 2. …)"}
+            </p>
+          )}
           {reviewList && (
             <div className="space-y-2 rounded-xl border border-warning/50 bg-warning/5 p-3">
               <p className="text-xs font-bold text-foreground">
@@ -433,16 +433,14 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             </div>
           )}
           <button
-            onClick={() =>
-              reviewList ? savePastedQuestions(reviewList, 0) : handlePasteImport()
-            }
-            disabled={importing || !pasteText.trim() || (reviewList !== null && reviewList.some((q) => q.correct < 0))}
+            onClick={() => reviewList && savePastedQuestions(reviewList, pasteSkipped.current)}
+            disabled={importing || !reviewList || reviewList.some((q) => q.correct < 0)}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
             {importing ? <Loader2 size={16} className="animate-spin" /> : <ClipboardPaste size={16} />}
-            {reviewList
-              ? (ar ? "حفظ الأسئلة في البنك" : "Save questions to bank")
-              : (ar ? "استيراد الأسئلة الملصقة" : "Import pasted questions")}
+            {ar
+              ? `حفظ الأسئلة في البنك${reviewList ? ` (${reviewList.length})` : ""}`
+              : `Save questions to bank${reviewList ? ` (${reviewList.length})` : ""}`}
           </button>
         </div>
       )}
