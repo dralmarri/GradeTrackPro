@@ -37,7 +37,7 @@ export const ID_PITCH = ID_COL_PITCH;
 const Q_ROW_PITCH = 6.5;
 const Q_CHOICE_PITCH = 8;
 const Q_TOP_BUBBLES = 122;        // first question row when the bubble ID grid is present
-const Q_TOP_WRITTEN = 64;         // first question row when the ID is handwritten-only
+const Q_TOP_WRITTEN = 72;         // first question row when the ID is handwritten-only
 const Q_BOTTOM_Y = 278;
 const Q_COL_XS = [28, 93, 158];   // x of choice "A" bubble per column block
 

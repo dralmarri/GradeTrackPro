@@ -74,8 +74,8 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   if (exam.idMode === "written") {
     // handwritten civil-ID strip: 12 joined cells inside a labelled rectangle
     const cells = 12, cellW = 8, stripW = cells * cellW;
-    const sx = (PAGE_W - stripW) / 2, sy = 45, cellH = 9;
-    parts.push(`<text x="${sx + stripW}" y="${sy - 1.8}" direction="rtl" font-size="3.1" font-weight="bold" text-anchor="start" font-family="${FONT}">الرقم المدني للطالب:</text>`);
+    const sx = (PAGE_W - stripW) / 2, sy = 46.5, cellH = 9;
+    parts.push(`<text x="${sx + stripW}" y="${sy - 2.6}" direction="rtl" font-size="3.1" font-weight="bold" text-anchor="start" font-family="${FONT}">الرقم المدني للطالب:</text>`);
     parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${cellH}" fill="none" stroke="#000" stroke-width="0.5" rx="1.5"/>`);
     for (let i = 1; i < cells; i++) {
       parts.push(`<line x1="${sx + i * cellW}" y1="${sy}" x2="${sx + i * cellW}" y2="${sy + cellH}" stroke="#000" stroke-width="0.3"/>`);
@@ -110,8 +110,9 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   // ---------- questions ----------
   const NAVY = "#1e3a5f";
   const rows = questionRows(exam);
-  // group badge above each column block: "الأسئلة X - Y"
-  {
+  // group badge above each column block: "الأسئلة X - Y" (written mode only —
+  // in bubbles mode the ID grid leaves no room above the questions)
+  if (exam.idMode === "written") {
     const blocksN = Math.ceil(exam.questionCount / rows);
     for (let b = 0; b < blocksN; b++) {
       const from = b * rows + 1;
