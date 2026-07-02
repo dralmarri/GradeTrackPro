@@ -6,13 +6,14 @@ import { printAnswerSheet } from "@/lib/omr/sheet";
 import { MAX_QUESTIONS } from "@/lib/omr/layout";
 import OmrScanDialog from "@/components/OmrScanDialog";
 import OmrScansDialog from "@/components/OmrScansDialog";
+import OmrStatsDialog from "@/components/OmrStatsDialog";
 import QuestionBankPage from "@/components/QuestionBankPage";
 import { GeneratedForm } from "@/types/questionBank";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, CheckCircle2, Pencil, History,
+  Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, CheckCircle2, Pencil, History, BarChart3,
 } from "lucide-react";
 
 
@@ -44,6 +45,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [savingEdit, setSavingEdit] = useState(false);
   const [scanExam, setScanExam] = useState<OmrExam | null>(null);
   const [historyExam, setHistoryExam] = useState<OmrExam | null>(null);
+  const [statsExam, setStatsExam] = useState<OmrExam | null>(null);
   const [version, setVersion] = useState("");
   const [editVersion, setEditVersion] = useState("");
   const [idMode, setIdMode] = useState<"bubbles" | "written">("bubbles");
@@ -380,6 +382,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                   <KeyRound size={15} />
                 </button>
                 <button
+                  onClick={() => setStatsExam(exam)}
+                  title={ar ? "إحصائيات الاختبار" : "Statistics"}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted"
+                >
+                  <BarChart3 size={15} />
+                </button>
+                <button
                   onClick={() => setHistoryExam(exam)}
                   title={ar ? "سجل المسح (الأوراق المؤرشفة)" : "Scan history"}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted"
@@ -539,6 +548,14 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           })}
         />
       </div>
+
+      {statsExam && (
+        <OmrStatsDialog
+          exam={statsExam}
+          open={!!statsExam}
+          onClose={() => setStatsExam(null)}
+        />
+      )}
 
       {historyExam && (
         <OmrScansDialog

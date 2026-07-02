@@ -25,10 +25,12 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
   const { user } = useAuth();
   const [questions, setQuestions] = useState<BankQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+  // stable key — a fresh array identity per render must NOT retrigger fetching
+  const idsKey = (courseIds && courseIds.length ? courseIds : courseId ? [courseId] : []).slice().sort().join(",");
 
   const fetchQuestions = useCallback(async () => {
     if (!user || !courseId) { setQuestions([]); setLoading(false); return; }
-    const ids = courseIds && courseIds.length ? courseIds : [courseId];
+    const ids = idsKey.split(",").filter(Boolean);
     const { data, error } = await db
       .from("omr_questions").select("*")
       .in("course_id", ids)
@@ -36,7 +38,7 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
     if (error) { console.error("Error fetching questions:", error); setLoading(false); return; }
     setQuestions((data || []).map(rowToQuestion));
     setLoading(false);
-  }, [user, courseId, courseIds]);
+  }, [user, courseId, idsKey]);
 
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 
