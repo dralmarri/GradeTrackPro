@@ -7,6 +7,7 @@ export interface CustomComponent {
 export interface Student {
   id: string;
   name: string;
+  studentNumber?: string;  // bubbled sheet number — learned automatically on first scan
   lectureBonus: number[];
   attendance: boolean[]; // true = present (default), false = absent
   exam1: number;

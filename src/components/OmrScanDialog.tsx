@@ -16,9 +16,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onApplyScore: (studentId: string, targetComponent: string, score: number) => Promise<void>;
+  onLearnNumber: (studentId: string, studentNumber: string) => Promise<void>;
 }
 
-export default function OmrScanDialog({ exam, course, open, onClose, onApplyScore }: Props) {
+export default function OmrScanDialog({ exam, course, open, onClose, onApplyScore, onLearnNumber }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const fileRef = useRef<HTMLInputElement>(null);
@@ -40,15 +41,16 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       const raw = await scanAnswerSheet(file, exam);
       const graded = gradeOmr(exam, raw.answers);
 
-      // try to auto-match a student by bubbled number (fallback UI select)
-      // students have no stored number yet — matching by order isn't safe,
-      // so we surface the read number and let the professor pick/confirm.
+      // auto-match by bubbled number against learned student numbers
+      const clean = raw.studentNumber && !raw.studentNumber.includes("؟") ? raw.studentNumber : "";
+      const match = clean ? course.students.find((st) => st.studentNumber === clean) : undefined;
       const res: OmrScanResult = {
         studentNumber: raw.studentNumber,
-        matchedStudentId: null,
+        matchedStudentId: match?.id ?? null,
         ...graded,
       };
       setResult(res);
+      if (match) setSelectedStudentId(match.id);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : (ar ? "فشل المسح" : "Scan failed"));
     } finally {
@@ -65,6 +67,11 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
     try {
       await onApplyScore(selectedStudentId, exam.targetComponent, result.score);
       const s = course.students.find((st) => st.id === selectedStudentId);
+      // learn: bind the clean bubbled number to this student for future auto-match
+      const cleanNum = result.studentNumber && !result.studentNumber.includes("؟") ? result.studentNumber : "";
+      if (cleanNum && s && s.studentNumber !== cleanNum) {
+        await onLearnNumber(s.id, cleanNum);
+      }
       toast.success(
         ar
           ? `رُصدت الدرجة ${result.score}/${exam.maxScore} للطالب ${s?.name ?? ""}`
@@ -153,6 +160,11 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
               <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
                 <UserRound size={14} />
                 {ar ? `رقم الطالب المقروء: ${result.studentNumber || "—"}` : `Read student #: ${result.studentNumber || "—"}`}
+                {result.matchedStudentId && (
+                  <span className="rounded-md bg-success/10 px-1.5 py-0.5 text-[10px] font-bold text-success">
+                    {ar ? "تم التعرف تلقائياً ✓" : "Auto-matched ✓"}
+                  </span>
+                )}
               </p>
               <select
                 value={selectedStudentId}

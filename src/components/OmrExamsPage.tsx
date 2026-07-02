@@ -16,9 +16,10 @@ import {
 interface Props {
   course: Course;
   onApplyScore: (studentId: string, targetComponent: string, score: number) => Promise<void>;
+  onLearnNumber: (studentId: string, studentNumber: string) => Promise<void>;
 }
 
-export default function OmrExamsPage({ course, onApplyScore }: Props) {
+export default function OmrExamsPage({ course, onApplyScore, onLearnNumber }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const { exams, loading, addExam, updateExam, updateAnswerKey, deleteExam } = useOmrExams(course.id);
@@ -506,6 +507,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
           open={!!scanExam}
           onClose={() => setScanExam(null)}
           onApplyScore={onApplyScore}
+          onLearnNumber={onLearnNumber}
         />
       )}
     </div>

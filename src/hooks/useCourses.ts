@@ -35,6 +35,7 @@ function dbRowToStudent(row: any): Student {
   return {
     id: row.id,
     name: row.name,
+    studentNumber: row.student_number || undefined,
     lectureBonus: (row.lecture_bonus || []) as number[],
     attendance: (row.attendance || []) as boolean[],
     exam1: Number(row.exam1) || 0,
@@ -176,6 +177,7 @@ export function useCourses() {
   const updateStudent = useCallback(async (_courseId: string, studentId: string, updates: Partial<Student>) => {
     const u: any = {};
     if (updates.name !== undefined) u.name = updates.name;
+    if (updates.studentNumber !== undefined) u.student_number = updates.studentNumber || null;
     if (updates.lectureBonus !== undefined) u.lecture_bonus = updates.lectureBonus;
     if (updates.attendance !== undefined) u.attendance = updates.attendance;
     if (updates.exam1 !== undefined) u.exam1 = updates.exam1;

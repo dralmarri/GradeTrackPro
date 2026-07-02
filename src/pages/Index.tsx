@@ -558,6 +558,7 @@ export default function Index() {
             />
             <OmrExamsPage
               course={activeCourse}
+              onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
               onApplyScore={async (studentId, targetComponent, score) => {
                 const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
                 if (standard.includes(targetComponent)) {
