@@ -14,6 +14,8 @@ export interface OmrScanRaw {
   studentNumber: string;      // "" digits that were readable, in order
   answers: number[];          // per question: choice index, -1 blank, -2 ambiguous
   markQuality: number;        // 0..1 how well the corner marks were found
+  nameImageUrl?: string;      // rectified crop of the handwritten-name box
+  civilIdImageUrl?: string;   // rectified crop of the civil-ID strip (written mode)
   debug?: {
     threshold: number;
     corners: { x: number; y: number }[];
@@ -28,6 +30,7 @@ const MAX_DIM = 1700;
 export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise<OmrScanRaw> {
   const img = await loadImage(file);
   const { data, w, h } = drawToCanvas(img);
+  const srcRgba = data; // kept for rectified crops (name box, civil-ID strip)
 
   const gray = toGray(data, w, h);
   const thr = otsu(gray);
@@ -111,6 +114,15 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     answers.push(pickOne(ratios));
   }
 
+  // rectified crops so the professor can READ the handwriting when picking
+  // the student (no AI needed) — name box is at sheet-mm (25,31.5)-(185,41.5)
+  const nameImageUrl = rectifyRegion(srcRgba, w, h, H, 25, 31, 185, 42);
+  let civilIdImageUrl: string | undefined;
+  if (exam.idMode === "written") {
+    // civil strip: 12 cells × 8mm centered → x 57..153, y 43.5..56
+    civilIdImageUrl = rectifyRegion(srcRgba, w, h, H, 55, 43.5, 155, 56.5);
+  }
+
   const debugRatios: number[] = [];
   for (let c = 0; c < exam.choiceCount; c++) {
     const p = questionBubble(exam, 0, c);
@@ -119,8 +131,48 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
 
   return {
     studentNumber, answers, markQuality: bestDot,
+    nameImageUrl, civilIdImageUrl,
     debug: { threshold: thr, corners, rotation: bestRotation, orientDot: bestDot, sampleRatios: debugRatios },
   };
+}
+
+// Warp a sheet-mm rectangle out of the photo into an upright crop (data URL).
+// Uses the same homography as bubble sampling, so the crop is always straight
+// even if the photo was tilted or upside-down.
+function rectifyRegion(
+  src: Uint8ClampedArray, w: number, h: number,
+  H: number[], x0: number, y0: number, x1: number, y1: number,
+  pxPerMm = 7,
+): string | undefined {
+  try {
+    const ow = Math.round((x1 - x0) * pxPerMm);
+    const oh = Math.round((y1 - y0) * pxPerMm);
+    const out = document.createElement("canvas");
+    out.width = ow; out.height = oh;
+    const ctx = out.getContext("2d")!;
+    const img = ctx.createImageData(ow, oh);
+    for (let oy = 0; oy < oh; oy++) {
+      for (let ox = 0; ox < ow; ox++) {
+        const [sx, sy] = applyH(H, x0 + ox / pxPerMm, y0 + oy / pxPerMm);
+        const ix = Math.round(sx), iy = Math.round(sy);
+        const di = (oy * ow + ox) * 4;
+        if (ix >= 0 && iy >= 0 && ix < w && iy < h) {
+          const si = (iy * w + ix) * 4;
+          img.data[di] = src[si];
+          img.data[di + 1] = src[si + 1];
+          img.data[di + 2] = src[si + 2];
+          img.data[di + 3] = 255;
+        } else {
+          img.data[di] = img.data[di + 1] = img.data[di + 2] = 255;
+          img.data[di + 3] = 255;
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return out.toDataURL("image/jpeg", 0.85);
+  } catch {
+    return undefined;
+  }
 }
 
 // mean darkness of a small square patch (sheet-mm space) under homography H

@@ -47,6 +47,7 @@ export interface OmrExam {
   sections?: OmrSection[];     // optional mixed-type sections (T/F + MCQ…)
   version?: string;            // exam form letter/number (نموذج أ/ب…) printed on the sheet
   idMode?: "bubbles" | "written"; // student number: bubble grid (auto-read) or handwritten civil-ID box
+  questionWeights?: number[];  // per-question points; when set, maxScore = sum(weights)
   createdAt: string;
   updatedAt: string;
 }
@@ -92,19 +93,33 @@ export function createOmrExam(
 }
 
 // Grade a set of student answers against the exam's answer key.
+// With questionWeights set, each question earns its own points; otherwise
+// all questions weigh equally against maxScore.
 export function gradeOmr(exam: OmrExam, answers: number[]): Omit<OmrScanResult, "studentNumber" | "matchedStudentId"> {
   const results: OmrQuestionResult[] = [];
   let rawCorrect = 0;
+  let earned = 0;
+  const weights = exam.questionWeights && exam.questionWeights.length === exam.questionCount
+    ? exam.questionWeights
+    : null;
   for (let i = 0; i < exam.questionCount; i++) {
     const key = exam.answerKey[i];
     const marked = answers[i] ?? -1;
     const correct = key >= 0 && marked === key;
-    if (correct) rawCorrect++;
+    if (correct) {
+      rawCorrect++;
+      if (weights) earned += weights[i];
+    }
     results.push({ questionIndex: i, marked, correct });
   }
-  const gradedCount = exam.answerKey.filter((k) => k >= 0).length || exam.questionCount;
-  const score = gradedCount > 0
-    ? Math.round((rawCorrect / gradedCount) * exam.maxScore * 100) / 100
-    : 0;
+  let score: number;
+  if (weights) {
+    score = Math.round(earned * 100) / 100;
+  } else {
+    const gradedCount = exam.answerKey.filter((k) => k >= 0).length || exam.questionCount;
+    score = gradedCount > 0
+      ? Math.round((rawCorrect / gradedCount) * exam.maxScore * 100) / 100
+      : 0;
+  }
   return { answers, results, score, rawCorrect };
 }

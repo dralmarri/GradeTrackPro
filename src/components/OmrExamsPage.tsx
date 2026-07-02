@@ -37,6 +37,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [creating, setCreating] = useState(false);
   const [openKeyExamId, setOpenKeyExamId] = useState<string | null>(null);
   const [draftKey, setDraftKey] = useState<number[]>([]);
+  const [draftWeights, setDraftWeights] = useState<number[]>([]);
   const [savingKey, setSavingKey] = useState(false);
   const [editExamId, setEditExamId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -116,21 +117,31 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4 }]); setMaxScore(20); setVersion("");
       setOpenKeyExamId(id);
       setDraftKey(new Array(totalQuestions).fill(-1));
+      setDraftWeights(new Array(totalQuestions).fill(Math.round((maxScore / totalQuestions) * 100) / 100));
     }
   };
 
   const openKey = (exam: OmrExam) => {
     setOpenKeyExamId(exam.id);
     setDraftKey(exam.answerKey.length === exam.questionCount ? [...exam.answerKey] : new Array(exam.questionCount).fill(-1));
+    const equal = Math.round((exam.maxScore / exam.questionCount) * 100) / 100;
+    setDraftWeights(
+      exam.questionWeights && exam.questionWeights.length === exam.questionCount
+        ? [...exam.questionWeights]
+        : new Array(exam.questionCount).fill(equal),
+    );
   };
 
   const setKeyChoice = (q: number, c: number) => {
     setDraftKey((prev) => { const n = [...prev]; n[q] = n[q] === c ? -1 : c; return n; });
   };
 
+  const weightsTotal = Math.round(draftWeights.reduce((a, b) => a + (Number(b) || 0), 0) * 100) / 100;
+
   const saveKey = async (exam: OmrExam) => {
+    if (weightsTotal <= 0) { toast.error(ar ? "مجموع الدرجات يجب أن يكون أكبر من صفر" : "Total points must be > 0"); return; }
     setSavingKey(true);
-    await updateAnswerKey(exam.id, draftKey);
+    await updateAnswerKey(exam.id, draftKey, draftWeights.map((w) => Number(w) || 0));
     setSavingKey(false);
     const unset = draftKey.filter((k) => k < 0).length;
     toast.success(
@@ -467,13 +478,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
             {keyOpen && (
               <div className="mt-4 space-y-3 border-t border-border pt-4">
                 <p className="text-xs font-semibold text-muted-foreground">
-                  {ar ? "اختر الإجابة الصحيحة لكل سؤال:" : "Pick the correct answer per question:"}
+                  {ar ? "اختر الإجابة الصحيحة لكل سؤال، وحدّد درجته:" : "Pick the correct answer and points per question:"}
                 </p>
                 <div className="grid max-h-72 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-2">
                   {Array.from({ length: exam.questionCount }, (_, q) => (
                     <div key={q} className="flex items-center gap-2 rounded-lg bg-muted/40 px-2 py-1.5">
                       <span className="w-6 text-center text-xs font-bold text-muted-foreground">{q + 1}</span>
-                      <div className="flex gap-1">
+                      <div className="flex flex-1 gap-1">
                         {Array.from({ length: choiceCountFor(exam, q) }, (_, c) => (
                           <button
                             key={c}
@@ -489,8 +500,19 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                           </button>
                         ))}
                       </div>
+                      <input
+                        type="number" min={0} step={0.25}
+                        value={draftWeights[q] ?? 0}
+                        onChange={(e) => setDraftWeights((prev) => prev.map((w, j) => (j === q ? Number(e.target.value) : w)))}
+                        className="w-14 shrink-0 rounded-md border border-input bg-background px-1 py-1 text-center text-xs text-foreground outline-none focus:border-primary"
+                        title={ar ? "درجة السؤال" : "Points"}
+                      />
                     </div>
                   ))}
+                </div>
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-muted-foreground">{ar ? "مجموع الدرجات (يصبح الدرجة القصوى):" : "Points total (becomes max score):"}</span>
+                  <span className="text-primary">{weightsTotal}</span>
                 </div>
                 <button
                   onClick={() => saveKey(exam)}

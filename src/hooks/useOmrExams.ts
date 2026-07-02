@@ -20,6 +20,7 @@ function rowToExam(row: any): OmrExam {
     sections: Array.isArray(row.sections) && row.sections.length ? (row.sections as OmrSection[]) : undefined,
     version: row.version || undefined,
     idMode: row.id_mode === "written" ? "written" : "bubbles",
+    questionWeights: Array.isArray(row.question_weights) && row.question_weights.length ? (row.question_weights as number[]) : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -87,9 +88,15 @@ export function useOmrExams(courseId: string | null) {
     else await fetchExams();
   }, [fetchExams]);
 
-  const updateAnswerKey = useCallback(async (examId: string, answerKey: number[]) => {
+  const updateAnswerKey = useCallback(async (examId: string, answerKey: number[], weights?: number[] | null) => {
+    const u: any = { answer_key: answerKey, updated_at: new Date().toISOString() };
+    if (weights !== undefined) {
+      u.question_weights = weights;
+      // keep maxScore consistent with the weight total
+      if (weights) u.max_score = Math.round(weights.reduce((a, b) => a + b, 0) * 100) / 100;
+    }
     const { error } = await db.from("omr_exams")
-      .update({ answer_key: answerKey, updated_at: new Date().toISOString() })
+      .update(u)
       .eq("id", examId);
     if (error) console.error("Error updating answer key:", error);
     else await fetchExams();

@@ -29,11 +29,13 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [applying, setApplying] = useState(false);
   const [photo, setPhoto] = useState<Blob | null>(null);
+  const [nameCrop, setNameCrop] = useState<string | null>(null);
+  const [civilCrop, setCivilCrop] = useState<string | null>(null);
   const { addScan } = useOmrScans(null); // used for recording only
 
   if (!open) return null;
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -54,6 +56,8 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         ...graded,
       };
       setResult(res);
+      setNameCrop(raw.nameImageUrl || null);
+      setCivilCrop(raw.civilIdImageUrl || null);
       if (match) setSelectedStudentId(match.id);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : (ar ? "فشل المسح" : "Scan failed"));
@@ -175,6 +179,34 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
 
             {/* student number + picker */}
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              {(nameCrop || civilCrop) && (
+                <div className="mb-3 space-y-2">
+                  {nameCrop && (
+                    <div>
+                      <p className="mb-1 text-[11px] font-bold text-muted-foreground">
+                        {ar ? "الاسم كما كُتب في الورقة — اقرأه واختر الطالب المطابق:" : "Name as written — read it and pick the student:"}
+                      </p>
+                      <img
+                        src={nameCrop}
+                        alt="handwritten name"
+                        className="w-full rounded-lg border border-border bg-white object-contain"
+                      />
+                    </div>
+                  )}
+                  {civilCrop && (
+                    <div>
+                      <p className="mb-1 text-[11px] font-bold text-muted-foreground">
+                        {ar ? "الرقم المدني كما كُتب:" : "Civil ID as written:"}
+                      </p>
+                      <img
+                        src={civilCrop}
+                        alt="civil id"
+                        className="w-full rounded-lg border border-border bg-white object-contain"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
               <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
                 <UserRound size={14} />
                 {ar ? `رقم الطالب المقروء: ${result.studentNumber || "—"}` : `Read student #: ${result.studentNumber || "—"}`}
