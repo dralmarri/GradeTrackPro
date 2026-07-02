@@ -88,5 +88,13 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
     else await fetchQuestions();
   }, [fetchQuestions]);
 
-  return { questions, loading, addQuestion, addQuestions, deleteQuestion, refetch: fetchQuestions };
+  const deleteQuestions = useCallback(async (ids: string[]): Promise<boolean> => {
+    if (!ids.length) return true;
+    const { error } = await db.from("omr_questions").delete().in("id", ids);
+    if (error) { console.error("Error deleting questions:", error); return false; }
+    await fetchQuestions();
+    return true;
+  }, [fetchQuestions]);
+
+  return { questions, loading, addQuestion, addQuestions, deleteQuestion, deleteQuestions, refetch: fetchQuestions };
 }

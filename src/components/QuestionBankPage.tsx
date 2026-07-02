@@ -35,7 +35,9 @@ interface Props {
 export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, componentOptions, onCreateExam, onSetAnswerKey, buildExam }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { questions, loading, addQuestion, addQuestions, deleteQuestion } = useQuestionBank(course.id, bankCourseIds);
+  const { questions, loading, addQuestion, addQuestions, deleteQuestion, deleteQuestions } = useQuestionBank(course.id, bankCourseIds);
+  const [showBank, setShowBank] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const importRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
@@ -679,46 +681,89 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
         </div>
       ) : (
         questions.length > 0 && (
-          <details className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <summary className="flex cursor-pointer items-center justify-between text-xs font-bold text-muted-foreground">
-              {ar ? `عرض الأسئلة (${questions.length})` : `View questions (${questions.length})`}
-              <ChevronDown size={14} />
-            </summary>
-            <div className="mt-3 space-y-2">
-              {Array.from(new Set(questions.map((q) => q.chapter || ""))).map((ch) => (
-                <p key={"h" + ch} className="pt-2 text-xs font-extrabold text-primary first:pt-0">
-                  {ch || (ar ? "بدون فصل" : "No chapter")}
-                  <span className="ms-2 text-muted-foreground">({questions.filter((q) => (q.chapter || "") === ch).length})</span>
-                </p>
-              )).flatMap((header, hi, arr) => {
-                const ch = Array.from(new Set(questions.map((q) => q.chapter || "")))[hi];
-                const items = questions.filter((q) => (q.chapter || "") === ch);
-                return [header, ...items.map((q) => {
-                  const i = questions.indexOf(q);
-                  return (
-                <div key={q.id} className="flex items-start gap-2 rounded-xl bg-muted/40 px-3 py-2">
-                  <span className="mt-0.5 w-6 shrink-0 text-center text-xs font-bold text-muted-foreground">{i + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground">{q.text}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {q.choices.length === 2 ? (ar ? "صح/خطأ" : "T/F") : `${q.choices.length} ${ar ? "خيارات" : "choices"}`}
-                      {" · "}{ar ? "الإجابة:" : "Answer:"} <b className="text-success">{choiceLabels(q.choices.length as ChoiceCount)[q.correct]}</b>
-                      {q.topic ? ` · ${q.topic}` : ""}
-                      {q.difficulty ? ` · ${DIFFICULTY_LABELS[q.difficulty]}` : ""}
-                    </p>
-                  </div>
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <button
+              onClick={() => { setShowBank((v) => !v); setSelectedIds(new Set()); }}
+              className="flex w-full items-center justify-between text-sm font-bold text-foreground"
+            >
+              <span className="flex items-center gap-2">
+                <Library size={16} className="text-primary" />
+                {ar ? `الاطلاع على بنك الأسئلة (${questions.length})` : `Browse question bank (${questions.length})`}
+              </span>
+              <ChevronDown size={16} className={cn("transition-transform", showBank && "rotate-180")} />
+            </button>
+            {showBank && (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === questions.length && questions.length > 0}
+                      onChange={(e) => setSelectedIds(e.target.checked ? new Set(questions.map((q) => q.id)) : new Set())}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {ar ? "تحديد الكل" : "Select all"}
+                  </label>
                   <button
-                    onClick={async () => { await deleteQuestion(q.id); toast.success(ar ? "حُذف السؤال" : "Deleted"); }}
-                    className="shrink-0 rounded-lg p-1.5 text-destructive hover:bg-destructive/10"
+                    onClick={async () => {
+                      if (!selectedIds.size) return;
+                      if (!window.confirm(ar ? `حذف ${selectedIds.size} سؤالاً من البنك؟` : `Delete ${selectedIds.size} questions?`)) return;
+                      const ok = await deleteQuestions(Array.from(selectedIds));
+                      if (ok) { toast.success(ar ? `حُذف ${selectedIds.size} سؤالاً` : "Deleted"); setSelectedIds(new Set()); }
+                      else toast.error(ar ? "فشل الحذف" : "Delete failed");
+                    }}
+                    disabled={selectedIds.size === 0}
+                    className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-bold text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-40"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={13} />
+                    {ar ? `حذف المحدد (${selectedIds.size})` : `Delete selected (${selectedIds.size})`}
                   </button>
                 </div>
-                  );
-                })];
-              })}
-            </div>
-          </details>
+                {Array.from(new Set(questions.map((q) => q.chapter || ""))).flatMap((ch) => {
+                  const items = questions.filter((q) => (q.chapter || "") === ch);
+                  return [
+                    <p key={"h" + ch} className="pt-2 text-xs font-extrabold text-primary first:pt-0">
+                      {ch || (ar ? "بدون فصل" : "No chapter")}
+                      <span className="ms-2 text-muted-foreground">({items.length})</span>
+                    </p>,
+                    ...items.map((q) => {
+                      const i = questions.indexOf(q);
+                      return (
+                        <div key={q.id} className={cn("flex items-start gap-2 rounded-xl px-3 py-2", selectedIds.has(q.id) ? "bg-destructive/5 ring-1 ring-destructive/30" : "bg-muted/40")}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(q.id)}
+                            onChange={(e) => setSelectedIds((s) => {
+                              const n = new Set(s);
+                              if (e.target.checked) n.add(q.id); else n.delete(q.id);
+                              return n;
+                            })}
+                            className="mt-1 h-4 w-4 shrink-0 accent-primary"
+                          />
+                          <span className="mt-0.5 w-6 shrink-0 text-center text-xs font-bold text-muted-foreground">{i + 1}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-foreground">{q.text}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {q.choices.length === 2 ? (ar ? "صح/خطأ" : "T/F") : `${q.choices.length} ${ar ? "خيارات" : "choices"}`}
+                              {" · "}{ar ? "الإجابة:" : "Answer:"} <b className="text-success">{q.choices.length === 2 ? q.choices[q.correct] : choiceLabels(q.choices.length as ChoiceCount)[q.correct]}</b>
+                              {q.topic ? ` · ${q.topic}` : ""}
+                              {q.difficulty ? ` · ${DIFFICULTY_LABELS[q.difficulty]}` : ""}
+                            </p>
+                          </div>
+                          <button
+                            onClick={async () => { await deleteQuestion(q.id); toast.success(ar ? "حُذف السؤال" : "Deleted"); }}
+                            className="shrink-0 rounded-lg p-1.5 text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      );
+                    }),
+                  ];
+                })}
+              </div>
+            )}
+          </div>
         )
       )}
     </div>
