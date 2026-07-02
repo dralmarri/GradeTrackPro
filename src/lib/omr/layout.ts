@@ -29,9 +29,8 @@ export const BUBBLE_R = 2.5;      // bubble radius (mm)
 
 // Student-ID grid
 const ID_COL_PITCH = 8;           // horizontal distance between digit columns
-const ID_ROW_PITCH = 6.5;         // vertical distance between digits 0-9
-const ID_TOP_Y = 54;              // y of digit-0 row
-export const ID_WRITE_Y = 45;     // y-center of the handwritten-digit boxes above the grid
+const ID_ROW_PITCH = 6.0;         // vertical distance between digits 0-9
+const ID_TOP_Y = 57.5;            // y of digit-0 row (below the handwritten boxes)
 export const ID_PITCH = ID_COL_PITCH;
 
 // Question grid

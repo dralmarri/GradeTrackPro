@@ -41,13 +41,13 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   if (header?.college) instLines.push(header.college);
   if (header?.department) instLines.push(header.department);
   instLines.forEach((line, i) => {
-    parts.push(`<text x="${PAGE_W - 25}" y="${10.5 + i * 4}" font-size="${i === 0 ? 3.1 : 2.7}" ${i === 0 ? 'font-weight="bold"' : 'fill="#444"'} text-anchor="end" font-family="${FONT}">${escapeXml(line)}</text>`);
+    parts.push(`<text x="${PAGE_W - 25}" y="${10.5 + i * 4}" font-size="${i === 0 ? 3.1 : 2.7}" ${i === 0 ? 'font-weight="bold"' : 'fill="#444"'} text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
   });
 
   // exam version badge (top-left, prominent) — e.g. "نموذج أ"
   if (exam.version) {
-    parts.push(`<rect x="25" y="7.5" width="24" height="9" fill="none" stroke="#000" stroke-width="0.6" rx="1.5"/>`);
-    parts.push(`<text x="37" y="13.6" font-size="4" font-weight="bold" text-anchor="middle" font-family="${FONT}">نموذج ${escapeXml(exam.version)}</text>`);
+    parts.push(`<rect x="29" y="7.5" width="24" height="9" fill="none" stroke="#000" stroke-width="0.6" rx="1.5"/>`);
+    parts.push(`<text x="41" y="13.6" font-size="4" font-weight="bold" text-anchor="middle" direction="rtl" font-family="${FONT}">نموذج ${escapeXml(exam.version)}</text>`);
   }
 
   // ---------- title block ----------
@@ -57,12 +57,12 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     `عدد الأسئلة: ${exam.questionCount}`,
     `الدرجة: ${exam.maxScore}`,
   ].filter(Boolean).join("   ·   ");
-  parts.push(`<text x="${PAGE_W / 2}" y="${instLines.length ? 30 : 23}" font-size="2.9" fill="#444" text-anchor="middle" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${instLines.length ? 30 : 23}" font-size="2.9" fill="#444" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
 
   // ---------- name box (clear labelled rectangle) ----------
   parts.push(`<rect x="25" y="32" width="160" height="9" fill="none" stroke="#000" stroke-width="0.45" rx="1.5"/>`);
-  parts.push(`<text x="181.5" y="37.7" font-size="3.3" font-weight="bold" text-anchor="end" font-family="${FONT}">اسم الطالب:</text>`);
-  parts.push(`<line x1="30" y1="39.2" x2="150" y2="39.2" stroke="#bbb" stroke-width="0.25"/>`);
+  parts.push(`<text x="180" y="37.6" direction="rtl" font-size="3.3" font-weight="bold" text-anchor="start" font-family="${FONT}">اسم الطالب:</text>`);
+  parts.push(`<line x1="30" y1="38.9" x2="152" y2="38.9" stroke="#bbb" stroke-width="0.25"/>`);
 
   // ---------- student number block ----------
   const firstTop = idBubble(exam, 0, 0);
@@ -71,13 +71,15 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   const frameX = Math.min(firstTop.x, lastTop.x) - 6;
   const frameW = Math.abs(lastTop.x - firstTop.x) + 12;
 
-  parts.push(`<rect x="${frameX}" y="42.5" width="${frameW}" height="${lastBottom.y + 4.5 - 42.5}" fill="none" stroke="#000" stroke-width="0.5" rx="2"/>`);
-  parts.push(`<text x="${PAGE_W / 2}" y="46.6" font-size="3" font-weight="bold" text-anchor="middle" font-family="${FONT}">رقم الطالب: اكتب رقمك في المربعات ثم ظلّل الرقم المطابق في كل عمود</text>`);
+  parts.push(`<rect x="${frameX}" y="43" width="${frameW}" height="${lastBottom.y + 4 - 43}" fill="none" stroke="#000" stroke-width="0.5" rx="2"/>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="46.8" direction="rtl" font-size="3" font-weight="bold" text-anchor="middle" font-family="${FONT}">رقم الطالب</text>`);
+  parts.push(`<text x="${frameX - 3}" y="50" direction="rtl" font-size="2.5" fill="#555" text-anchor="start" font-family="${FONT}">اكتب رقمك في المربعات</text>`);
+  parts.push(`<text x="${frameX - 3}" y="53.6" direction="rtl" font-size="2.5" fill="#555" text-anchor="start" font-family="${FONT}">ثم ظلّل الرقم المطابق في كل عمود</text>`);
 
   // handwritten digit boxes — one above each bubble column
   for (let col = 0; col < exam.studentIdDigits; col++) {
     const cx = idBubble(exam, col, 0).x;
-    parts.push(`<rect x="${cx - 3.1}" y="47.8" width="6.2" height="5.4" fill="none" stroke="#000" stroke-width="0.4" rx="0.7"/>`);
+    parts.push(`<rect x="${cx - 3.1}" y="48.4" width="6.2" height="5.2" fill="none" stroke="#000" stroke-width="0.4" rx="0.7"/>`);
   }
 
   // bubble grid 0–9 per column
@@ -113,7 +115,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   }
 
   // ---------- footer ----------
-  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 6.5}" font-size="2.4" fill="#999" text-anchor="middle" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 6.5}" font-size="2.4" fill="#999" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}">${parts.join("")}</svg>`;
 }
