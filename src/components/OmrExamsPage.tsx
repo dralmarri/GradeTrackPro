@@ -38,6 +38,18 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
   const [editTarget, setEditTarget] = useState("exam1");
   const [savingEdit, setSavingEdit] = useState(false);
   const [scanExam, setScanExam] = useState<OmrExam | null>(null);
+  const [version, setVersion] = useState("");
+  const [editVersion, setEditVersion] = useState("");
+  const [institution, setInstitution] = useState(() => localStorage.getItem("gtp_institution") || "");
+  const [college, setCollege] = useState(() => localStorage.getItem("gtp_college") || "");
+  const [department, setDepartment] = useState(() => localStorage.getItem("gtp_department") || "");
+
+  const sheetHeader = () => ({
+    institution: institution.trim() || undefined,
+    college: college.trim() || undefined,
+    department: department.trim() || undefined,
+    courseName: course.name + (course.section ? ` — شعبة ${course.section}` : ""),
+  });
 
   const componentOptions = [
     { key: "exam1", label: ar ? "اختبار أول" : "Exam 1" },
@@ -60,11 +72,12 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
       choiceCount: sections[0].choiceCount,
       targetComponent, maxScore, studentIdDigits: 6,
       sections: sections.length > 1 ? sections : undefined,
+      version: version.trim() || undefined,
     });
     setCreating(false);
     if (id) {
       toast.success(ar ? "تم إنشاء الاختبار" : "Exam created");
-      setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4 }]); setMaxScore(20);
+      setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4 }]); setMaxScore(20); setVersion("");
       setOpenKeyExamId(id);
       setDraftKey(new Array(totalQuestions).fill(-1));
     }
@@ -181,6 +194,15 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
               />
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
+              {ar ? "رقم النموذج (اختياري)" : "Form version (optional)"}
+              <input
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+                placeholder={ar ? "مثال: أ أو ب" : "e.g. A or B"}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              />
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "تُرصد في" : "Maps to"}
               <select
                 value={targetComponent}
@@ -204,6 +226,36 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
         </div>
       )}
 
+      {/* sheet header settings (institution/college/department) */}
+      <details className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <summary className="cursor-pointer text-xs font-bold text-muted-foreground">
+          {ar ? "ترويسة ورقة الإجابة (المؤسسة / الكلية / القسم)" : "Sheet header (institution / college / dept)"}
+        </summary>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <input
+            value={institution}
+            onChange={(e) => { setInstitution(e.target.value); localStorage.setItem("gtp_institution", e.target.value); }}
+            placeholder={ar ? "المؤسسة التعليمية" : "Institution"}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+          <input
+            value={college}
+            onChange={(e) => { setCollege(e.target.value); localStorage.setItem("gtp_college", e.target.value); }}
+            placeholder={ar ? "الكلية" : "College"}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+          <input
+            value={department}
+            onChange={(e) => { setDepartment(e.target.value); localStorage.setItem("gtp_department", e.target.value); }}
+            placeholder={ar ? "القسم العلمي" : "Department"}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {ar ? "تُحفظ هذه البيانات على جهازك وتظهر أعلى كل ورقة إجابة تطبعها." : "Saved on this device and printed at the top of every sheet."}
+        </p>
+      </details>
+
       {/* exams list */}
       {exams.length === 0 && !showCreate && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center text-muted-foreground">
@@ -220,7 +272,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
           <div key={exam.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate font-display text-base font-bold text-foreground">{exam.title}</p>
+                <p className="truncate font-display text-base font-bold text-foreground">{exam.title}{exam.version ? <span className="ms-2 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-bold text-primary">{`نموذج ${exam.version}`}</span> : null}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {exam.questionCount} {ar ? "سؤال" : "Qs"} · {exam.sections?.length ? (ar ? "مختلط" : "Mixed") : choiceLabels(exam.choiceCount).join(" ")} · {exam.maxScore} {ar ? "درجة" : "pts"}
                   {" · "}
@@ -237,6 +289,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
                     setEditTitle(exam.title);
                     setEditMaxScore(exam.maxScore);
                     setEditTarget(exam.targetComponent);
+                    setEditVersion(exam.version || "");
                   }}
                   title={ar ? "تعديل الاختبار" : "Edit exam"}
                   className={cn(
@@ -247,7 +300,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
                   <Pencil size={15} />
                 </button>
                 <button
-                  onClick={() => { if (!printAnswerSheet(exam)) toast.error(ar ? "اسمح بالنوافذ المنبثقة للطباعة" : "Allow pop-ups to print"); }}
+                  onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "اسمح بالنوافذ المنبثقة للطباعة" : "Allow pop-ups to print"); }}
                   title={ar ? "طباعة ورقة الإجابة" : "Print sheet"}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted"
                 >
@@ -292,6 +345,15 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
                     />
                   </label>
                   <label className="space-y-1 text-xs text-muted-foreground">
+                    {ar ? "رقم النموذج" : "Form version"}
+                    <input
+                      value={editVersion}
+                      onChange={(e) => setEditVersion(e.target.value)}
+                      placeholder={ar ? "مثال: أ" : "e.g. A"}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                    />
+                  </label>
+                  <label className="space-y-1 text-xs text-muted-foreground">
                     {ar ? "تُرصد في" : "Maps to"}
                     <select
                       value={editTarget}
@@ -308,7 +370,7 @@ export default function OmrExamsPage({ course, onApplyScore }: Props) {
                   onClick={async () => {
                     if (!editTitle.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
                     setSavingEdit(true);
-                    await updateExam(exam.id, { title: editTitle.trim(), maxScore: editMaxScore, targetComponent: editTarget });
+                    await updateExam(exam.id, { title: editTitle.trim(), maxScore: editMaxScore, targetComponent: editTarget, version: editVersion.trim() });
                     setSavingEdit(false);
                     setEditExamId(null);
                     toast.success(ar ? "تم حفظ التعديلات" : "Changes saved");

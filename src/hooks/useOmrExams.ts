@@ -18,6 +18,7 @@ function rowToExam(row: any): OmrExam {
     answerKey: (row.answer_key || []) as number[],
     studentIdDigits: Number(row.student_id_digits) || 6,
     sections: Array.isArray(row.sections) && row.sections.length ? (row.sections as OmrSection[]) : undefined,
+    version: row.version || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -49,6 +50,7 @@ export function useOmrExams(courseId: string | null) {
     maxScore: number;
     studentIdDigits: number;
     sections?: OmrSection[];
+    version?: string;
   }): Promise<string> => {
     if (!user || !courseId) return "";
     const { data, error } = await db.from("omr_exams").insert({
@@ -62,6 +64,7 @@ export function useOmrExams(courseId: string | null) {
       answer_key: new Array(input.questionCount).fill(-1),
       student_id_digits: input.studentIdDigits,
       sections: input.sections && input.sections.length > 1 ? input.sections : null,
+      version: input.version || null,
     }).select().single();
     if (error || !data) { console.error("Error adding omr exam:", error); return ""; }
     await fetchExams();
@@ -69,12 +72,13 @@ export function useOmrExams(courseId: string | null) {
   }, [user, courseId, fetchExams]);
 
   const updateExam = useCallback(async (examId: string, updates: {
-    title?: string; maxScore?: number; targetComponent?: string;
+    title?: string; maxScore?: number; targetComponent?: string; version?: string;
   }) => {
     const u: any = { updated_at: new Date().toISOString() };
     if (updates.title !== undefined) u.title = updates.title;
     if (updates.maxScore !== undefined) u.max_score = updates.maxScore;
     if (updates.targetComponent !== undefined) u.target_component = updates.targetComponent;
+    if (updates.version !== undefined) u.version = updates.version || null;
     const { error } = await db.from("omr_exams").update(u).eq("id", examId);
     if (error) console.error("Error updating omr exam:", error);
     else await fetchExams();

@@ -45,6 +45,7 @@ export interface OmrExam {
   answerKey: number[];         // per question: index of correct choice (0=A), -1 = not set
   studentIdDigits: number;     // how many digits the student number box has
   sections?: OmrSection[];     // optional mixed-type sections (T/F + MCQ…)
+  version?: string;            // exam form letter/number (نموذج أ/ب…) printed on the sheet
   createdAt: string;
   updatedAt: string;
 }
