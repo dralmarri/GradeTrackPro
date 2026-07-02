@@ -4,9 +4,9 @@
 
 export type ChoiceCount = 2 | 3 | 4 | 5; // 2 = صح/خطأ, 3 = A–C, 4 = A–D, 5 = A–E
 
-// display letters per choice count — true/false exams show ✓ / ✗
+// display letters per choice count — true/false bubbles are labelled ص / خ
 export function choiceLabels(choiceCount: ChoiceCount): string[] {
-  if (choiceCount === 2) return ["✓", "✗"];
+  if (choiceCount === 2) return ["ص", "خ"];
   return ["A", "B", "C", "D", "E"].slice(0, choiceCount);
 }
 
