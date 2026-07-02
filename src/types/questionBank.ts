@@ -97,6 +97,7 @@ export interface ParsedQuestion {
   text: string;
   choices: string[];
   correct: number;         // -1 = answer not in the text; user picks it before saving
+  num?: number;            // original number in the pasted text (for range-based typing)
   chapter?: string;
   topic?: string;
   difficulty?: Difficulty;
@@ -187,10 +188,25 @@ export function parseQuestionRows(rows: Record<string, unknown>[]): BulkParseRes
 //   أ) خيار    ب) خيار    ج) خيار   (each on its own line, أ- أ. also accepted)
 //   الإجابة: ب                       (or: صح / خطأ for T/F)
 // forcedType:
-//   "auto" — classify by content (needs الإجابة: lines)
-//   "tf"   — every question is صح/خطأ; answer lines optional (correct=-1 if absent)
-//   "mcq"  — multiple choice; answer lines optional (correct=-1 if absent)
-export type PasteType = "auto" | "tf" | "mcq";
+//   "auto"  — classify by content (needs الإجابة: lines)
+//   "tf"    — every question is صح/خطأ; answer lines optional (correct=-1 if absent)
+//   "mcq"   — multiple choice; answer lines optional (correct=-1 if absent)
+//   "mixed" — both types: a question with choice lines is MCQ, otherwise صح/خطأ;
+//             answer lines optional. Ranges (أسئلة كذا–كذا) are applied by the UI.
+export type PasteType = "auto" | "tf" | "mcq" | "mixed";
+
+// "1-10, 15" → Set{1..10, 15} — Arabic-Indic digits and commas accepted
+export function parseNumRanges(s: string): Set<number> {
+  const out = new Set<number>();
+  const norm = s.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+  for (const part of norm.split(/[,،]/)) {
+    const m = part.trim().match(/^(\d+)\s*[-–—إلى]+\s*(\d+)$/) || part.trim().match(/^(\d+)$/);
+    if (!m) continue;
+    const a = Number(m[1]), b = Number(m[2] ?? m[1]);
+    for (let n = Math.min(a, b); n <= Math.max(a, b); n++) out.add(n);
+  }
+  return out;
+}
 
 export function parseQuestionsText(text: string, forcedType: PasteType = "auto"): BulkParseResult {
   const questions: ParsedQuestion[] = [];
@@ -200,7 +216,7 @@ export function parseQuestionsText(text: string, forcedType: PasteType = "auto")
 
   // choices may start with a dash/bullet: "- أ. خيار" / "– ب) خيار" / "• ج: خيار"
   const CHOICE_RE = /^[-–—•*]?\s*([أابجدهabcde]|هـ)\s*[\)\-\.:،]\s*(.+)$/i;
-  const Q_RE = /^(?:س\s*[:.]|سؤال\s*[:.]?|\d+\s*[\)\-\.:،])\s*(.+)$/;
+  const Q_RE = /^(?:س\s*[:.]|سؤال\s*[:.]?|(\d+)\s*[\)\-\.:،])\s*(.+)$/;
   const ANS_RE = /^[-–—•*]?\s*(?:الإجابة|الاجابة|الجواب|answer)\s*(?:الصحيحة)?\s*(?:هي)?\s*[:：]?\s*(.+)$/i;
   const CHAPTER_RE = /^(?:الفصل|الوحدة|chapter)\s*[:：]\s*(.+)$/i;
   const TOPIC_RE = /^(?:الموضوع|العنوان|topic)\s*[:：]\s*(.+)$/i;
@@ -209,33 +225,35 @@ export function parseQuestionsText(text: string, forcedType: PasteType = "auto")
 
   let topic: string | undefined;
   let chapter: string | undefined;
-  let cur: { text: string; choices: string[]; line: number } | null = null;
+  let cur: { text: string; choices: string[]; line: number; num?: number } | null = null;
 
   const flush = (ansRaw: string | null, lineNo: number) => {
     if (!cur) return;
+    // in mixed mode the choices decide the type: with choices → MCQ, without → صح/خطأ
+    const eff = forcedType === "mixed" ? (cur.choices.length >= 2 ? "mcq" : "tf") : forcedType;
     if (ansRaw === null) {
       // no answer line — allowed when the type is forced; the user picks answers before saving
-      if (forcedType === "tf") {
-        questions.push({ text: cur.text, choices: ["صح", "خطأ"], correct: -1, chapter, topic });
-      } else if (forcedType === "mcq" && cur.choices.length >= 2) {
-        questions.push({ text: cur.text, choices: cur.choices, correct: -1, chapter, topic });
+      if (eff === "tf") {
+        questions.push({ text: cur.text, choices: ["صح", "خطأ"], correct: -1, chapter, topic, num: cur.num });
+      } else if (eff === "mcq" && cur.choices.length >= 2) {
+        questions.push({ text: cur.text, choices: cur.choices, correct: -1, chapter, topic, num: cur.num });
       } else {
-        skipped.push({ row: cur.line, reason: forcedType === "mcq" ? "خيارات ناقصة" : "سؤال بدون سطر إجابة" });
+        skipped.push({ row: cur.line, reason: eff === "mcq" ? "خيارات ناقصة" : "سؤال بدون سطر إجابة" });
       }
       cur = null; return;
     }
     // tolerate "أ)" / "ب." / "صح." — keep only the leading token
     const a = ansRaw.trim().toLowerCase().replace(/[\)\-\.:،]+$/, "").split(/\s+/)[0] || "";
     const tf = ["صح", "ص", "true", "صواب"].includes(a) ? 0 : ["خطأ", "خ", "false", "خاطئ"].includes(a) ? 1 : -1;
-    if (forcedType === "tf" || cur.choices.length === 0) {
+    if (eff === "tf" || cur.choices.length === 0) {
       if (tf === -1) { skipped.push({ row: cur.line, reason: `إجابة غير مفهومة: ${ansRaw}` }); cur = null; return; }
-      questions.push({ text: cur.text, choices: ["صح", "خطأ"], correct: tf, chapter, topic });
+      questions.push({ text: cur.text, choices: ["صح", "خطأ"], correct: tf, chapter, topic, num: cur.num });
     } else {
       const idx = CH_IDX[a] ?? -1;
       if (idx < 0 || idx >= cur.choices.length) {
         skipped.push({ row: cur.line, reason: `إجابة غير صالحة: ${ansRaw}` }); cur = null; return;
       }
-      questions.push({ text: cur.text, choices: cur.choices, correct: idx, chapter, topic });
+      questions.push({ text: cur.text, choices: cur.choices, correct: idx, chapter, topic, num: cur.num });
     }
     cur = null;
   };
@@ -248,7 +266,7 @@ export function parseQuestionsText(text: string, forcedType: PasteType = "auto")
     const qm = line.match(Q_RE);
     if (qm) {
       if (cur) flush(null, i); // previous question had no answer
-      cur = { text: qm[1].trim(), choices: [], line: i + 1 };
+      cur = { text: qm[2].trim(), choices: [], line: i + 1, num: qm[1] ? Number(qm[1]) : undefined };
       return;
     }
     const am = line.match(ANS_RE);

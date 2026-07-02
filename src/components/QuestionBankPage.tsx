@@ -3,7 +3,7 @@ import { Course } from "@/types/student";
 import { OmrExam, ChoiceCount, choiceLabels } from "@/types/exam";
 import {
   BankQuestion, Difficulty, DIFFICULTY_LABELS, GeneratedForm, generateForms, seededShuffle, parseQuestionRows, parseQuestionsText,
-  PasteType, ParsedQuestion,
+  PasteType, ParsedQuestion, parseNumRanges,
 } from "@/types/questionBank";
 import * as XLSX from "xlsx";
 import { useQuestionBank } from "@/hooks/useQuestionBank";
@@ -44,6 +44,8 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const [showExcel, setShowExcel] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteType, setPasteType] = useState<PasteType>("auto");
+  const [tfRange, setTfRange] = useState("");   // e.g. "1-10" — mixed mode only
+  const [mcqRange, setMcqRange] = useState("");
   // parsed questions whose answers weren't in the text — user picks them here before saving
   const [reviewList, setReviewList] = useState<ParsedQuestion[] | null>(null);
   // الفصل/الموضوع يُختاران هنا ويُطبَّقان على كل الأسئلة المستوردة (لصقاً أو Excel)
@@ -218,11 +220,27 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
     const t = setTimeout(() => {
       const { questions: parsed, skipped } = parseQuestionsText(pasteText, pasteType);
       pasteSkipped.current = skipped.length;
-      setReviewList(parsed.length ? parsed : null);
+      // mixed mode: ranges typed by the professor override the auto classification
+      let final = parsed;
+      if (pasteType === "mixed") {
+        const tfSet = parseNumRanges(tfRange);
+        const mcqSet = parseNumRanges(mcqRange);
+        final = parsed.map((q) => {
+          if (q.num != null && tfSet.has(q.num) && q.choices.length !== 2) {
+            return { ...q, choices: ["صح", "خطأ"], correct: -1 };
+          }
+          if (q.num != null && mcqSet.has(q.num) && q.choices.length === 2 && q.choices[0] === "صح") {
+            // marked MCQ but no choice lines were found — keep as pending with empty note
+            return q;
+          }
+          return q;
+        });
+      }
+      setReviewList(final.length ? final : null);
     }, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pasteText, pasteType, showPaste]);
+  }, [pasteText, pasteType, tfRange, mcqRange, showPaste]);
 
   const handleGenerate = async () => {
     const pool = questions.filter((q) => (!genChapter || q.chapter === genChapter) && (!genTopic || q.topic === genTopic));
@@ -374,8 +392,38 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
               <option value="auto">{ar ? "تلقائي (الإجابات مكتوبة داخل النص)" : "Auto (answers included in text)"}</option>
               <option value="tf">{ar ? "صح وخطأ" : "True / False"}</option>
               <option value="mcq">{ar ? "اختيار من متعدد" : "Multiple choice"}</option>
+              <option value="mixed">{ar ? "متنوع (صح/خطأ + اختيار من متعدد)" : "Mixed (T/F + MCQ)"}</option>
             </select>
           </label>
+          {pasteType === "mixed" && (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="space-y-1 text-xs text-muted-foreground">
+                {ar ? "أسئلة صح وخطأ (الأرقام)" : "T/F question numbers"}
+                <input
+                  value={tfRange}
+                  onChange={(e) => setTfRange(e.target.value)}
+                  placeholder={ar ? "مثال: 1-10" : "e.g. 1-10"}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                  dir="ltr"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                {ar ? "أسئلة اختيار من متعدد (الأرقام)" : "MCQ question numbers"}
+                <input
+                  value={mcqRange}
+                  onChange={(e) => setMcqRange(e.target.value)}
+                  placeholder={ar ? "مثال: 11-20" : "e.g. 11-20"}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                  dir="ltr"
+                />
+              </label>
+              <p className="col-span-2 text-[11px] text-muted-foreground">
+                {ar
+                  ? "اختياري — يمكن تركهما فارغين: أي سؤال تحته خيارات يُعد اختياراً من متعدد تلقائياً، وما عداه صح وخطأ"
+                  : "Optional — leave empty: questions with choice lines become MCQ automatically, the rest T/F"}
+              </p>
+            </div>
+          )}
           <p className="text-xs font-bold text-muted-foreground">
             {ar
               ? "الصق الأسئلة — إن لم تكن الإجابات داخل النص فستحددها هنا قبل الحفظ:"
@@ -413,23 +461,70 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
               </p>
               {reviewList.map((q, qi) => (
                 <div key={qi} className="rounded-lg bg-background p-2.5">
-                  <p className="mb-1.5 text-sm text-foreground">{qi + 1}. {q.text}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {q.choices.map((c, ci) => (
-                      <button
-                        key={ci}
-                        onClick={() => setReviewList((l) => l!.map((x, xi) => (xi === qi ? { ...x, correct: ci } : x)))}
-                        className={cn(
-                          "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
-                          q.correct === ci
-                            ? "border-success bg-success/15 text-success"
-                            : "border-border text-muted-foreground hover:bg-muted",
-                        )}
-                      >
-                        {q.choices.length === 2 ? c : `${["أ", "ب", "ج", "د", "هـ"][ci]}. ${c}`}
-                      </button>
-                    ))}
+                  <div className="mb-1.5 flex items-start gap-2">
+                    <span className="mt-2 w-5 shrink-0 text-center text-xs font-bold text-muted-foreground">{qi + 1}</span>
+                    <textarea
+                      value={q.text}
+                      onChange={(e) => setReviewList((l) => l!.map((x, xi) => (xi === qi ? { ...x, text: e.target.value } : x)))}
+                      rows={1}
+                      className="min-h-[36px] flex-1 resize-y rounded-lg border border-transparent bg-muted/40 px-2 py-1.5 text-sm text-foreground outline-none focus:border-primary"
+                      dir="rtl"
+                    />
+                    <button
+                      onClick={() => setReviewList((l) => {
+                        const n = l!.filter((_, xi) => xi !== qi);
+                        return n.length ? n : null;
+                      })}
+                      title={ar ? "حذف هذا السؤال من الاستيراد" : "Remove from import"}
+                      className="mt-1 shrink-0 rounded-lg p-1.5 text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
+                  {q.choices.length === 2 && q.choices[0] === "صح" ? (
+                    <div className="flex flex-wrap gap-1.5 ps-7">
+                      {q.choices.map((c, ci) => (
+                        <button
+                          key={ci}
+                          onClick={() => setReviewList((l) => l!.map((x, xi) => (xi === qi ? { ...x, correct: ci } : x)))}
+                          className={cn(
+                            "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
+                            q.correct === ci
+                              ? "border-success bg-success/15 text-success"
+                              : "border-border text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-1 ps-7">
+                      {q.choices.map((c, ci) => (
+                        <div key={ci} className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setReviewList((l) => l!.map((x, xi) => (xi === qi ? { ...x, correct: ci } : x)))}
+                            title={ar ? "هذه هي الإجابة الصحيحة" : "Mark correct"}
+                            className={cn(
+                              "w-8 shrink-0 rounded-lg border py-1 text-xs font-bold transition-colors",
+                              q.correct === ci
+                                ? "border-success bg-success/15 text-success"
+                                : "border-border text-muted-foreground hover:bg-muted",
+                            )}
+                          >
+                            {["أ", "ب", "ج", "د", "هـ"][ci]}
+                          </button>
+                          <input
+                            value={c}
+                            onChange={(e) => setReviewList((l) => l!.map((x, xi) =>
+                              (xi === qi ? { ...x, choices: x.choices.map((cc, cci) => (cci === ci ? e.target.value : cc)) } : x)))}
+                            className="flex-1 rounded-lg border border-transparent bg-muted/40 px-2 py-1 text-xs text-foreground outline-none focus:border-primary"
+                            dir="rtl"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
