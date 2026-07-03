@@ -942,10 +942,23 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                 {Array.from(new Set(questions.map((q) => q.chapter || ""))).flatMap((ch) => {
                   const items = questions.filter((q) => (q.chapter || "") === ch);
                   return [
-                    <p key={"h" + ch} className="pt-2 text-xs font-extrabold text-primary first:pt-0">
-                      {ch || (ar ? "بدون فصل" : "No chapter")}
-                      <span className="ms-2 text-muted-foreground">({items.length})</span>
-                    </p>,
+                    <div key={"h" + ch} className="flex items-center justify-between pt-2 first:pt-0">
+                      <p className="text-xs font-extrabold text-primary">
+                        {ch || (ar ? "بدون فصل" : "No chapter")}
+                        <span className="ms-2 text-muted-foreground">({items.length})</span>
+                      </p>
+                      <button
+                        onClick={() => {
+                          setImportChapter(ch); setImportTopic("");
+                          setShowPaste(true); setShowExcel(false); setShowAdd(false); setShowGen(false);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        className="flex items-center gap-1 rounded-lg border border-primary/40 px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/10"
+                      >
+                        <Plus size={12} />
+                        {ar ? "إضافة أسئلة" : "Add questions"}
+                      </button>
+                    </div>,
                     ...items.map((q) => {
                       const i = questions.indexOf(q);
                       return (
