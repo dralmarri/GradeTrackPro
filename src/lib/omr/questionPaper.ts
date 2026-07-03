@@ -33,20 +33,21 @@ export function buildQuestionPaperHtml(
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/dubai" />
 <title>${esc(title)} — نموذج ${esc(form.version)}</title>
 <style>
   @page { size: A4; margin: 18mm 16mm; }
-  body { font-family: 'Segoe UI', Tahoma, Arial; color: #111; margin: 0; }
+  body { font-family: 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; margin: 0; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1e3a5f; padding-bottom: 4mm; }
   .inst { font-size: 11px; color: #333; line-height: 1.6; }
   .inst div:first-child { font-weight: bold; font-size: 12px; }
   .badge { border: 1.5px solid #1e3a5f; color: #1e3a5f; border-radius: 6px; padding: 3px 12px; font-weight: bold; font-size: 14px; }
-  h1 { text-align: center; font-size: 18px; color: #1e3a5f; margin: 6mm 0 1mm; }
+  h1 { text-align: center; font-size: 20pt; color: #1e3a5f; margin: 6mm 0 1mm; }
   .meta { text-align: center; font-size: 11px; color: #555; margin-bottom: 5mm; }
   .note { background: #f2f6fb; border: 1px solid #d5e2f0; border-radius: 6px; padding: 3mm; font-size: 11px; margin-bottom: 5mm; }
   .q { margin-bottom: 4.5mm; page-break-inside: avoid; }
-  .qtext { font-size: 13px; margin-bottom: 1.5mm; }
-  .choices { display: flex; flex-wrap: wrap; gap: 2mm 8mm; padding-inline-start: 7mm; font-size: 12px; }
+  .qtext { font-size: 14pt; font-weight: 700; margin-bottom: 1.5mm; }
+  .choices { display: flex; flex-wrap: wrap; gap: 2mm 8mm; padding-inline-start: 7mm; font-size: 14pt; }
   .choice { min-width: 38mm; }
   .foot { text-align: center; color: #1e3a5f; font-weight: bold; font-size: 12px; margin-top: 8mm; }
 </style>
@@ -75,6 +76,7 @@ export function printQuestionPaper(title: string, form: GeneratedForm, header?: 
   w.document.write(html);
   w.document.close();
   w.focus();
-  setTimeout(() => w.print(), 300);
+  const go = () => setTimeout(() => w.print(), 150);
+  (w.document as any).fonts?.ready ? (w.document as any).fonts.ready.then(go).catch(go) : setTimeout(go, 500);
   return true;
 }

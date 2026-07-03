@@ -17,7 +17,7 @@ export interface SheetHeader {
   logoDataUrl?: string;   // شعار المؤسسة (اختياري)
 }
 
-const FONT = "'Segoe UI', Tahoma, Arial";
+const FONT = "'Dubai', 'Segoe UI', Tahoma, Arial";
 
 function circle(x: number, y: number, r: number, letter: string): string {
   // letter drawn in light gray so it thresholds out during scanning
@@ -162,6 +162,7 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
 <html lang="ar">
 <head>
 <meta charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/dubai" />
 <title>${escapeXml(exam.title)}</title>
 <style>
   @page { size: A4; margin: 0; }
@@ -181,6 +182,7 @@ export function printAnswerSheet(exam: OmrExam, header?: SheetHeader): boolean {
   w.document.write(html);
   w.document.close();
   w.focus();
-  setTimeout(() => w.print(), 300);
+  const go = () => setTimeout(() => w.print(), 150);
+  (w.document as any).fonts?.ready ? (w.document as any).fonts.ready.then(go).catch(go) : setTimeout(go, 500);
   return true;
 }
