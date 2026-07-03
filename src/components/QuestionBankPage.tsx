@@ -321,59 +321,82 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
-          <Library size={18} className="text-primary" />
+      {/* header */}
+      <div className="flex items-center gap-2">
+        <Library size={18} className="text-primary" />
+        <h3 className="font-display text-lg font-bold text-foreground">
           {ar ? "بنك الأسئلة" : "Question Bank"}
-          <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">{questions.length}</span>
-          {bankCourseIds.length > 1 && (
-            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-              {ar ? "مشترك بين الشعب" : "Shared across sections"}
-            </span>
-          )}
         </h3>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={downloadTemplate}
-            title={ar ? "تحميل قالب Excel" : "Download Excel template"}
-            className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted"
-          >
-            <Download size={14} />
-            {ar ? "القالب" : "Template"}
-          </button>
-          <button
-            onClick={() => { setShowExcel((v) => !v); setShowPaste(false); setShowAdd(false); setShowGen(false); }}
-            disabled={importing}
-            className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
-          >
-            {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            {ar ? "استيراد Excel" : "Import Excel"}
-          </button>
-          <input ref={importRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
-          <button
-            onClick={() => { setShowPaste((v) => !v); setShowExcel(false); setShowAdd(false); setShowGen(false); }}
-            className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
-          >
-            <ClipboardPaste size={14} />
-            {ar ? "لصق من Word" : "Paste"}
-          </button>
-          <button
-            onClick={() => { setShowGen((v) => !v); setShowAdd(false); }}
-            disabled={questions.length === 0}
-            className="flex items-center gap-1.5 rounded-xl bg-success/15 px-3 py-2 text-xs font-bold text-success transition-colors hover:bg-success/25 disabled:opacity-40"
-          >
-            <Wand2 size={14} />
-            {ar ? "توليد اختبار" : "Generate exam"}
-          </button>
-          <button
-            onClick={() => { setShowAdd((v) => !v); setShowGen(false); }}
-            className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <Plus size={14} />
-            {ar ? "سؤال جديد" : "Add question"}
-          </button>
-        </div>
+        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
+          {questions.length} {ar ? "سؤالاً" : "questions"}
+        </span>
+        {bankCourseIds.length > 1 && (
+          <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+            {ar ? "مشترك بين الشعب" : "Shared across sections"}
+          </span>
+        )}
       </div>
+
+      {/* actions — grouped: add questions | generate from bank */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {([
+          {
+            key: "add",
+            active: showAdd,
+            icon: <Plus size={18} />,
+            title: ar ? "إضافة سؤال" : "Add question",
+            desc: ar ? "إدخال يدوي واحداً واحداً" : "Type one by one",
+            onClick: () => { setShowAdd((v) => !v); setShowGen(false); setShowPaste(false); setShowExcel(false); },
+            disabled: false,
+          },
+          {
+            key: "paste",
+            active: showPaste,
+            icon: <ClipboardPaste size={18} />,
+            title: ar ? "لصق أسئلة" : "Paste questions",
+            desc: ar ? "نسخ من Word أو PDF" : "Copy from Word/PDF",
+            onClick: () => { setShowPaste((v) => !v); setShowExcel(false); setShowAdd(false); setShowGen(false); },
+            disabled: false,
+          },
+          {
+            key: "excel",
+            active: showExcel,
+            icon: importing ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />,
+            title: ar ? "استيراد Excel" : "Import Excel",
+            desc: ar ? "ملف جاهز بالقالب" : "From template file",
+            onClick: () => { setShowExcel((v) => !v); setShowPaste(false); setShowAdd(false); setShowGen(false); },
+            disabled: importing,
+          },
+          {
+            key: "gen",
+            active: showGen,
+            icon: <Wand2 size={18} />,
+            title: ar ? "توليد اختبار" : "Generate exam",
+            desc: ar ? "نماذج أ/ب من البنك" : "Forms from the bank",
+            onClick: () => { setShowGen((v) => !v); setShowAdd(false); setShowPaste(false); setShowExcel(false); },
+            disabled: questions.length === 0,
+          },
+        ]).map((b) => (
+          <button
+            key={b.key}
+            onClick={b.onClick}
+            disabled={b.disabled}
+            className={cn(
+              "flex flex-col items-center gap-1 rounded-2xl border p-3 text-center transition-colors disabled:opacity-40",
+              b.active
+                ? "border-primary bg-primary/10 text-primary"
+                : b.key === "gen"
+                  ? "border-success/40 bg-success/5 text-success hover:bg-success/15"
+                  : "border-border bg-card text-foreground hover:bg-muted",
+            )}
+          >
+            {b.icon}
+            <span className="text-xs font-bold">{b.title}</span>
+            <span className={cn("text-[10px]", b.active ? "text-primary/80" : "text-muted-foreground")}>{b.desc}</span>
+          </button>
+        ))}
+      </div>
+      <input ref={importRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
 
       {/* Excel import settings */}
       {showExcel && (
@@ -384,14 +407,23 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
               : "Pick chapter/topic here — applied to all imported questions (no need to include them in the file)"}
           </p>
           {importMetaFields}
-          <button
-            onClick={() => importRef.current?.click()}
-            disabled={importing}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
-          >
-            {importing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-            {ar ? "اختيار ملف Excel واستيراده" : "Choose Excel file and import"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={downloadTemplate}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2.5 text-xs font-bold text-foreground transition-colors hover:bg-muted"
+            >
+              <Download size={14} />
+              {ar ? "تحميل القالب" : "Template"}
+            </button>
+            <button
+              onClick={() => importRef.current?.click()}
+              disabled={importing}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+            >
+              {importing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+              {ar ? "اختيار ملف Excel واستيراده" : "Choose Excel file and import"}
+            </button>
+          </div>
         </div>
       )}
 
