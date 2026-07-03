@@ -31,11 +31,15 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [nameCrop, setNameCrop] = useState<string | null>(null);
   const [civilCrop, setCivilCrop] = useState<string | null>(null);
+  // questions the engine flagged (blank / double-marked) — professor sets the
+  // intended answer from the row photo and the score is recomputed
+  const [reviewItems, setReviewItems] = useState<{ q: number; imageUrl?: string; reason: "blank" | "multiple" }[]>([]);
+  const [answers, setAnswers] = useState<number[]>([]);
   const { addScan } = useOmrScans(null); // used for recording only
 
   if (!open) return null;
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,6 +60,8 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         ...graded,
       };
       setResult(res);
+      setAnswers(raw.answers);
+      setReviewItems(raw.review || []);
       setNameCrop(raw.nameImageUrl || null);
       setCivilCrop(raw.civilIdImageUrl || null);
       if (match) setSelectedStudentId(match.id);
@@ -64,6 +70,17 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
     } finally {
       setScanning(false);
     }
+  };
+
+  // professor picks the intended answer for a flagged question → regrade
+  const overrideAnswer = (q: number, c: number) => {
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[q] = next[q] === c ? -1 : c;
+      const graded = gradeOmr(exam, next);
+      setResult((r) => (r ? { ...r, ...graded } : r));
+      return next;
+    });
   };
 
   const apply = async () => {
@@ -176,6 +193,64 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                 </p>
               )}
             </div>
+
+            {/* flagged questions review */}
+            {reviewItems.length > 0 && (
+              <div className="space-y-3 rounded-2xl border border-amber-400/60 bg-amber-500/5 p-4 shadow-sm">
+                <p className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400">
+                  <AlertTriangle size={14} />
+                  {ar
+                    ? `${reviewItems.length} سؤالاً يحتاج مراجعتك — انظر صورة السطر وحدد قصد الطالب:`
+                    : `${reviewItems.length} question(s) need your review — see the row photo and set the intent:`}
+                </p>
+                {reviewItems.map((it) => (
+                  <div key={it.q} className="rounded-xl bg-background p-3">
+                    <p className="mb-1.5 text-xs font-bold text-foreground">
+                      {ar ? `سؤال ${it.q + 1}` : `Q${it.q + 1}`}
+                      <span className="ms-2 font-normal text-muted-foreground">
+                        {it.reason === "blank"
+                          ? (ar ? "لم يُرصد تظليل" : "no mark detected")
+                          : (ar ? "تظليل متعدد / شطب" : "multiple marks / cross-out")}
+                      </span>
+                    </p>
+                    {it.imageUrl && (
+                      <img
+                        src={it.imageUrl}
+                        alt={`question ${it.q + 1}`}
+                        className="mb-2 w-full rounded-lg border border-border bg-white object-contain"
+                      />
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {choiceLabelsFor(exam, it.q).map((label, ci) => (
+                        <button
+                          key={ci}
+                          onClick={() => overrideAnswer(it.q, ci)}
+                          className={cn(
+                            "min-w-10 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
+                            answers[it.q] === ci
+                              ? "border-success bg-success/15 text-success"
+                              : "border-border text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => overrideAnswer(it.q, answers[it.q])}
+                        className={cn(
+                          "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
+                          answers[it.q] < 0
+                            ? "border-muted-foreground bg-muted text-foreground"
+                            : "border-border text-muted-foreground hover:bg-muted",
+                        )}
+                      >
+                        {ar ? "بلا إجابة" : "No answer"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* student number + picker */}
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">

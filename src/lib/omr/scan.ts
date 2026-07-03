@@ -12,7 +12,11 @@ import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble } from "@/lib/om
 
 export interface OmrScanRaw {
   studentNumber: string;      // "" digits that were readable, in order
-  answers: number[];          // per question: choice index, -1 blank, -2 ambiguous
+  answers: number[];          // per question: choice index, -1 blank, -2 needs review
+  // questions the engine isn't sure about (blank, double-marked, crossed-out
+  // change of mind…) + an upright photo crop of each row so the professor
+  // can see the student's intent and set the answer manually
+  review: { q: number; imageUrl?: string; reason: "blank" | "multiple" }[];
   markQuality: number;        // 0..1 how well the corner marks were found
   nameImageUrl?: string;      // rectified crop of the handwritten-name box
   civilIdImageUrl?: string;   // rectified crop of the civil-ID strip (written mode)
@@ -102,16 +106,31 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     studentNumber += digit >= 0 ? String(digit) : "؟";
   }
 
-  // answers
+  // answers — any doubt (blank / two marks / crossed-out change of mind)
+  // becomes a review item with a photo crop of that question's row
   const answers: number[] = [];
+  const review: OmrScanRaw["review"] = [];
   for (let q = 0; q < exam.questionCount; q++) {
     const ratios: number[] = [];
     const qChoices = choiceCountFor(exam, q);
+    const pts = [];
     for (let c = 0; c < qChoices; c++) {
       const p = questionBubble(exam, q, c);
+      pts.push(p);
       ratios.push(fillAt(p.x, p.y));
     }
-    answers.push(pickOne(ratios));
+    const picked = pickOne(ratios);
+    answers.push(picked);
+    if (picked < 0) {
+      const xs = pts.map((p) => p.x);
+      const x0 = Math.min(...xs) - 10, x1 = Math.max(...xs) + 6;
+      const y = pts[0].y;
+      review.push({
+        q,
+        reason: picked === -1 ? "blank" : "multiple",
+        imageUrl: rectifyRegion(srcRgba, w, h, H, x0, y - 4.5, x1, y + 4.5, 9),
+      });
+    }
   }
 
   // rectified crops so the professor can READ the handwriting when picking
@@ -130,7 +149,7 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   }
 
   return {
-    studentNumber, answers, markQuality: bestDot,
+    studentNumber, answers, review, markQuality: bestDot,
     nameImageUrl, civilIdImageUrl,
     debug: { threshold: thr, corners, rotation: bestRotation, orientDot: bestDot, sampleRatios: debugRatios },
   };
@@ -204,7 +223,8 @@ function pickOne(ratios: number[]): number {
     else if (v > second) second = v;
   });
   if (bestV < FILL_MIN) return -1;
-  if (second >= FILL_MIN && bestV - second < MARGIN) return -2;
+  if (second >= FILL_MIN) return -2;      // double-marked / crossed-out → professor decides
+  if (bestV - second < MARGIN) return -2; // too close to call
   return best;
 }
 
