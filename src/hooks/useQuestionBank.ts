@@ -48,7 +48,7 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
     text: string; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty; points?: number;
   }): Promise<boolean> => {
     if (!user || !courseId) return false;
-    const { error } = await db.from("omr_questions").insert({
+    let { error } = await db.from("omr_questions").insert({
       user_id: user.id,
       course_id: courseId,
       text: input.text,
@@ -59,7 +59,20 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
       difficulty: input.difficulty || null,
       points: input.points ?? 1,
     });
-    if (error) { console.error("Error adding question:", error); return false; }
+    if (error && /points/.test(error.message || "")) {
+      const { points: _p, ...rest } = {
+        user_id: user.id, course_id: courseId, text: input.text, choices: input.choices,
+        correct: input.correct, chapter: input.chapter || null, topic: input.topic || null,
+        difficulty: input.difficulty || null, points: input.points ?? 1,
+      };
+      ({ error } = await db.from("omr_questions").insert(rest));
+    }
+    if (error) {
+      console.error("Error adding question:", error);
+      const { toast } = await import("sonner");
+      toast.error(`فشل الحفظ: ${error.message || "خطأ غير معروف"}`, { duration: 9000 });
+      return false;
+    }
     await fetchQuestions();
     return true;
   }, [user, courseId, fetchQuestions]);
@@ -79,8 +92,17 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
       difficulty: q.difficulty || null,
       points: q.points ?? 1,
     }));
-    const { error } = await db.from("omr_questions").insert(rows);
-    if (error) { console.error("Bulk insert failed:", error); return 0; }
+    let { error } = await db.from("omr_questions").insert(rows);
+    if (error && /points/.test(error.message || "")) {
+      // قاعدة البيانات لم تُحدَّث بعمود الدرجات بعد — احفظ بدونه بدل الفشل
+      ({ error } = await db.from("omr_questions").insert(rows.map(({ points: _p, ...r }) => r)));
+    }
+    if (error) {
+      console.error("Bulk insert failed:", error);
+      const { toast } = await import("sonner");
+      toast.error(`فشل الحفظ: ${error.message || error.code || "خطأ غير معروف"}`, { duration: 9000 });
+      return 0;
+    }
     await fetchQuestions();
     return rows.length;
   }, [user, courseId, fetchQuestions]);
