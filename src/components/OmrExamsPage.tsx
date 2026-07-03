@@ -47,7 +47,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [scanExam, setScanExam] = useState<OmrExam | null>(null);
   const [historyExam, setHistoryExam] = useState<OmrExam | null>(null);
   const [statsExam, setStatsExam] = useState<OmrExam | null>(null);
-  const [version, setVersion] = useState("");
+  const [formsCount, setFormsCount] = useState(1);
   const [editVersion, setEditVersion] = useState("");
   const [idMode, setIdMode] = useState<"bubbles" | "written">("bubbles");
   const [logo, setLogo] = useState(() => localStorage.getItem("gtp_logo") || "");
@@ -102,20 +102,32 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       toast.error(ar ? `عدد الأسئلة بين 1 و ${MAX_QUESTIONS}` : `Questions must be 1–${MAX_QUESTIONS}`); return;
     }
     setCreating(true);
-    const id = await addExam({
-      title: title.trim(),
-      questionCount: totalQuestions,
-      choiceCount: sections[0].choiceCount,
-      targetComponent, maxScore, studentIdDigits: 6,
-      sections: sections.length > 1 ? sections : undefined,
-      version: version.trim() || undefined,
-      idMode,
-    });
+    // one exam per requested form (نموذج أ/ب/ج/د) — each gets its own answer key
+    const letters = ["أ", "ب", "ج", "د"];
+    let firstId: string | null = null;
+    for (let v = 0; v < formsCount; v++) {
+      const id = await addExam({
+        title: title.trim(),
+        questionCount: totalQuestions,
+        choiceCount: sections[0].choiceCount,
+        targetComponent, maxScore, studentIdDigits: 6,
+        sections: sections.length > 1 ? sections : undefined,
+        version: formsCount > 1 ? letters[v] : undefined,
+        idMode,
+      });
+      if (!id) break;
+      if (!firstId) firstId = id;
+    }
     setCreating(false);
-    if (id) {
-      toast.success(ar ? "تم إنشاء الاختبار" : "Exam created");
-      setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4 }]); setMaxScore(20); setVersion("");
-      setOpenKeyExamId(id);
+    if (firstId) {
+      toast.success(
+        formsCount > 1
+          ? (ar ? `أُنشئت ${formsCount} نماذج — أدخل مفتاح كل نموذج` : `${formsCount} forms created — enter each form's key`)
+          : (ar ? "تم إنشاء الاختبار" : "Exam created"),
+        { duration: 6000 },
+      );
+      setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4 }]); setMaxScore(20); setFormsCount(1);
+      setOpenKeyExamId(firstId);
       setDraftKey(new Array(totalQuestions).fill(-1));
       setDraftWeights(new Array(totalQuestions).fill(Math.round((maxScore / totalQuestions) * 100) / 100));
     }
@@ -252,13 +264,17 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
               </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "رقم النموذج (اختياري)" : "Form version (optional)"}
-              <input
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                placeholder={ar ? "مثال: أ أو ب" : "e.g. A or B"}
+              {ar ? "عدد النماذج" : "Forms count"}
+              <select
+                value={formsCount}
+                onChange={(e) => setFormsCount(Number(e.target.value))}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              />
+              >
+                <option value={1}>{ar ? "نموذج واحد" : "1 form"}</option>
+                <option value={2}>{ar ? "نموذجان (أ، ب)" : "2 forms (A, B)"}</option>
+                <option value={3}>{ar ? "3 نماذج (أ، ب، ج)" : "3 forms"}</option>
+                <option value={4}>{ar ? "4 نماذج (أ، ب، ج، د)" : "4 forms"}</option>
+              </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "تُرصد في" : "Maps to"}
