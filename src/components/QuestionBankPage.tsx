@@ -75,13 +75,14 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const [showGen, setShowGen] = useState(false);
   const [genTitle, setGenTitle] = useState("");
   const [genCount, setGenCount] = useState(10);
-  const [genChapter, setGenChapter] = useState("");
-  const [genTopic, setGenTopic] = useState("");
+  const [genMode, setGenMode] = useState<"full" | "paper">("full");
+  const [genChapters, setGenChapters] = useState<Set<string>>(new Set());
+  const [genTopics, setGenTopics] = useState<Set<string>>(new Set());
   const [genForms, setGenForms] = useState(2);
   const [genTarget, setGenTarget] = useState("exam1");
   const [genMax, setGenMax] = useState(20);
   const [generating, setGenerating] = useState(false);
-  const [generated, setGenerated] = useState<{ exam: OmrExam; form: GeneratedForm }[]>([]);
+  const [generated, setGenerated] = useState<{ exam: OmrExam | null; form: GeneratedForm }[]>([]);
 
   const topics = useMemo(
     () => Array.from(new Set(questions.map((q) => q.topic).filter(Boolean))) as string[],
@@ -245,7 +246,9 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   }, [pasteText, pasteType, tfRange, mcqRange, showPaste]);
 
   const handleGenerate = async () => {
-    const pool = questions.filter((q) => (!genChapter || q.chapter === genChapter) && (!genTopic || q.topic === genTopic));
+    const pool = questions.filter((q) =>
+      (genChapters.size === 0 || genChapters.has(q.chapter || "")) &&
+      (genTopics.size === 0 || genTopics.has(q.topic || "")));
     if (!genTitle.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
     if (pool.length < genCount) {
       toast.error(ar ? `البنك يحتوي ${pool.length} سؤالاً فقط بهذا التصفية` : `Only ${pool.length} questions match`); return;
@@ -257,7 +260,19 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
       const picked = seededShuffle(pool, seedBase).slice(0, genCount);
       const forms = generateForms(picked, genForms, seedBase + 17);
 
-      const out: { exam: OmrExam; form: GeneratedForm }[] = [];
+      // ورقة أسئلة فقط — طباعة بدون إنشاء اختبار تصحيح في قاعدة البيانات
+      if (genMode === "paper") {
+        setGenerated(forms.map((form) => ({ exam: null, form })));
+        toast.success(
+          ar
+            ? `جُهّز ${forms.length} نموذج ورقة أسئلة — اطبعها من الأزرار أدناه`
+            : `${forms.length} question paper(s) ready — print below`,
+          { duration: 6000 },
+        );
+        return;
+      }
+
+      const out: { exam: OmrExam | null; form: GeneratedForm }[] = [];
       for (const form of forms) {
         // per-question weights from the bank; if any differ from 1 the exam's
         // max score is their sum, otherwise genMax is split equally
@@ -681,6 +696,80 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             placeholder={ar ? "عنوان الاختبار المولّد" : "Generated exam title"}
             className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
           />
+          {/* output mode: full graded exam vs question paper only */}
+          <div className="flex gap-2">
+            {([
+              { key: "full", label: ar ? "اختبار كامل (تصحيح آلي)" : "Full exam (auto grading)" },
+              { key: "paper", label: ar ? "ورقة أسئلة فقط (طباعة)" : "Question paper only" },
+            ] as const).map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setGenMode(m.key)}
+                className={cn(
+                  "flex-1 rounded-xl border px-3 py-2 text-xs font-bold transition-colors",
+                  genMode === m.key
+                    ? "border-success bg-success/15 text-success"
+                    : "border-border text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {/* chapters / topics multi-select — none selected = all */}
+          {chapters.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-muted-foreground">
+                {ar ? "الفصول الداخلة في الاختبار (اتركها بلا تحديد = الكل):" : "Chapters included (none = all):"}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {chapters.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setGenChapters((s) => { const n = new Set(s); n.has(c) ? n.delete(c) : n.add(c); return n; })}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors",
+                      genChapters.has(c)
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {topics.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-muted-foreground">
+                {ar ? "المواضيع الداخلة في الاختبار (اتركها بلا تحديد = الكل):" : "Topics included (none = all):"}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {topics.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setGenTopics((s) => { const n = new Set(s); n.has(t) ? n.delete(t) : n.add(t); return n; })}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors",
+                      genTopics.has(t)
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            {ar
+              ? `الأسئلة المتاحة بهذا الاختيار: ${questions.filter((q) => (genChapters.size === 0 || genChapters.has(q.chapter || "")) && (genTopics.size === 0 || genTopics.has(q.topic || ""))).length}`
+              : `Questions matching: ${questions.filter((q) => (genChapters.size === 0 || genChapters.has(q.chapter || "")) && (genTopics.size === 0 || genTopics.has(q.topic || ""))).length}`}
+          </p>
+
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "عدد الأسئلة" : "Questions"}
@@ -689,28 +778,6 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                 onChange={(e) => setGenCount(Number(e.target.value) || 1)}
                 className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
-            </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "الفصل" : "Chapter"}
-              <select
-                value={genChapter}
-                onChange={(e) => setGenChapter(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
-              >
-                <option value="">{ar ? "الكل" : "All"}</option>
-                {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "الموضوع" : "Topic"}
-              <select
-                value={genTopic}
-                onChange={(e) => setGenTopic(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
-              >
-                <option value="">{ar ? "الكل" : "All"}</option>
-                {topics.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "عدد النماذج" : "Forms"}
@@ -725,15 +792,15 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                 <option value={4}>{ar ? "4 نماذج" : "4 forms"}</option>
               </select>
             </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
+            {genMode === "full" && <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "الدرجة القصوى" : "Max score"}
               <input
                 type="number" min={1} value={genMax}
                 onChange={(e) => setGenMax(Number(e.target.value) || 1)}
                 className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
-            </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
+            </label>}
+            {genMode === "full" && <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "تُرصد في" : "Maps to"}
               <select
                 value={genTarget}
@@ -744,7 +811,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                   <option key={o.key} value={o.key}>{o.label}</option>
                 ))}
               </select>
-            </label>
+            </label>}
           </div>
           <button
             onClick={handleGenerate}
@@ -752,35 +819,39 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-success py-2.5 text-sm font-bold text-success-foreground disabled:opacity-50"
           >
             {generating ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-            {ar ? "ولّد النماذج والمفاتيح تلقائياً" : "Generate forms + keys"}
+            {genMode === "paper"
+              ? (ar ? "ولّد أوراق الأسئلة للطباعة" : "Generate question papers")
+              : (ar ? "ولّد النماذج والمفاتيح تلقائياً" : "Generate forms + keys")}
           </button>
 
           {/* generated results */}
           {generated.length > 0 && (
             <div className="space-y-2 border-t border-success/30 pt-3">
               <p className="text-xs font-bold text-success">
-                {ar ? "جاهزة — اطبع لكل نموذج ورقة الأسئلة وورقة الإجابة:" : "Ready — print each form's papers:"}
+                {generated[0]?.exam
+                  ? (ar ? "جاهزة — اطبع لكل نموذج ورقة الأسئلة وورقة الإجابة:" : "Ready — print each form's papers:")
+                  : (ar ? "جاهزة — اطبع ورقة الأسئلة لكل نموذج:" : "Ready — print each form's question paper:")}
               </p>
               {generated.map(({ exam, form }) => (
-                <div key={exam.id} className="flex items-center justify-between gap-2 rounded-xl bg-card px-3 py-2">
+                <div key={exam?.id ?? form.version} className="flex items-center justify-between gap-2 rounded-xl bg-card px-3 py-2">
                   <span className="text-sm font-bold text-foreground">
                     {ar ? `نموذج ${form.version}` : `Form ${form.version}`}
                   </span>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { if (!printQuestionPaper(exam.title, form, sheetHeader())) toast.error(ar ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups"); }}
+                      onClick={() => { if (!printQuestionPaper(exam?.title ?? genTitle.trim(), form, sheetHeader())) toast.error(ar ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups"); }}
                       className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-muted"
                     >
                       <FileText size={13} />
                       {ar ? "ورقة الأسئلة" : "Questions"}
                     </button>
-                    <button
+                    {exam && <button
                       onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups"); }}
                       className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-muted"
                     >
                       <Printer size={13} />
                       {ar ? "ورقة الإجابة" : "Answer sheet"}
-                    </button>
+                    </button>}
                   </div>
                 </div>
               ))}
