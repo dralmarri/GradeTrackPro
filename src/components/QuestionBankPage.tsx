@@ -223,7 +223,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   // appear below with answer buttons — answers found in the text are pre-selected
   const pasteSkipped = useRef(0);
   useEffect(() => {
-    if (!showPaste || !pasteText.trim()) { setReviewList(null); pasteSkipped.current = 0; return; }
+    if (!pasteText.trim()) { setReviewList(null); pasteSkipped.current = 0; return; }
     const t = setTimeout(() => {
       const { questions: parsed, skipped } = parseQuestionsText(pasteText, pasteType);
       pasteSkipped.current = skipped.length;
@@ -247,7 +247,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
     }, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pasteText, pasteType, tfRange, mcqRange, showPaste]);
+  }, [pasteText, pasteType, tfRange, mcqRange]);
 
   const handleGenerate = async () => {
     const pool = questions.filter((q) =>
@@ -763,7 +763,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                 {chapters.map((c) => (
                   <button
                     key={c}
-                    onClick={() => setGenChapters((s) => { const n = new Set(s); n.has(c) ? n.delete(c) : n.add(c); return n; })}
+                    onClick={() => setGenChapters((s) => { const n = new Set(s); if (n.has(c)) n.delete(c); else n.add(c); return n; })}
                     className={cn(
                       "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors",
                       genChapters.has(c)
@@ -786,7 +786,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                 {topics.map((t) => (
                   <button
                     key={t}
-                    onClick={() => setGenTopics((s) => { const n = new Set(s); n.has(t) ? n.delete(t) : n.add(t); return n; })}
+                    onClick={() => setGenTopics((s) => { const n = new Set(s); if (n.has(t)) n.delete(t); else n.add(t); return n; })}
                     className={cn(
                       "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors",
                       genTopics.has(t)
@@ -991,7 +991,9 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                           <button
                             onClick={async () => {
                               if (!window.confirm(ar ? "حذف هذا السؤال من البنك؟" : "Delete this question?")) return;
-                              await deleteQuestion(q.id); toast.success(ar ? "حُذف السؤال" : "Deleted");
+                              await deleteQuestion(q.id);
+                              setSelectedIds((sel) => { const n = new Set(sel); n.delete(q.id); return n; });
+                              toast.success(ar ? "حُذف السؤال" : "Deleted");
                             }}
                             className="shrink-0 rounded-lg p-1.5 text-destructive hover:bg-destructive/10"
                           >

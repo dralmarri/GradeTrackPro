@@ -473,6 +473,7 @@ export default function Index() {
           destructive
           onConfirm={() => {
             if (pendingDeleteCourse) {
+              if (pendingDeleteCourse.id === activeCourseId) setActiveCourseId(null);
               deleteCourse(pendingDeleteCourse.id);
               toast.success(t("courseDeleted"));
               setPendingDeleteCourse(null);

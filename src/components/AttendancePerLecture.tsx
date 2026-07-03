@@ -37,6 +37,15 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
   });
   const [search, setSearch] = useState("");
 
+  const { presentCount, absentCount, pct } = useMemo(() => {
+    let p = 0, a = 0;
+    safeStudents.forEach((s) => {
+      if (s.attendance?.[selectedLecture] === false) a += 1; else p += 1;
+    });
+    const total = p + a;
+    return { presentCount: p, absentCount: a, pct: total ? Math.round((p / total) * 100) : 0 };
+  }, [safeStudents, selectedLecture]);
+
   if (safeStudents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -54,15 +63,6 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
   }
 
   const current = safeLectures[selectedLecture];
-
-  const { presentCount, absentCount, pct } = useMemo(() => {
-    let p = 0, a = 0;
-    safeStudents.forEach((s) => {
-      if (s.attendance?.[selectedLecture] === false) a += 1; else p += 1;
-    });
-    const total = p + a;
-    return { presentCount: p, absentCount: a, pct: total ? Math.round((p / total) * 100) : 0 };
-  }, [safeStudents, selectedLecture]);
 
   const filtered = search
     ? safeStudents.filter((s) => s.name.includes(search.trim()))

@@ -154,7 +154,10 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const saveKey = async (exam: OmrExam) => {
     if (weightsTotal <= 0) { toast.error(ar ? "مجموع الدرجات يجب أن يكون أكبر من صفر" : "Total points must be > 0"); return; }
     setSavingKey(true);
-    await updateAnswerKey(exam.id, draftKey, draftWeights.map((w) => Number(w) || 0));
+    const nums = draftWeights.map((w) => Number(w) || 0);
+    // all-equal weights = plain equal split → don't overwrite max_score with a rounded sum (20 → 20.01)
+    const allEqual = nums.every((w) => Math.abs(w - nums[0]) < 1e-9);
+    await updateAnswerKey(exam.id, draftKey, allEqual ? undefined : nums);
     setSavingKey(false);
     const unset = draftKey.filter((k) => k < 0).length;
     toast.success(

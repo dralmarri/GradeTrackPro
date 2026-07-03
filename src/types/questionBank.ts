@@ -219,8 +219,8 @@ export function parseQuestionsText(text: string, forcedType: PasteType = "auto")
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
 
   // choices may start with a dash/bullet: "- أ. خيار" / "– ب) خيار" / "• ج: خيار"
-  const CHOICE_RE = /^[-–—•*]?\s*([أابجدهabcde]|هـ)\s*[\)\-\.:،]\s*(.+)$/i;
-  const Q_RE = /^(?:س\s*[:.]|سؤال\s*[:.]?|(\d+)\s*[\)\-\.:،])\s*(.+)$/;
+  const CHOICE_RE = /^[-–—•*]?\s*([أابجدهabcde]|هـ)\s*[)\-.:،]\s*(.+)$/i;
+  const Q_RE = /^(?:س\s*[:.]|سؤال\s*[:.]?|([\d٠-٩]+)\s*[)\-.:،])\s*(.+)$/;
   const ANS_RE = /^[-–—•*]?\s*(?:الإجابة|الاجابة|الجواب|answer)\s*(?:الصحيحة)?\s*(?:هي)?\s*[:：]?\s*(.+)$/i;
   const CHAPTER_RE = /^(?:الفصل|الوحدة|chapter)\s*[:：]\s*(.+)$/i;
   const TOPIC_RE = /^(?:الموضوع|العنوان|topic)\s*[:：]\s*(.+)$/i;
@@ -247,7 +247,7 @@ export function parseQuestionsText(text: string, forcedType: PasteType = "auto")
       cur = null; return;
     }
     // tolerate "أ)" / "ب." / "صح." — keep only the leading token
-    const a = ansRaw.trim().toLowerCase().replace(/[\)\-\.:،]+$/, "").split(/\s+/)[0] || "";
+    const a = ansRaw.trim().toLowerCase().replace(/[)\-.:،]+$/, "").split(/\s+/)[0] || "";
     const tf = ["صح", "ص", "true", "صواب"].includes(a) ? 0 : ["خطأ", "خ", "false", "خاطئ"].includes(a) ? 1 : -1;
     if (eff === "tf" || cur.choices.length === 0) {
       if (tf === -1) { skipped.push({ row: cur.line, reason: `إجابة غير مفهومة: ${ansRaw}` }); cur = null; return; }
@@ -270,7 +270,8 @@ export function parseQuestionsText(text: string, forcedType: PasteType = "auto")
     const qm = line.match(Q_RE);
     if (qm) {
       if (cur) flush(null, i); // previous question had no answer
-      cur = { text: qm[2].trim(), choices: [], line: i + 1, num: qm[1] ? Number(qm[1]) : undefined };
+      const rawNum = qm[1] ? qm[1].replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))) : "";
+      cur = { text: qm[2].trim(), choices: [], line: i + 1, num: rawNum ? Number(rawNum) : undefined };
       return;
     }
     const am = line.match(ANS_RE);

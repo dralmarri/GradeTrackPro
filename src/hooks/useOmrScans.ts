@@ -98,7 +98,7 @@ export function useOmrScans(examId: string | null) {
     const { error } = await db.from("omr_scans").insert({
       user_id: user.id,
       exam_id: input.examId,
-      student_id: input.studentId,
+      student_id: input.studentId || null,
       student_name: input.studentName,
       student_number: input.studentNumber || null,
       score: input.score,
@@ -120,12 +120,14 @@ export function useOmrScans(examId: string | null) {
   }, []);
 
   const deleteScan = useCallback(async (scan: OmrScanRecord) => {
-    if (scan.imagePath) {
-      await supabase.storage.from("scans").remove([scan.imagePath]);
-    }
+    // delete the row FIRST — removing the image before a failed row delete
+    // would leave a record pointing at a missing file
     const { error } = await db.from("omr_scans").delete().eq("id", scan.id);
-    if (error) console.error("Error deleting scan:", error);
-    else await fetchScans();
+    if (error) { console.error("Error deleting scan:", error); return; }
+    if (scan.imagePath) {
+      await supabase.storage.from("scans").remove([scan.imagePath]).catch(() => {});
+    }
+    await fetchScans();
   }, [fetchScans]);
 
   return { scans, loading, addScan, getImageUrl, deleteScan, refetch: fetchScans };

@@ -43,7 +43,7 @@ export default function OmrStatsDialog({ exam, open, onClose }: Props) {
       for (const s of latest) {
         const a = s.answers[qi];
         if (a === undefined) continue;
-        if (a === exam.answerKey[qi]) correct++;
+        if (exam.answerKey[qi] >= 0 && a === exam.answerKey[qi]) correct++;
         else if (a === -1) blank++;
         else wrong++;
       }

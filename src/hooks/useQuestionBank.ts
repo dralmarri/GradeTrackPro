@@ -41,6 +41,7 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
       console.error("Error fetching questions:", error);
       const { toast } = await import("sonner");
       toast.error(`تعذّر تحميل بنك الأسئلة: ${error.message || error.code || "خطأ غير معروف"}`, { duration: 9000 });
+      setQuestions([]); // never show another course's stale questions
       setLoading(false);
       return;
     }

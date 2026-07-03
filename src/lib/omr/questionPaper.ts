@@ -77,6 +77,7 @@ export function printQuestionPaper(title: string, form: GeneratedForm, header?: 
   w.document.close();
   w.focus();
   const go = () => setTimeout(() => w.print(), 150);
-  (w.document as any).fonts?.ready ? (w.document as any).fonts.ready.then(go).catch(go) : setTimeout(go, 500);
+  const fonts = (w.document as Document & { fonts?: { ready: Promise<unknown> } }).fonts;
+  if (fonts?.ready) fonts.ready.then(go, go); else setTimeout(go, 500);
   return true;
 }

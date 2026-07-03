@@ -129,8 +129,10 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   for (let b = 1; b < blocks; b++) {
     const x = questionNumberX(exam, b) - 6.5;
     const yTop = questionBubble(exam, 0, 0).y - 4;
-    const lastQ = Math.min(exam.questionCount, rows * blocks) - 1;
-    const yBot = questionBubble(exam, Math.min(rows - 1, lastQ % rows), 0).y + 4;
+    // separator length = the shorter of the two adjacent blocks; block b-1 is
+    // always full, block b may be partial only when it's the last one
+    const rowsRight = b === blocks - 1 ? exam.questionCount - rows * b : rows;
+    const yBot = questionBubble(exam, Math.max(rows, rowsRight) - 1, 0).y + 4;
     parts.push(`<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBot}" stroke="#ccc" stroke-width="0.25"/>`);
   }
 
@@ -183,6 +185,7 @@ export function printAnswerSheet(exam: OmrExam, header?: SheetHeader): boolean {
   w.document.close();
   w.focus();
   const go = () => setTimeout(() => w.print(), 150);
-  (w.document as any).fonts?.ready ? (w.document as any).fonts.ready.then(go).catch(go) : setTimeout(go, 500);
+  const fonts = (w.document as Document & { fonts?: { ready: Promise<unknown> } }).fonts;
+  if (fonts?.ready) fonts.ready.then(go, go); else setTimeout(go, 500);
   return true;
 }

@@ -236,10 +236,10 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                         </button>
                       ))}
                       <button
-                        onClick={() => overrideAnswer(it.q, answers[it.q])}
+                        onClick={() => { if (answers[it.q] !== -1) overrideAnswer(it.q, answers[it.q]); }}
                         className={cn(
                           "rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors",
-                          answers[it.q] < 0
+                          answers[it.q] === -1
                             ? "border-muted-foreground bg-muted text-foreground"
                             : "border-border text-muted-foreground hover:bg-muted",
                         )}
