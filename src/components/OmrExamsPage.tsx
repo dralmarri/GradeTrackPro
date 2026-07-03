@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Course } from "@/types/student";
+import { Course, getLabel } from "@/types/student";
 import { OmrExam, ChoiceCount, OmrSection, choiceLabels, choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import { useOmrExams } from "@/hooks/useOmrExams";
 import { printAnswerSheet } from "@/lib/omr/sheet";
@@ -87,10 +87,11 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
     img.src = url;
   };
 
+  // labels follow the course settings (المستخدم يعيد تسميتها من إعدادات المقرر)
   const componentOptions = [
-    { key: "exam1", label: ar ? "اختبار أول" : "Exam 1" },
-    { key: "exam2", label: ar ? "اختبار ثاني" : "Exam 2" },
-    { key: "finalExam", label: ar ? "نهائي" : "Final" },
+    { key: "exam1", label: getLabel(course, "exam1") },
+    { key: "exam2", label: getLabel(course, "exam2") },
+    { key: "finalExam", label: getLabel(course, "finalExam") },
     ...(course.customComponents || []).map((c) => ({ key: c.key, label: c.label })),
   ];
 
