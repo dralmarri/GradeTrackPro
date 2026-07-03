@@ -23,7 +23,7 @@ function circle(x: number, y: number, r: number, letter: string): string {
   // letter drawn in light gray so it thresholds out during scanning
   return `
     <circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#000" stroke-width="0.35"/>
-    <text x="${x}" y="${y + 1.0}" font-size="2.5" fill="#b5b5b5" text-anchor="middle" font-family="${FONT}">${letter}</text>`;
+    <text x="${x}" y="${y + 1.15}" font-size="3.2" fill="#a8a8a8" text-anchor="middle" font-family="${FONT}">${letter}</text>`;
 }
 
 export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string {
@@ -88,7 +88,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   const frameW = Math.abs(lastTop.x - firstTop.x) + 12;
 
   parts.push(`<rect x="${frameX}" y="43" width="${frameW}" height="${lastBottom.y + 4 - 43}" fill="none" stroke="#000" stroke-width="0.5" rx="2"/>`);
-  parts.push(`<text x="${PAGE_W / 2}" y="46.8" direction="rtl" font-size="3" font-weight="bold" text-anchor="middle" font-family="${FONT}">رقم الطالب</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="46.8" direction="rtl" font-size="3" font-weight="bold" text-anchor="middle" font-family="${FONT}">الرقم المدني للطالب</text>`);
   parts.push(`<text x="${frameX - 3}" y="50" direction="rtl" font-size="2.5" fill="#555" text-anchor="start" font-family="${FONT}">اكتب رقمك في المربعات</text>`);
   parts.push(`<text x="${frameX - 3}" y="53.6" direction="rtl" font-size="2.5" fill="#555" text-anchor="start" font-family="${FONT}">ثم ظلّل الرقم المطابق في كل عمود</text>`);
 

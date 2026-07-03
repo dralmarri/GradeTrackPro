@@ -25,20 +25,20 @@ export const MARKS = [
 // The scanner tries all 4 rotations and keeps the one where this dot is dark.
 export const ORIENT_MARK = { x: 22.5, y: 11, size: 5 } as const;
 
-export const BUBBLE_R = 2.5;      // bubble radius (mm)
+export const BUBBLE_R = 3.4;      // bubble radius (mm) — enlarged for easier shading
 
 // Student-ID grid
-const ID_COL_PITCH = 8;           // horizontal distance between digit columns
-const ID_ROW_PITCH = 6.0;         // vertical distance between digits 0-9
+const ID_COL_PITCH = 9;           // horizontal distance between digit columns
+const ID_ROW_PITCH = 7.4;         // vertical distance between digits 0-9
 const ID_TOP_Y = 57.5;            // y of digit-0 row (below the handwritten boxes)
 export const ID_PITCH = ID_COL_PITCH;
 
 // Question grid
-const Q_ROW_PITCH = 6.5;
-const Q_CHOICE_PITCH = 8;
-const Q_TOP_BUBBLES = 122;        // first question row when the bubble ID grid is present
+const Q_ROW_PITCH = 7.8;
+const Q_CHOICE_PITCH = 10;
+const Q_TOP_BUBBLES = 136;        // first question row (below the taller civil-ID grid)
 const Q_TOP_WRITTEN = 72;         // first question row when the ID is handwritten-only
-const Q_BOTTOM_Y = 278;
+const Q_BOTTOM_Y = 274;
 const Q_COL_XS = [28, 93, 158];   // x of choice "A" bubble per column block
 
 type IdModeExam = Pick<OmrExam, "idMode">;
@@ -56,8 +56,8 @@ export function maxQuestions(exam: IdModeExam): number {
 }
 
 // static cap used by the create-exam UI (bubble-grid mode, the smaller one)
-export const MAX_ROWS_PER_COL = Math.floor((Q_BOTTOM_Y - Q_TOP_BUBBLES) / Q_ROW_PITCH) + 1; // 25
-export const MAX_QUESTIONS = MAX_ROWS_PER_COL * Q_COL_XS.length; // 75
+export const MAX_ROWS_PER_COL = Math.floor((Q_BOTTOM_Y - Q_TOP_BUBBLES) / Q_ROW_PITCH) + 1;
+export const MAX_QUESTIONS = MAX_ROWS_PER_COL * Q_COL_XS.length;
 
 export interface BubblePos { x: number; y: number }
 

@@ -289,7 +289,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
           choiceCount: form.sections[0].choiceCount,
           targetComponent: genTarget,
           maxScore,
-          studentIdDigits: 6,
+          studentIdDigits: 12,
           sections: form.sections.length > 1 ? form.sections : undefined,
           version: genForms > 1 ? form.version : undefined,
           idMode: "bubbles",
