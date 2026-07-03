@@ -46,7 +46,7 @@ type MainView = "courses" | "settings";
 
 export default function Index() {
   
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const {
     courses,
     loading,
@@ -139,7 +139,10 @@ export default function Index() {
   // Bottom nav handlers shared across views
   const goHome = () => { setActiveCourseId(null); setMainView("courses"); };
   const goSettings = () => { setMainView("settings"); };
-  const goCourseTab = (tab: CourseTab) => { setMainView("courses"); setCourseTab(tab); };
+  const goCourseTab = (tab: "assess" | "status") => {
+    setMainView("courses");
+    setCourseTab(tab === "assess" ? "omr" : "status");
+  };
 
 
   // Settings / Course management view
@@ -538,6 +541,27 @@ export default function Index() {
 
       <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto px-4 py-6 pb-24">
 
+        {(courseTab === "exams" || courseTab === "omr") && (
+          <div className="mb-4 flex gap-2">
+            {([
+              { key: "omr", label: lang === "ar" ? "التصحيح الآلي والاختبارات" : "Auto grading & exams" },
+              { key: "exams", label: lang === "ar" ? "رصد الدرجات" : "Grade entry" },
+            ] as const).map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setCourseTab(m.key)}
+                className={
+                  courseTab === m.key
+                    ? "flex-1 rounded-xl border border-primary bg-primary/10 px-3 py-2 text-xs font-bold text-primary"
+                    : "flex-1 rounded-xl border border-border px-3 py-2 text-xs font-bold text-muted-foreground hover:bg-muted"
+                }
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {courseTab === "exams" && (
           <div className="space-y-6">
             <ExamsPage
@@ -621,10 +645,10 @@ export default function Index() {
       />
 
       <BottomNav
-        active={courseTab as BottomNavKey}
+        active={courseTab === "attendance" ? "home" : courseTab === "status" ? "status" : "assess"}
         hasActiveCourse={true}
-        onHome={goHome}
-        onCourseTab={(tab) => setCourseTab(tab)}
+        onHome={() => (courseTab === "attendance" ? goHome() : setCourseTab("attendance"))}
+        onCourseTab={(tab) => setCourseTab(tab === "assess" ? "omr" : "status")}
         onSettings={goSettings}
       />
     </div>
