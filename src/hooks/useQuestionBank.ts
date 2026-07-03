@@ -37,7 +37,13 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
       .from("omr_questions").select("*")
       .in("course_id", ids)
       .order("created_at", { ascending: true });
-    if (error) { console.error("Error fetching questions:", error); setLoading(false); return; }
+    if (error) {
+      console.error("Error fetching questions:", error);
+      const { toast } = await import("sonner");
+      toast.error(`تعذّر تحميل بنك الأسئلة: ${error.message || error.code || "خطأ غير معروف"}`, { duration: 9000 });
+      setLoading(false);
+      return;
+    }
     setQuestions((data || []).map(rowToQuestion));
     setLoading(false);
   }, [user, courseId, idsKey]);
