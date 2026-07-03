@@ -364,7 +364,11 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         return (
           <div key={exam.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
+              <div
+                className="min-w-0 flex-1 cursor-pointer"
+                onClick={() => (keyOpen ? setOpenKeyExamId(null) : openKey(exam))}
+                title={ar ? "فتح مفتاح الإجابة ودرجات الأسئلة" : "Open answer key & points"}
+              >
                 <p className="truncate font-display text-base font-bold text-foreground">{exam.title}{exam.version ? <span className="ms-2 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-bold text-primary">{`نموذج ${exam.version}`}</span> : null}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {exam.questionCount} {ar ? "سؤال" : "Qs"} · {exam.sections?.length ? (ar ? "مختلط" : "Mixed") : choiceLabels(exam.choiceCount).join(" ")} · {exam.maxScore} {ar ? "درجة" : "pts"}
