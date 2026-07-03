@@ -145,9 +145,10 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
     });
     setSaving(false);
     if (ok) {
-      toast.success(ar ? "أُضيف السؤال إلى البنك" : "Question added");
+      toast.success(ar ? "أُضيف السؤال إلى البنك ✓" : "Question added");
       setQText(""); setQCorrect(0);
       if (qType !== 2) setQChoices(new Array(qType).fill(""));
+      setShowAdd(false);
     }
   };
 
@@ -188,6 +189,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
           { duration: 6000 },
         );
         if (skipped.length) console.warn("Skipped rows:", skipped);
+        setShowExcel(false); setImportChapter(""); setImportTopic("");
       } else {
         toast.error(ar ? "فشل الاستيراد — حاول مجدداً" : "Import failed");
       }
@@ -210,6 +212,8 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
         { duration: 6000 },
       );
       setPasteText(""); setShowPaste(false); setReviewList(null);
+      setPasteType("auto"); setTfRange(""); setMcqRange("");
+      setImportChapter(""); setImportTopic("");
     } else {
       toast.error(ar ? "فشل الاستيراد" : "Import failed");
     }
