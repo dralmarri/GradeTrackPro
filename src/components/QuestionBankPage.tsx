@@ -28,7 +28,7 @@ interface Props {
     sections?: { questionCount: number; choiceCount: ChoiceCount }[];
     version?: string; idMode?: "bubbles" | "written";
   }) => Promise<string>;
-  onSetAnswerKey: (examId: string, key: number[]) => Promise<void>;
+  onSetAnswerKey: (examId: string, key: number[], weights?: number[]) => Promise<void>;
   buildExam: (id: string, form: GeneratedForm, title: string, targetComponent: string, maxScore: number, idMode: "bubbles" | "written") => OmrExam;
 }
 
@@ -68,6 +68,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const [qChapter, setQChapter] = useState("");
   const [qTopic, setQTopic] = useState("");
   const [qDifficulty, setQDifficulty] = useState<Difficulty | "">("");
+  const [qPoints, setQPoints] = useState(1);
   const [saving, setSaving] = useState(false);
 
   // --- generation form ---
@@ -139,6 +140,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
       chapter: qChapter.trim() || undefined,
       topic: qTopic.trim() || undefined,
       difficulty: (qDifficulty || undefined) as Difficulty | undefined,
+      points: qPoints,
     });
     setSaving(false);
     if (ok) {
@@ -150,9 +152,9 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
 
   const downloadTemplate = () => {
     const rows = [
-      { "السؤال": "عاصمة الكويت هي مدينة الكويت", "أ": "", "ب": "", "ج": "", "د": "", "هـ": "", "الإجابة": "صح", "الفصل": "الفصل الأول", "الموضوع": "مقدمة", "الصعوبة": "سهل" },
-      { "السؤال": "ما ناتج 2 + 3 ؟", "أ": "4", "ب": "5", "ج": "6", "د": "7", "هـ": "", "الإجابة": "ب", "الفصل": "الفصل الأول", "الموضوع": "العمليات", "الصعوبة": "متوسط" },
-      { "السؤال": "أي مما يلي عدد أولي؟", "أ": "4", "ب": "6", "ج": "7", "د": "", "هـ": "", "الإجابة": "ج", "الفصل": "الفصل الثاني", "الموضوع": "الأعداد الأولية", "الصعوبة": "صعب" },
+      { "السؤال": "عاصمة الكويت هي مدينة الكويت", "أ": "", "ب": "", "ج": "", "د": "", "هـ": "", "الإجابة": "صح", "الدرجة": 1, "الفصل": "الفصل الأول", "الموضوع": "مقدمة", "الصعوبة": "سهل" },
+      { "السؤال": "ما ناتج 2 + 3 ؟", "أ": "4", "ب": "5", "ج": "6", "د": "7", "هـ": "", "الإجابة": "ب", "الدرجة": 2, "الفصل": "الفصل الأول", "الموضوع": "العمليات", "الصعوبة": "متوسط" },
+      { "السؤال": "أي مما يلي عدد أولي؟", "أ": "4", "ب": "6", "ج": "7", "د": "", "هـ": "", "الإجابة": "ج", "الدرجة": 1, "الفصل": "الفصل الثاني", "الموضوع": "الأعداد الأولية", "الصعوبة": "صعب" },
     ];
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -257,21 +259,26 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
 
       const out: { exam: OmrExam; form: GeneratedForm }[] = [];
       for (const form of forms) {
+        // per-question weights from the bank; if any differ from 1 the exam's
+        // max score is their sum, otherwise genMax is split equally
+        const weights = form.questions.map((q) => q.points ?? 1);
+        const customWeights = weights.some((w) => w !== 1);
+        const maxScore = customWeights ? weights.reduce((a, b) => a + b, 0) : genMax;
         const id = await onCreateExam({
           title: genTitle.trim(),
           questionCount: form.questions.length,
           choiceCount: form.sections[0].choiceCount,
           targetComponent: genTarget,
-          maxScore: genMax,
+          maxScore,
           studentIdDigits: 6,
           sections: form.sections.length > 1 ? form.sections : undefined,
           version: genForms > 1 ? form.version : undefined,
           idMode: "bubbles",
         });
         if (!id) throw new Error(ar ? "فشل إنشاء الاختبار" : "Failed to create exam");
-        await onSetAnswerKey(id, form.answerKey);
+        await onSetAnswerKey(id, form.answerKey, customWeights ? weights : undefined);
         out.push({
-          exam: buildExam(id, form, genTitle.trim(), genTarget, genMax, "bubbles"),
+          exam: buildExam(id, form, genTitle.trim(), genTarget, maxScore, "bubbles"),
           form,
         });
       }
@@ -470,6 +477,13 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                       className="min-h-[36px] flex-1 resize-y rounded-lg border border-transparent bg-muted/40 px-2 py-1.5 text-sm text-foreground outline-none focus:border-primary"
                       dir="rtl"
                     />
+                    <input
+                      type="number" min={0.25} step={0.25}
+                      value={q.points ?? 1}
+                      onChange={(e) => setReviewList((l) => l!.map((x, xi) => (xi === qi ? { ...x, points: Number(e.target.value) || 1 } : x)))}
+                      title={ar ? "درجة السؤال" : "Points"}
+                      className="mt-1 w-14 shrink-0 rounded-lg border border-input bg-background px-1.5 py-1 text-center text-xs text-foreground outline-none focus:border-primary"
+                    />
                     <button
                       onClick={() => setReviewList((l) => {
                         const n = l!.filter((_, xi) => xi !== qi);
@@ -604,6 +618,14 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                 <option value="medium">{DIFFICULTY_LABELS.medium}</option>
                 <option value="hard">{DIFFICULTY_LABELS.hard}</option>
               </select>
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              {ar ? "درجة السؤال" : "Points"}
+              <input
+                type="number" min={0.25} step={0.25} value={qPoints}
+                onChange={(e) => setQPoints(Number(e.target.value) || 1)}
+                className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+              />
             </label>
           </div>
 
@@ -841,12 +863,16 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                             <p className="mt-0.5 text-xs text-muted-foreground">
                               {q.choices.length === 2 ? (ar ? "صح/خطأ" : "T/F") : `${q.choices.length} ${ar ? "خيارات" : "choices"}`}
                               {" · "}{ar ? "الإجابة:" : "Answer:"} <b className="text-success">{q.choices.length === 2 ? q.choices[q.correct] : choiceLabels(q.choices.length as ChoiceCount)[q.correct]}</b>
+                              {" · "}{ar ? "الدرجة:" : "Pts:"} <b>{q.points ?? 1}</b>
                               {q.topic ? ` · ${q.topic}` : ""}
                               {q.difficulty ? ` · ${DIFFICULTY_LABELS[q.difficulty]}` : ""}
                             </p>
                           </div>
                           <button
-                            onClick={async () => { await deleteQuestion(q.id); toast.success(ar ? "حُذف السؤال" : "Deleted"); }}
+                            onClick={async () => {
+                              if (!window.confirm(ar ? "حذف هذا السؤال من البنك؟" : "Delete this question?")) return;
+                              await deleteQuestion(q.id); toast.success(ar ? "حُذف السؤال" : "Deleted");
+                            }}
                             className="shrink-0 rounded-lg p-1.5 text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 size={14} />

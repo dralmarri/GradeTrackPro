@@ -13,6 +13,7 @@ export interface BankQuestion {
   chapter?: string;       // الفصل / الوحدة
   topic?: string;         // الموضوع داخل الفصل
   difficulty?: Difficulty;
+  points?: number;        // وزن السؤال بالدرجات (الافتراضي 1)
   createdAt: string;
 }
 
@@ -98,6 +99,7 @@ export interface ParsedQuestion {
   choices: string[];
   correct: number;         // -1 = answer not in the text; user picks it before saving
   num?: number;            // original number in the pasted text (for range-based typing)
+  points?: number;         // وزن السؤال بالدرجات (الافتراضي 1)
   chapter?: string;
   topic?: string;
   difficulty?: Difficulty;
@@ -157,6 +159,8 @@ export function parseQuestionRows(rows: Record<string, unknown>[]): BulkParseRes
     const chapter = val(r, ["الفصل", "الوحدة", "chapter"]) || undefined;
     const topic = val(r, ["الموضوع", "topic"]) || undefined;
     const difficulty = DIFF_MAP[val(r, ["الصعوبة", "difficulty"]).toLowerCase()] || undefined;
+    const pointsRaw = Number(val(r, ["الدرجة", "الوزن", "points"]));
+    const points = pointsRaw > 0 ? pointsRaw : undefined;
 
     // true/false question?
     const tfAnswer = ["صح", "ص", "true", "صواب"].includes(ansRaw) ? 0
@@ -164,7 +168,7 @@ export function parseQuestionRows(rows: Record<string, unknown>[]): BulkParseRes
       : -1;
     if (choices.length === 0) {
       if (tfAnswer === -1) { skipped.push({ row: rowNo, reason: "بدون خيارات والإجابة ليست صح/خطأ" }); return; }
-      questions.push({ text, choices: ["صح", "خطأ"], correct: tfAnswer, chapter, topic, difficulty });
+      questions.push({ text, choices: ["صح", "خطأ"], correct: tfAnswer, chapter, topic, difficulty, points });
       return;
     }
 
@@ -175,7 +179,7 @@ export function parseQuestionRows(rows: Record<string, unknown>[]): BulkParseRes
     if (correct < 0 || correct >= choices.length) {
       skipped.push({ row: rowNo, reason: `إجابة غير صالحة: ${ansRaw}` }); return;
     }
-    questions.push({ text, choices, correct, chapter, topic, difficulty });
+    questions.push({ text, choices, correct, chapter, topic, difficulty, points });
   });
 
   return { questions, skipped };

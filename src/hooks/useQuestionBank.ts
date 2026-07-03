@@ -16,6 +16,7 @@ function rowToQuestion(row: any): BankQuestion {
     chapter: row.chapter || undefined,
     topic: row.topic || undefined,
     difficulty: (row.difficulty as Difficulty) || undefined,
+    points: row.points != null ? Number(row.points) : undefined,
     createdAt: row.created_at,
   };
 }
@@ -44,7 +45,7 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 
   const addQuestion = useCallback(async (input: {
-    text: string; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty;
+    text: string; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty; points?: number;
   }): Promise<boolean> => {
     if (!user || !courseId) return false;
     const { error } = await db.from("omr_questions").insert({
@@ -56,6 +57,7 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
       chapter: input.chapter || null,
       topic: input.topic || null,
       difficulty: input.difficulty || null,
+      points: input.points ?? 1,
     });
     if (error) { console.error("Error adding question:", error); return false; }
     await fetchQuestions();
@@ -63,7 +65,7 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
   }, [user, courseId, fetchQuestions]);
 
   const addQuestions = useCallback(async (items: {
-    text: string; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty;
+    text: string; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty; points?: number;
   }[]): Promise<number> => {
     if (!user || !courseId || !items.length) return 0;
     const rows = items.map((q) => ({
@@ -75,6 +77,7 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
       chapter: q.chapter || null,
       topic: q.topic || null,
       difficulty: q.difficulty || null,
+      points: q.points ?? 1,
     }));
     const { error } = await db.from("omr_questions").insert(rows);
     if (error) { console.error("Bulk insert failed:", error); return 0; }

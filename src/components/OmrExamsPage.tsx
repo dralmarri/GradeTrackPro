@@ -407,7 +407,10 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                   <History size={15} />
                 </button>
                 <button
-                  onClick={async () => { await deleteExam(exam.id); toast.success(ar ? "حُذف الاختبار" : "Exam deleted"); }}
+                  onClick={async () => {
+                    if (!window.confirm(ar ? `حذف اختبار «${exam.title}» ومفتاحه ونتائجه؟` : `Delete exam "${exam.title}" with its key and scans?`)) return;
+                    await deleteExam(exam.id); toast.success(ar ? "حُذف الاختبار" : "Exam deleted");
+                  }}
                   title={ar ? "حذف" : "Delete"}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-destructive transition-colors hover:bg-destructive/10"
                 >

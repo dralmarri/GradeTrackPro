@@ -83,7 +83,10 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
                   </p>
                 </div>
                 <button
-                  onClick={async () => { await deleteScan(s); toast.success(ar ? "حُذف من الأرشيف" : "Deleted"); }}
+                  onClick={async () => {
+                    if (!window.confirm(ar ? "حذف هذه الورقة من الأرشيف؟" : "Delete this sheet from the archive?")) return;
+                    await deleteScan(s); toast.success(ar ? "حُذف من الأرشيف" : "Deleted");
+                  }}
                   className="shrink-0 rounded-lg p-2 text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 size={15} />

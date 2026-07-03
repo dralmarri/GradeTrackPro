@@ -136,7 +136,9 @@ export default function GradeTable({
                 </td>
                 <td className="px-2 py-2">
                   <button
-                    onClick={() => onDeleteStudent(student.id)}
+                    onClick={() => {
+                      if (window.confirm(`حذف الطالب «${student.name}» وجميع درجاته؟`)) onDeleteStudent(student.id);
+                    }}
                     className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                   >
                     <Trash2 size={14} />
