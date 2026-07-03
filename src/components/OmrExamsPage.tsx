@@ -260,8 +260,8 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                 onChange={(e) => setIdMode(e.target.value as "bubbles" | "written")}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               >
-                <option value="bubbles">{ar ? "فقاعات تُقرأ آلياً" : "Bubbles (auto-read)"}</option>
-                <option value="written">{ar ? "مستطيل رقم مدني (كتابة يدوية)" : "Civil-ID box (handwritten)"}</option>
+                <option value="bubbles">{ar ? "فقاعات الرقم المدني (تُقرأ آلياً)" : "Civil-ID bubbles (auto-read)"}</option>
+                <option value="written">{ar ? "مستطيل رقم مدني (كتابة يدوية — بدون قراءة آلية)" : "Civil-ID box (handwritten only)"}</option>
               </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
