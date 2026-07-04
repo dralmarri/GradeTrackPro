@@ -160,12 +160,13 @@ export function useCourses() {
   }, [courses, fetchCourses]);
 
 
-  const addStudentsToCourse = useCallback(async (courseId: string, names: string[]) => {
+  const addStudentsToCourse = useCallback(async (courseId: string, students: { name: string; civilId?: string }[]) => {
     if (!user) return;
     const course = courses.find((c) => c.id === courseId);
     const lc = course?.lectureCount || 0;
-    const rows = names.map((name) => ({
-      course_id: courseId, user_id: user.id, name,
+    const rows = students.map((st) => ({
+      course_id: courseId, user_id: user.id, name: st.name,
+      student_number: st.civilId || null,
       lecture_bonus: new Array(lc).fill(0), attendance: new Array(lc).fill(true),
       exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
     }));
@@ -253,27 +254,35 @@ export function useCourses() {
     else await fetchCourses();
   }, [fetchCourses]);
 
-  const syncStudentsToCourse = useCallback(async (courseId: string, names: string[]) => {
+  const syncStudentsToCourse = useCallback(async (courseId: string, students: { name: string; civilId?: string }[]) => {
     if (!user) return;
     const course = courses.find((c) => c.id === courseId);
     if (!course) return;
     const lc = course.lectureCount || 0;
 
-    const incomingSet = new Set(names.map((n) => n.trim()));
+    const incomingSet = new Set(students.map((n) => n.name.trim()));
     const toDelete = course.students.filter((s) => !incomingSet.has(s.name.trim())).map((s) => s.id);
-    const existingNames = new Set(course.students.map((s) => s.name.trim()));
-    const toAdd = names.filter((n) => !existingNames.has(n.trim()));
+    const existingByName = new Map(course.students.map((s) => [s.name.trim(), s]));
+    const toAdd = students.filter((n) => !existingByName.has(n.name.trim()));
 
     if (toDelete.length > 0) {
       await db.from("students").delete().in("id", toDelete);
     }
     if (toAdd.length > 0) {
-      const rows = toAdd.map((name) => ({
-        course_id: courseId, user_id: user.id, name,
+      const rows = toAdd.map((st) => ({
+        course_id: courseId, user_id: user.id, name: st.name,
+        student_number: st.civilId || null,
         lecture_bonus: new Array(lc).fill(0), attendance: new Array(lc).fill(true),
         exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
       }));
       await db.from("students").insert(rows);
+    }
+    // existing students that now carry a civil ID in the file → learn it
+    for (const st of students) {
+      const ex = existingByName.get(st.name.trim());
+      if (ex && st.civilId && ex.studentNumber !== st.civilId) {
+        await db.from("students").update({ student_number: st.civilId }).eq("id", ex.id);
+      }
     }
     await fetchCourses();
   }, [user, courses, fetchCourses]);
