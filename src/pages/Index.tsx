@@ -633,6 +633,10 @@ export default function Index() {
             course={activeCourse}
           />
         )}
+
+        {/* explicit spacer — guarantees the last item clears the fixed
+            bottom nav regardless of container padding/dvh edge cases */}
+        <div aria-hidden className="h-24" />
       </main>
 
       <CourseStudentsDialog
