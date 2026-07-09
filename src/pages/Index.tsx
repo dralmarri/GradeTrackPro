@@ -494,7 +494,7 @@ export default function Index() {
 
   // Course detail view
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <header className="flex-shrink-0 border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4">
           <button
@@ -540,7 +540,7 @@ export default function Index() {
       </header>
 
 
-      <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto px-4 py-6 pb-24">
+      <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto px-4 py-6 pb-32">
 
         {(courseTab === "exams" || courseTab === "omr") && (
           <div className="mb-4 flex gap-2">
