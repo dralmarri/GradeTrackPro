@@ -15,6 +15,8 @@ export interface OmrScanRecord {
   answers: number[];
   imagePath: string | null;
   createdAt: string;
+  needsReview: boolean;
+  reviewCount: number;
 }
 
 function rowToScan(row: any): OmrScanRecord {
@@ -29,6 +31,8 @@ function rowToScan(row: any): OmrScanRecord {
     answers: (row.answers || []) as number[],
     imagePath: row.image_path,
     createdAt: row.created_at,
+    needsReview: Boolean(row.needs_review),
+    reviewCount: Number(row.review_count) || 0,
   };
 }
 
@@ -80,6 +84,8 @@ export function useOmrScans(examId: string | null) {
     rawCorrect: number;
     answers: number[];
     photo: Blob | null;
+    needsReview?: boolean;
+    reviewCount?: number;
   }): Promise<boolean> => {
     if (!user) return false;
     let imagePath: string | null = null;
@@ -105,6 +111,8 @@ export function useOmrScans(examId: string | null) {
       raw_correct: input.rawCorrect,
       answers: input.answers,
       image_path: imagePath,
+      needs_review: input.needsReview ?? false,
+      review_count: input.reviewCount ?? 0,
     });
     if (error) { console.error("Error recording scan:", error); return false; }
     await fetchScans();

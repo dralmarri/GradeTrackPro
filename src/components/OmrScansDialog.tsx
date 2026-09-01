@@ -3,7 +3,8 @@ import { OmrExam } from "@/types/exam";
 import { useOmrScans, OmrScanRecord } from "@/hooks/useOmrScans";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
-import { X, Loader2, ImageIcon, Trash2, History } from "lucide-react";
+import { X, Loader2, ImageIcon, Trash2, History, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Props {
   exam: OmrExam;
@@ -66,7 +67,13 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
         ) : (
           <div className="space-y-2">
             {scans.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
+              <div
+                key={s.id}
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm",
+                  s.needsReview ? "border-amber-400/60 bg-amber-500/5" : "border-border",
+                )}
+              >
                 <button
                   onClick={() => openImage(s)}
                   disabled={loadingImg === s.id}
@@ -76,7 +83,15 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
                   {loadingImg === s.id ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={17} />}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-foreground">{s.studentName || (ar ? "غير معروف" : "Unknown")}</p>
+                  <p className="flex items-center gap-1.5 truncate text-sm font-bold text-foreground">
+                    {s.studentName || (ar ? "غير معروف" : "Unknown")}
+                    {s.needsReview && (
+                      <span className="flex shrink-0 items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                        <AlertTriangle size={10} />
+                        {ar ? `يحتاج مراجعة (${s.reviewCount})` : `Needs review (${s.reviewCount})`}
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {s.score}/{exam.maxScore} · {s.rawCorrect} {ar ? "صحيحة" : "correct"}
                     {s.studentNumber ? ` · #${s.studentNumber}` : ""} · {fmtDate(s.createdAt)}

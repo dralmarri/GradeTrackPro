@@ -35,12 +35,15 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   // intended answer from the row photo and the score is recomputed
   const [reviewItems, setReviewItems] = useState<{ q: number; imageUrl?: string; reason: "blank" | "multiple" }[]>([]);
   const [answers, setAnswers] = useState<number[]>([]);
+  // which flagged questions the professor actually looked at and set an
+  // intent for — used to persist "needs review" for anything left untouched
+  const [resolvedQs, setResolvedQs] = useState<Set<number>>(new Set());
   const [studentSearch, setStudentSearch] = useState("");
   const { addScan } = useOmrScans(null); // used for recording only
 
   if (!open) return null;
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setStudentSearch(""); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,7 +85,12 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       setResult((r) => (r ? { ...r, ...graded } : r));
       return next;
     });
+    setResolvedQs((prev) => new Set(prev).add(q));
   };
+
+  // flagged questions the professor never actually looked at — these get
+  // archived with a "needs review" flag so they can be found later
+  const unresolvedCount = reviewItems.filter((it) => !resolvedQs.has(it.q)).length;
 
   const apply = async () => {
     if (!result || !selectedStudentId) {
@@ -108,15 +116,25 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         rawCorrect: result.rawCorrect,
         answers: result.answers,
         photo,
+        needsReview: unresolvedCount > 0,
+        reviewCount: unresolvedCount,
       }).catch(() => false);
       if (!archived) {
         toast.warning(ar ? "رُصدت الدرجة لكن تعذّرت أرشفة صورة الورقة" : "Score saved, but archiving the sheet photo failed");
       }
-      toast.success(
-        ar
-          ? `رُصدت الدرجة ${result.score}/${exam.maxScore} للطالب ${s?.name ?? ""}`
-          : `Scored ${result.score}/${exam.maxScore} for ${s?.name ?? ""}`,
-      );
+      if (unresolvedCount > 0) {
+        toast.warning(
+          ar
+            ? `رُصدت الدرجة، لكن ${unresolvedCount} سؤالاً لم تُراجعه — سيظهر في سجل المسح بعلامة "يحتاج مراجعة"`
+            : `Score saved, but ${unresolvedCount} question(s) were left unreviewed — flagged in the scan history as "needs review"`,
+        );
+      } else {
+        toast.success(
+          ar
+            ? `رُصدت الدرجة ${result.score}/${exam.maxScore} للطالب ${s?.name ?? ""}`
+            : `Scored ${result.score}/${exam.maxScore} for ${s?.name ?? ""}`,
+        );
+      }
       reset(); // ready to scan the next sheet
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : (ar ? "فشل رصد الدرجة — حاول مجدداً" : "Failed to apply score — try again"));
@@ -226,13 +244,22 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                 </p>
                 {reviewItems.map((it) => (
                   <div key={it.q} className="rounded-xl bg-background p-3">
-                    <p className="mb-1.5 text-xs font-bold text-foreground">
+                    <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-foreground">
                       {ar ? `سؤال ${it.q + 1}` : `Q${it.q + 1}`}
-                      <span className="ms-2 font-normal text-muted-foreground">
+                      <span className="font-normal text-muted-foreground">
                         {it.reason === "blank"
                           ? (ar ? "لم يُرصد تظليل" : "no mark detected")
                           : (ar ? "تظليل متعدد / شطب" : "multiple marks / cross-out")}
                       </span>
+                      {resolvedQs.has(it.q) ? (
+                        <span className="ms-auto flex items-center gap-1 text-[10px] font-bold text-success">
+                          <CheckCircle2 size={12} /> {ar ? "رُوجع" : "reviewed"}
+                        </span>
+                      ) : (
+                        <span className="ms-auto text-[10px] font-bold text-amber-600">
+                          {ar ? "لم تُراجع بعد" : "not yet reviewed"}
+                        </span>
+                      )}
                     </p>
                     {it.imageUrl && (
                       <img

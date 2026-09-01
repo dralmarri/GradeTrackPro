@@ -57,10 +57,10 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [college, setCollege] = useState(() => localStorage.getItem("gtp_college") || "");
   const [department, setDepartment] = useState(() => localStorage.getItem("gtp_department") || "");
 
-  // batch stats card — real numbers only (scanned count + average accuracy),
-  // aggregated across this course's exams' archived scans. No "needs review"
-  // figure is shown since that isn't persisted per-scan anywhere.
-  const [batchStats, setBatchStats] = useState<{ scanned: number; accuracy: number | null } | null>(null);
+  // batch stats card — real numbers only, aggregated across this course's
+  // exams' archived scans (scanned count, average accuracy, and how many
+  // archived sheets still have unresolved flagged questions).
+  const [batchStats, setBatchStats] = useState<{ scanned: number; accuracy: number | null; needsReview: number } | null>(null);
   useEffect(() => {
     let cancelled = false;
     const examIds = exams.map((e) => e.id);
@@ -68,19 +68,22 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
     (async () => {
       const { data, error } = await (supabase as any)
         .from("omr_scans")
-        .select("exam_id, raw_correct")
+        .select("exam_id, raw_correct, needs_review")
         .in("exam_id", examIds);
       if (cancelled) return;
       if (error || !data) { setBatchStats(null); return; }
       const qcById = new Map(exams.map((e) => [e.id, e.questionCount]));
       const ratios: number[] = [];
-      for (const row of data as { exam_id: string; raw_correct: number }[]) {
+      let needsReview = 0;
+      for (const row of data as { exam_id: string; raw_correct: number; needs_review: boolean }[]) {
         const qc = qcById.get(row.exam_id);
         if (qc && qc > 0) ratios.push((Number(row.raw_correct) || 0) / qc);
+        if (row.needs_review) needsReview++;
       }
       setBatchStats({
         scanned: data.length,
         accuracy: ratios.length ? Math.round((ratios.reduce((a, b) => a + b, 0) / ratios.length) * 100) : null,
+        needsReview,
       });
     })();
     return () => { cancelled = true; };
@@ -313,7 +316,12 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
               </button>
             )}
           </div>
-          <div className={cn("grid gap-4 text-center", batchStats.accuracy !== null ? "grid-cols-2" : "grid-cols-1")}>
+          <div className={cn(
+            "grid gap-4 text-center",
+            batchStats.accuracy !== null
+              ? (batchStats.needsReview > 0 ? "grid-cols-3" : "grid-cols-2")
+              : (batchStats.needsReview > 0 ? "grid-cols-2" : "grid-cols-1"),
+          )}>
             <div>
               <p className="text-2xl font-bold text-primary">{batchStats.scanned}</p>
               <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "تم مسحها" : "Scanned"}</p>
@@ -322,6 +330,12 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
               <div className="border-s border-border">
                 <p className="text-2xl font-bold text-success">{batchStats.accuracy}%</p>
                 <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "متوسط الإجابات الصحيحة" : "Avg. correct"}</p>
+              </div>
+            )}
+            {batchStats.needsReview > 0 && (
+              <div className="border-s border-border">
+                <p className="text-2xl font-bold text-amber-600">{batchStats.needsReview}</p>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "تحتاج مراجعة" : "Needs review"}</p>
               </div>
             )}
           </div>
