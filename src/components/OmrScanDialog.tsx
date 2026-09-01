@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Course, Student } from "@/types/student";
 import { OmrExam, gradeOmr, OmrScanResult, choiceLabelsFor } from "@/types/exam";
 import { scanAnswerSheet } from "@/lib/omr/scan";
+import { examCode } from "@/lib/omr/layout";
 import { useOmrScans } from "@/hooks/useOmrScans";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
@@ -18,9 +19,15 @@ interface Props {
   onClose: () => void;
   onApplyScore: (studentId: string, targetComponent: string, score: number) => Promise<void>;
   onLearnNumber: (studentId: string, studentNumber: string) => Promise<void>;
+  // The course's other exams — used only to recognise "this photo is
+  // actually a different exam's sheet" from the machine-readable code
+  // printed on every sheet, and offer a one-tap switch instead of the
+  // professor having to notice and re-pick manually.
+  allExams?: OmrExam[];
+  onSwitchExam?: (exam: OmrExam) => void;
 }
 
-export default function OmrScanDialog({ exam, course, open, onClose, onApplyScore, onLearnNumber }: Props) {
+export default function OmrScanDialog({ exam, course, open, onClose, onApplyScore, onLearnNumber, allExams, onSwitchExam }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const fileRef = useRef<HTMLInputElement>(null);
@@ -39,21 +46,40 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   // intent for — used to persist "needs review" for anything left untouched
   const [resolvedQs, setResolvedQs] = useState<Set<number>>(new Set());
   const [studentSearch, setStudentSearch] = useState("");
+  const [wrongExamMatch, setWrongExamMatch] = useState<OmrExam | null>(null);
   const { addScan } = useOmrScans(null); // used for recording only
 
-  if (!open) return null;
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); };
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); };
-
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
+  // Shared by the initial photo upload AND by re-analysing the same photo
+  // after switching to the exam the sheet's printed code actually matches —
+  // no need to make the professor re-take/re-upload the picture.
+  const runScan = async (file: File | Blob, examForScan: OmrExam) => {
     setScanning(true);
-    setPhoto(file);
     try {
-      const raw = await scanAnswerSheet(file, exam);
-      const graded = gradeOmr(exam, raw.answers);
+      const raw = await scanAnswerSheet(file, examForScan);
+
+      // The sheet's machine-readable code doesn't match the exam currently
+      // selected — most likely the professor scanned a different exam's
+      // sheet than the one they picked. Look for the exam it actually
+      // belongs to among the course's other exams and offer to switch,
+      // instead of silently grading it against the wrong answer key.
+      if (raw.detectedExamCode !== examCode(examForScan.id) && allExams) {
+        const match = allExams.find((e) => e.id !== examForScan.id && examCode(e.id) === raw.detectedExamCode);
+        setWrongExamMatch(match || null);
+        if (match) {
+          toast.warning(
+            ar
+              ? `يبدو أن هذه الورقة من اختبار «${match.title}» — راجع التنبيه أدناه`
+              : `This sheet looks like it's from "${match.title}" — see the notice below`,
+            { duration: 8000 },
+          );
+        }
+      } else {
+        setWrongExamMatch(null);
+      }
+
+      const graded = gradeOmr(examForScan, raw.answers);
 
       // auto-match by bubbled number against learned student numbers
       const clean = raw.studentNumber && !raw.studentNumber.includes("؟") ? raw.studentNumber : "";
@@ -74,6 +100,26 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
     } finally {
       setScanning(false);
     }
+  };
+
+  // A "switch to the matched exam" click updates the parent's selected exam
+  // (the `exam` prop below); this effect notices that and re-runs the SAME
+  // captured photo against the new exam — it never re-fires on the initial
+  // scan, since `photo` is still null at that point.
+  useEffect(() => {
+    if (!photo) return;
+    runScan(photo, exam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exam.id]);
+
+  if (!open) return null;
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setPhoto(file);
+    await runScan(file, exam);
   };
 
   // professor picks the intended answer for a flagged question → regrade
@@ -212,6 +258,28 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
 
         {result && (
           <div className="space-y-4">
+            {/* wrong-exam warning — decoded from the sheet's own printed
+                code marks, not a guess */}
+            {wrongExamMatch && onSwitchExam && (
+              <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4 shadow-sm">
+                <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-destructive">
+                  <AlertTriangle size={16} />
+                  {ar ? "هذه الورقة ليست لهذا الاختبار" : "This sheet isn't for this exam"}
+                </p>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {ar
+                    ? `الرمز المطبوع على الورقة يطابق اختبار «${wrongExamMatch.title}» — الدرجة المعروضة أدناه محسوبة بمفتاح الإجابة الخطأ.`
+                    : `The sheet's printed code matches "${wrongExamMatch.title}" — the score below was graded with the wrong answer key.`}
+                </p>
+                <button
+                  onClick={() => { onSwitchExam(wrongExamMatch); }}
+                  className="w-full rounded-xl bg-destructive py-2.5 text-sm font-bold text-destructive-foreground hover:brightness-110"
+                >
+                  {ar ? `التبديل إلى «${wrongExamMatch.title}» وإعادة القراءة` : `Switch to "${wrongExamMatch.title}" and re-read`}
+                </button>
+              </div>
+            )}
+
             {/* score summary */}
             <div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
               <p className="font-display text-4xl font-extrabold text-primary">

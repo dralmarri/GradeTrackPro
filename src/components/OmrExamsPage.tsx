@@ -860,6 +860,8 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           onClose={() => setScanExam(null)}
           onApplyScore={onApplyScore}
           onLearnNumber={onLearnNumber}
+          allExams={exams}
+          onSwitchExam={(e) => setScanExam(e)}
         />
       )}
     </div>

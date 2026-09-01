@@ -8,7 +8,7 @@
 //   6. decide marked / blank / ambiguous per question and per ID digit
 
 import { OmrExam, choiceCountFor } from "@/types/exam";
-import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble } from "@/lib/omr/layout";
+import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, CODE_BITS, codeMarkPos } from "@/lib/omr/layout";
 
 export interface OmrScanRaw {
   studentNumber: string;      // "" digits that were readable, in order
@@ -18,6 +18,7 @@ export interface OmrScanRaw {
   // can see the student's intent and set the answer manually
   review: { q: number; imageUrl?: string; reason: "blank" | "multiple" }[];
   markQuality: number;        // 0..1 how well the corner marks were found
+  detectedExamCode: number;   // decoded from the sheet's exam-code marks — compare against examCode(exam.id)
   nameImageUrl?: string;      // rectified crop of the handwritten-name box
   civilIdImageUrl?: string;   // rectified crop of the civil-ID strip (written mode)
   debug?: {
@@ -71,6 +72,14 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   }
   if (!H || bestDot < 0.5) {
     throw new Error("تعذّر تحديد اتجاه الورقة — تأكد أن المربع الصغير بجانب علامة الزاوية ظاهر");
+  }
+
+  // --- decode the exam-code marks (which exam this printed sheet is) ---
+  let detectedExamCode = 0;
+  for (let b = 0; b < CODE_BITS; b++) {
+    const p = codeMarkPos(b);
+    const dot = sampleSquare(dark, w, h, H, p.x, p.y, p.size * 0.35);
+    if (dot > 0.5) detectedExamCode |= (1 << b);
   }
 
   // --- sample bubbles ---
@@ -150,6 +159,7 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
 
   return {
     studentNumber, answers, review, markQuality: bestDot,
+    detectedExamCode,
     nameImageUrl, civilIdImageUrl,
     debug: { threshold: thr, corners, rotation: bestRotation, orientDot: bestDot, sampleRatios: debugRatios },
   };

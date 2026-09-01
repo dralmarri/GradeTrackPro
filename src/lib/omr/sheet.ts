@@ -6,6 +6,7 @@ import { OmrExam, choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import {
   PAGE_W, PAGE_H, MARK_SIZE, MARKS, ORIENT_MARK, BUBBLE_R,
   idBubble, questionBubble, questionRows, questionNumberX,
+  CODE_BITS, codeMarkPos, examCode,
 } from "@/lib/omr/layout";
 
 // Optional institutional header printed at the top of the sheet.
@@ -93,6 +94,24 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     `الدرجة: ${exam.maxScore}`,
   ].filter(Boolean).join("   ·   ");
   parts.push(`<text x="${PAGE_W / 2}" y="23.3" font-size="3.1" fill="#556" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
+
+  // ---------- exam-code marks: machine-readable "which exam is this sheet"
+  // encoding, in the always-empty 6mm gap between the header card and the
+  // name box (never touches the name box's own fixed footprint below). Lets
+  // the scanner auto-recognise the exam instead of relying only on the
+  // professor picking the right one by hand. ----------
+  {
+    const code = examCode(exam.id);
+    for (let b = 0; b < CODE_BITS; b++) {
+      const bitOn = (code >> b) & 1;
+      const p = codeMarkPos(b);
+      parts.push(
+        bitOn
+          ? `<rect x="${p.x - p.size / 2}" y="${p.y - p.size / 2}" width="${p.size}" height="${p.size}" fill="#000"/>`
+          : `<rect x="${p.x - p.size / 2}" y="${p.y - p.size / 2}" width="${p.size}" height="${p.size}" fill="none" stroke="#ccc" stroke-width="0.25"/>`,
+      );
+    }
+  }
 
   // ---------- name box — the label lives INSIDE the box's own top strip
   // (a tinted caption band with a divider line above the writing area)

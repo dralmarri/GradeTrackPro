@@ -25,6 +25,36 @@ export const MARKS = [
 // The scanner tries all 4 rotations and keeps the one where this dot is dark.
 export const ORIENT_MARK = { x: 22.5, y: 11, size: 5 } as const;
 
+// Exam-code marks: a row of small squares (filled = bit 1) machine-encoding
+// which exam a printed sheet belongs to — lets the scanner tell "this photo
+// is exam X" WITHOUT the professor telling it, instead of only the printed
+// (human-only) title/version text. Placed in the 6mm gap between the header
+// card (ends y=25) and the name box (starts y=31) — already-empty in every
+// idMode — and kept well clear of both corner-mark search windows (which
+// scan the outer 30% of the image from each side, ~ x<63mm / x>147mm here)
+// by centering the row in the page's middle third.
+export const CODE_BITS = 10; // 0..1023 — plenty for any one course's exams
+const CODE_MARK_SIZE = 2.4;
+const CODE_MARK_PITCH = 4.6;
+const CODE_MARK_Y = 27.8;
+export function codeMarkPos(bitIndex: number): { x: number; y: number; size: number } {
+  const totalW = (CODE_BITS - 1) * CODE_MARK_PITCH;
+  const startX = PAGE_W / 2 - totalW / 2;
+  return { x: startX + bitIndex * CODE_MARK_PITCH, y: CODE_MARK_Y, size: CODE_MARK_SIZE };
+}
+
+// Deterministic short code for an exam id (stable across print → scan,
+// computed fresh each time from the id — nothing new stored in the DB).
+// Plain FNV-1a-style string hash, mod 2^CODE_BITS.
+export function examCode(examId: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < examId.length; i++) {
+    h ^= examId.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0) % (1 << CODE_BITS);
+}
+
 // Bubble radius and every pitch below were enlarged together (from the
 // original 3.4mm bubble) for readability — bigger targets and more
 // whitespace between rows/columns for students with lower vision, while
