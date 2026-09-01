@@ -4,6 +4,7 @@ import { OmrExam, ChoiceCount, OmrSection, choiceLabels, choiceCountFor, choiceL
 import { useOmrExams } from "@/hooks/useOmrExams";
 import { printAnswerSheet } from "@/lib/omr/sheet";
 import { MAX_QUESTIONS } from "@/lib/omr/layout";
+import { daysUntilPurge, PURGE_WARNING_DAYS } from "@/lib/omr/archiveRetention";
 import OmrScanDialog from "@/components/OmrScanDialog";
 import OmrScansDialog from "@/components/OmrScansDialog";
 import OmrStatsDialog from "@/components/OmrStatsDialog";
@@ -15,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, CheckCircle2, Pencil, History, BarChart3,
-  Database, Wand2, Camera, ChevronRight,
+  Database, Wand2, Camera, ChevronRight, AlertTriangle,
 } from "lucide-react";
 
 
@@ -60,7 +61,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   // batch stats card — real numbers only, aggregated across this course's
   // exams' archived scans (scanned count, average accuracy, and how many
   // archived sheets still have unresolved flagged questions).
-  const [batchStats, setBatchStats] = useState<{ scanned: number; accuracy: number | null; needsReview: number } | null>(null);
+  const [batchStats, setBatchStats] = useState<{ scanned: number; accuracy: number | null; needsReview: number; expiringSoon: number } | null>(null);
   useEffect(() => {
     let cancelled = false;
     const examIds = exams.map((e) => e.id);
@@ -68,22 +69,25 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
     (async () => {
       const { data, error } = await (supabase as any)
         .from("omr_scans")
-        .select("exam_id, raw_correct, needs_review")
+        .select("exam_id, raw_correct, needs_review, created_at, image_path")
         .in("exam_id", examIds);
       if (cancelled) return;
       if (error || !data) { setBatchStats(null); return; }
       const qcById = new Map(exams.map((e) => [e.id, e.questionCount]));
       const ratios: number[] = [];
       let needsReview = 0;
-      for (const row of data as { exam_id: string; raw_correct: number; needs_review: boolean }[]) {
+      let expiringSoon = 0;
+      for (const row of data as { exam_id: string; raw_correct: number; needs_review: boolean; created_at: string; image_path: string | null }[]) {
         const qc = qcById.get(row.exam_id);
         if (qc && qc > 0) ratios.push((Number(row.raw_correct) || 0) / qc);
         if (row.needs_review) needsReview++;
+        if (row.image_path && daysUntilPurge(row.created_at) <= PURGE_WARNING_DAYS) expiringSoon++;
       }
       setBatchStats({
         scanned: data.length,
         accuracy: ratios.length ? Math.round((ratios.reduce((a, b) => a + b, 0) / ratios.length) * 100) : null,
         needsReview,
+        expiringSoon,
       });
     })();
     return () => { cancelled = true; };
@@ -339,6 +343,17 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
               </div>
             )}
           </div>
+          {batchStats.expiringSoon > 0 && (
+            <button
+              onClick={() => setHistoryExam(quickScanExam ?? exams[0])}
+              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-400/60 bg-amber-500/5 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+            >
+              <AlertTriangle size={13} />
+              {ar
+                ? `${batchStats.expiringSoon} صورة أرشيف ستُحذف قريباً — افتح سجل المسح لتنزيلها قبل الحذف`
+                : `${batchStats.expiringSoon} archived photo(s) will be deleted soon — open scan history to download before then`}
+            </button>
+          )}
         </div>
       )}
 
