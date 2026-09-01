@@ -58,27 +58,30 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   if (header?.institution) instLines.push(header.institution);
   if (header?.college) instLines.push(header.college);
   if (header?.department) instLines.push(header.department);
-  parts.push(`<rect x="20" y="5" width="170" height="20" fill="${NAVY_SOFT}" stroke="${NAVY}" stroke-width="0.4" rx="3"/>`);
-  parts.push(`<rect x="20" y="5" width="170" height="1.8" fill="${NAVY}" rx="3"/>`);
-  parts.push(`<rect x="20" y="5.4" width="170" height="1.4" fill="${NAVY}"/>`);
+  // Card starts a little lower than the very top edge (y=7, not 5) for
+  // breathing room from the page edge, while its BOTTOM stays at the
+  // already-verified-safe y=25 (same clearance to the name label below).
+  parts.push(`<rect x="20" y="7" width="170" height="18" fill="${NAVY_SOFT}" stroke="${NAVY}" stroke-width="0.4" rx="3"/>`);
+  parts.push(`<rect x="20" y="7" width="170" height="1.8" fill="${NAVY}" rx="3"/>`);
+  parts.push(`<rect x="20" y="7.4" width="170" height="1.4" fill="${NAVY}"/>`);
 
   instLines.forEach((line, i) => {
-    parts.push(`<text x="${PAGE_W - 25}" y="${11.5 + i * 3.4}" font-size="${i === 0 ? 3 : 2.5}" font-weight="${i === 0 ? "bold" : "normal"}" fill="${i === 0 ? NAVY : "#445"}" text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
+    parts.push(`<text x="${PAGE_W - 25}" y="${13.5 + i * 3.4}" font-size="${i === 0 ? 3 : 2.5}" font-weight="${i === 0 ? "bold" : "normal"}" fill="${i === 0 ? NAVY : "#445"}" text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
   });
 
   // institution logo — kept between the corner-mark search windows (x 64–146)
   if (header?.logoDataUrl) {
-    parts.push(`<image href="${header.logoDataUrl}" x="128" y="7" width="16" height="12" preserveAspectRatio="xMidYMid meet"/>`);
+    parts.push(`<image href="${header.logoDataUrl}" x="128" y="9" width="16" height="12" preserveAspectRatio="xMidYMid meet"/>`);
   }
 
   // exam version badge (top-left, prominent) — e.g. "نموذج أ"
   if (exam.version) {
-    parts.push(`<rect x="27" y="8" width="25" height="8.5" fill="${NAVY}" rx="2"/>`);
-    parts.push(`<text x="39.5" y="14" font-size="3.7" font-weight="bold" fill="#fff" text-anchor="middle" direction="rtl" font-family="${FONT}">نموذج ${escapeXml(exam.version)}</text>`);
+    parts.push(`<rect x="27" y="10" width="25" height="8.5" fill="${NAVY}" rx="2"/>`);
+    parts.push(`<text x="39.5" y="16" font-size="3.7" font-weight="bold" fill="#fff" text-anchor="middle" direction="rtl" font-family="${FONT}">نموذج ${escapeXml(exam.version)}</text>`);
   }
 
   // ---------- title block ----------
-  parts.push(`<text x="${PAGE_W / 2}" y="18.5" font-size="5" font-weight="bold" fill="${NAVY}" text-anchor="middle" font-family="${FONT}">${escapeXml(exam.title)}</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="20.5" font-size="5" font-weight="bold" fill="${NAVY}" text-anchor="middle" font-family="${FONT}">${escapeXml(exam.title)}</text>`);
   const infoBits = [
     header?.courseName ? `المقرر: ${header.courseName}` : "",
     `عدد الأسئلة: ${exam.questionCount}`,

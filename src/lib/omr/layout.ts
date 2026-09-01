@@ -81,10 +81,17 @@ const COL_X_SETS: Record<number, number[]> = {
   3: [28, 93, 158],
 };
 
+// Above this many questions, prefer two side-by-side columns even if a
+// single tall column would technically still fit — reads as a proper
+// answer sheet rather than one long list. The hard capacity limits
+// (maxR, 2*maxR) still apply on top of this for very large exams.
+const COMFORTABLE_SINGLE_COL = 12;
+
 export function gridSpec(exam: GridExam): GridSpec {
   const maxR = maxRowsPerCol(exam);
   const n = Math.max(1, exam.questionCount);
-  const cols = n <= maxR ? 1 : n <= 2 * maxR ? 2 : 3;
+  const singleColCap = Math.min(maxR, COMFORTABLE_SINGLE_COL);
+  const cols = n <= singleColCap ? 1 : n <= 2 * maxR ? 2 : 3;
   const rows = Math.ceil(n / cols);
   const avail = Q_BOTTOM_Y - qTopY(exam);
   const pitch = rows > 1
