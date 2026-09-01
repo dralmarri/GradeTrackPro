@@ -23,7 +23,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
-  Plus,
   Upload,
   ChevronLeft,
   CalendarIcon,
@@ -35,7 +34,6 @@ import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 
 import { tf } from "@/lib/translations";
-import AppStoreBanner from "@/components/AppStoreBanner";
 
 
 type CourseTab = "attendance" | "exams" | "omr" | "status";
@@ -212,17 +210,6 @@ export default function Index() {
     return (
       <div className="flex h-dvh flex-col overflow-hidden bg-background">
         <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-4 py-6 pb-24">
-          <AppStoreBanner />
-          <div className="mb-4 flex items-center justify-end">
-            <button
-              onClick={() => setShowNewCourse(true)}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98]"
-            >
-              <Plus size={18} />
-              {t("newCourse")}
-            </button>
-          </div>
-
           {/* New Course Modal */}
           <AnimatePresence>
             {showNewCourse && (
@@ -404,6 +391,7 @@ export default function Index() {
             onAddStudents={(courseId, names) => { addStudentsToCourse(courseId, names.map((n) => ({ name: n }))); }}
             onDeleteStudent={deleteStudent}
             onSelectCourse={(id) => setActiveCourseId(id)}
+            onNewCourse={() => setShowNewCourse(true)}
           />
         </main>
 

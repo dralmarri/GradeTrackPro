@@ -17,6 +17,7 @@ import {
   Users,
   ChevronDown,
   Settings2,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -36,6 +37,7 @@ interface CourseManagerProps {
   onAddStudents: (courseId: string, names: string[]) => void;
   onDeleteStudent: (courseId: string, studentId: string) => void;
   onSelectCourse: (courseId: string) => void;
+  onNewCourse?: () => void;
 }
 
 export default function CourseManager({
@@ -45,6 +47,7 @@ export default function CourseManager({
   onAddStudents,
   onDeleteStudent,
   onSelectCourse,
+  onNewCourse,
 }: CourseManagerProps) {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
@@ -176,9 +179,18 @@ export default function CourseManager({
     return (
       <div className="mx-auto w-full max-w-2xl space-y-4">
         {header}
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border py-16 text-center text-muted-foreground">
           <BookOpen size={32} className="mb-3" />
           <p className="font-display text-lg">{t("noCoursesManage")}</p>
+          {onNewCourse && (
+            <button
+              onClick={onNewCourse}
+              className="mt-4 flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110"
+            >
+              <Sparkles size={15} />
+              {t("newCourse")}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -187,9 +199,20 @@ export default function CourseManager({
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4">
       {header}
-      <h3 className="px-1 font-display text-sm font-bold text-foreground">
-        {lang === "ar" ? "مقرراتي الدراسية" : "My Courses"}
-      </h3>
+      <div className="flex items-center justify-between gap-2 px-1">
+        <h3 className="font-display text-sm font-bold text-foreground">
+          {lang === "ar" ? "مقرراتي الدراسية" : "My Courses"}
+        </h3>
+        {onNewCourse && (
+          <button
+            onClick={onNewCourse}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 font-display text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110"
+          >
+            <Plus size={14} />
+            {t("newCourse")}
+          </button>
+        )}
+      </div>
       {courses.map((course) => (
         <div
           key={course.id}
