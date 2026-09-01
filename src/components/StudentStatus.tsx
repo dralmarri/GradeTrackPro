@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Student, Course, getLabel } from "@/types/student";
 import { getBonusTotal, getMaxTotal, getPercentage, getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
-import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy } from "lucide-react";
+import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy, ChevronDown } from "lucide-react";
 import { GradeTier, LetterTier, loadGradeTiers, loadLetterTiers, getTierFor, getLetterFor } from "@/lib/gradeTiers";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts";
@@ -17,6 +17,10 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
   const [searchQuery, setSearchQuery] = useState("");
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
   const [letterTiers, setLetterTiers] = useState<LetterTier[]>(loadLetterTiers());
+  // Card details (per-component breakdown + absences) stay collapsed by
+  // default so the list is scannable at a glance; expand one student at a
+  // time to dig in.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -183,6 +187,12 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
           const grade = getGrade(total, maxTotal);
           const letter = grade.letter.letter;
           const bonusOn = course.bonusEnabled !== false;
+          // A brand-new student with nothing entered yet (total === 0)
+          // is NOT the same as a student who scored zero — showing an "F"
+          // and a sad-face for someone simply not graded yet is misleading
+          // and needlessly alarming this early in the semester.
+          const hasAnyGrade = total !== 0;
+          const isExpanded = expandedId === student.id;
           const isPositiveBonus = bonusTotal > 0;
           const isNegativeBonus = bonusTotal < 0;
 
@@ -250,79 +260,101 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.02 }}
-              className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md"
+              className="rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md"
             >
-              {/* Header row: name + letter badge on right, total on left */}
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  {grade.tier?.emoji && (
+              {/* Compact row, always visible: name + total (or "not graded
+                  yet") + an expand toggle for the breakdown/absences. No
+                  letter grade or emoji shown until something is actually
+                  entered — avoids marking every new student as failing. */}
+              <button
+                type="button"
+                onClick={() => setExpandedId((v) => (v === student.id ? null : student.id))}
+                className="flex w-full items-center justify-between gap-3 p-4 text-start"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  {hasAnyGrade && grade.tier?.emoji && (
                     <span className="shrink-0 text-xl leading-none" aria-hidden>
                       {grade.tier.emoji}
                     </span>
                   )}
-                  <span
-                    className={`shrink-0 rounded-md px-2 py-0.5 font-display text-xs font-bold ${letterBadgeClass}`}
-                    dir="ltr"
-                  >
-                    {letter}
-                  </span>
-                  <h3 className="font-display text-base font-bold text-foreground truncate">{student.name}</h3>
+                  {hasAnyGrade && (
+                    <span
+                      className={`shrink-0 rounded-md px-2 py-0.5 font-display text-xs font-bold ${letterBadgeClass}`}
+                      dir="ltr"
+                    >
+                      {letter}
+                    </span>
+                  )}
+                  <h3 className="truncate font-display text-base font-bold text-foreground">{student.name}</h3>
+                  {absenceCount > 0 && (
+                    <span className="flex shrink-0 items-center gap-1 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-destructive" />
+                      {absenceCount}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-baseline gap-2 font-display">
-                  <span className="text-2xl font-bold text-primary">{total}</span>
-                  <span className="text-xs text-muted-foreground">/ {maxTotal}</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  {hasAnyGrade ? (
+                    <span className="flex items-baseline gap-1 font-display" dir="ltr">
+                      <span className="text-xl font-bold text-primary">{total}</span>
+                      <span className="text-xs text-muted-foreground">/ {maxTotal}</span>
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                      لم تُرصد الدرجات بعد
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={16}
+                    className={`text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                  />
                 </div>
-              </div>
+              </button>
 
-              {/* Mini metric cards — matches Exams tabs order */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {miniCells.map((cell) => (
-                  <div
-                    key={cell.key}
-                    className={`rounded-xl px-2 py-2 text-center ${cell.highlight}`}
-                  >
-                    <p className="mb-1 text-[10px] opacity-70 truncate">{cell.label}</p>
-                    <p className="font-display text-xl font-extrabold leading-none">{cell.value}</p>
-                    <p className="mt-1 text-[9px] opacity-50">من {cell.max}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Absences */}
-              <div className="mt-3 border-t border-border pt-3">
-                {absenceCount === 0 ? (
-                  <div className="flex items-center gap-2 text-xs text-success">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
-                    <span>لا توجد غيابات</span>
-                  </div>
-                ) : (
-                  <details className="group">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs">
-                      <span className="flex items-center gap-2 text-destructive">
-                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-destructive" />
-                        <span className="font-medium">
-                          الغيابات: <span className="font-display font-bold">{absenceCount}</span>
-                        </span>
-                      </span>
-                      <span className="text-muted-foreground group-open:hidden">عرض التواريخ</span>
-                      <span className="hidden text-muted-foreground group-open:inline">إخفاء</span>
-                    </summary>
-                    {absenceDates.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {absenceDates.map((d, i) => (
-                          <span
-                            key={i}
-                            className="rounded-md bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"
-                          >
-                            {fmtDate(d)}
-                          </span>
-                        ))}
+              {isExpanded && (
+                <div className="space-y-3 border-t border-border p-4 pt-3">
+                  {/* Mini metric cards — matches Exams tabs order */}
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                    {miniCells.map((cell) => (
+                      <div
+                        key={cell.key}
+                        className={`rounded-xl px-2 py-2 text-center ${cell.highlight}`}
+                      >
+                        <p className="mb-1 truncate text-[10px] opacity-70">{cell.label}</p>
+                        <p className="font-display text-xl font-extrabold leading-none">{cell.value}</p>
+                        <p className="mt-1 text-[9px] opacity-50">من {cell.max}</p>
                       </div>
-                    )}
-                  </details>
-                )}
-              </div>
+                    ))}
+                  </div>
 
+                  {/* Absences */}
+                  {absenceCount === 0 ? (
+                    <div className="flex items-center gap-2 text-xs text-success">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
+                      <span>لا توجد غيابات</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-2 text-xs font-medium text-destructive">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-destructive" />
+                        الغيابات: <span className="font-display font-bold">{absenceCount}</span>
+                      </p>
+                      {absenceDates.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {absenceDates.map((d, i) => (
+                            <span
+                              key={i}
+                              className="rounded-md bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"
+                            >
+                              {fmtDate(d)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           );
         })}
