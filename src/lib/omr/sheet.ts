@@ -58,7 +58,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   if (header?.institution) instLines.push(header.institution);
   if (header?.college) instLines.push(header.college);
   if (header?.department) instLines.push(header.department);
-  parts.push(`<rect x="20" y="5" width="170" height="24" fill="${NAVY_SOFT}" stroke="${NAVY}" stroke-width="0.4" rx="3"/>`);
+  parts.push(`<rect x="20" y="5" width="170" height="20" fill="${NAVY_SOFT}" stroke="${NAVY}" stroke-width="0.4" rx="3"/>`);
   parts.push(`<rect x="20" y="5" width="170" height="1.8" fill="${NAVY}" rx="3"/>`);
   parts.push(`<rect x="20" y="5.4" width="170" height="1.4" fill="${NAVY}"/>`);
 
@@ -84,13 +84,15 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     `عدد الأسئلة: ${exam.questionCount}`,
     `الدرجة: ${exam.maxScore}`,
   ].filter(Boolean).join("   ·   ");
-  parts.push(`<text x="${PAGE_W / 2}" y="24.5" font-size="2.7" fill="#556" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="22.5" font-size="2.7" fill="#556" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
 
   // ---------- name box (label sits just above the box, right-aligned, matching
   // the ID-strip label style below for a consistent form language). Box stays
   // at its original (25,31)-(185,42) footprint — scan.ts crops exactly that
-  // rectangle to show the professor the handwriting, so it must not move. ----------
-  parts.push(`<text x="182" y="29.6" direction="rtl" font-size="3" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">اسم الطالب بخط واضح:</text>`);
+  // rectangle to show the professor the handwriting, so it must not move.
+  // Header card now ends at y=25 (see above), leaving a clear ~2.5mm gap
+  // before this label's glyph tops start — verified visually, no overlap. ----------
+  parts.push(`<text x="182" y="29.5" direction="rtl" font-size="2.6" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">اسم الطالب بخط واضح:</text>`);
   parts.push(`<rect x="25" y="31" width="160" height="11" fill="#fff" stroke="${NAVY}" stroke-width="0.5" rx="2.5"/>`);
 
   // ---------- student number block ----------
@@ -100,7 +102,12 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     // straight into the question grid (see Q_TOP_WRITTEN in layout.ts).
     const cells = 12, cellW = 8, stripW = cells * cellW;
     const sx = (PAGE_W - stripW) / 2, sy = 46, cellH = 10;
-    parts.push(`<text x="${sx + stripW}" y="${sy - 2.6}" direction="rtl" font-size="3.3" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">الرقم الجامعي للطالب:</text>`);
+    // Only ~4mm of clearance exists between the name box's fixed bottom
+    // edge (42) and this box's fixed top edge (sy=46, tied to scan.ts's
+    // civil-ID crop) — keep this label small and hugging its own box
+    // closely so it reads as "this box's caption", not a squeeze between
+    // two unrelated elements.
+    parts.push(`<text x="${sx + stripW}" y="${sy - 1}" direction="rtl" font-size="2.2" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">الرقم الجامعي للطالب:</text>`);
     parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${cellH}" fill="#f6f9fc" stroke="${NAVY}" stroke-width="0.55" rx="2"/>`);
     for (let i = 1; i < cells; i++) {
       parts.push(`<line x1="${sx + i * cellW}" y1="${sy}" x2="${sx + i * cellW}" y2="${sy + cellH}" stroke="${NAVY}" stroke-width="0.3" opacity="0.55"/>`);
