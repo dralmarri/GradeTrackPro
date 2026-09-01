@@ -63,8 +63,8 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
           { label: t("lowestGrade"), value: lowest.toString(), icon: TrendingDown, color: "bg-destructive/10 text-destructive" },
           { label: t("passRate"), value: `${((passCount / students.length) * 100).toFixed(0)}%`, icon: User, color: "bg-accent/10 text-accent" },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${stat.color}`}>
+          <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-xl ${stat.color}`}>
               <stat.icon size={16} />
             </div>
             <p className="font-display text-xl font-bold text-foreground">{stat.value}</p>

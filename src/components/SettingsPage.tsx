@@ -462,8 +462,8 @@ export default function SettingsPage({ courses, onUpdateCourse }: SettingsPagePr
           onClick={async () => { await signOut(); sonnerToast.success(t("signOut")); }}
           className="flex w-full items-center gap-3 p-4 text-right transition-colors hover:bg-muted/50"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
-            <LogOut className="text-amber-600" size={20} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10">
+            <LogOut className="text-warning" size={20} />
           </div>
           <p className="font-display text-sm font-bold text-foreground">{t("signOut")}</p>
         </button>

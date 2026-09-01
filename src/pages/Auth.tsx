@@ -22,7 +22,7 @@ export default function Auth() {
 
   if (loading) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-sky-100 dark:bg-sky-950">
+      <div className="flex h-dvh items-center justify-center bg-muted/40">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -95,7 +95,7 @@ export default function Auth() {
 
   return (
     <div
-      className="flex h-dvh flex-col overflow-hidden bg-sky-100 dark:bg-sky-950"
+      className="flex h-dvh flex-col overflow-hidden bg-muted/40"
       style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-4 overflow-y-auto">
@@ -103,7 +103,7 @@ export default function Auth() {
         <div className="mb-4 flex justify-end">
           <button
             onClick={toggleLang}
-            className="flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted"
+            className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted"
           >
             <Languages size={14} />
             {lang === "ar" ? "English" : "العربية"}
@@ -112,7 +112,7 @@ export default function Auth() {
 
         {/* Logo */}
         <div className="mb-6 flex flex-col items-center">
-          <img src={appIcon} alt="GradeTrackPro" className="mb-3 h-16 w-16 rounded-2xl shadow-lg" />
+          <img src={appIcon} alt="GradeTrackPro" className="mb-3 h-16 w-16 rounded-3xl shadow-lg" />
           <h1 className="font-display text-2xl font-bold text-foreground">GradeTrackPro</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isLogin ? t("signInTitle") : t("signUpTitle")}
@@ -120,7 +120,7 @@ export default function Auth() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-[32px] border border-border bg-card p-6 shadow-sm">
           {/* Email */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("email")}</label>
@@ -196,7 +196,7 @@ export default function Auth() {
           <button
             type="submit"
             disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-display text-sm font-bold text-primary-foreground shadow transition-all hover:brightness-110 disabled:opacity-50"
           >
             {submitting ? <Loader2 size={16} className="animate-spin" /> : isLogin ? <LogIn size={16} /> : <UserPlus size={16} />}
             {isLogin ? t("signIn") : t("signUp")}
@@ -248,7 +248,7 @@ export default function Auth() {
           <button
             onClick={handleGuestLogin}
             disabled={guestLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
           >
             {guestLoading ? <Loader2 size={16} className="animate-spin" /> : <UserCircle size={16} />}
             {lang === "ar" ? "الدخول كضيف" : "Continue as Guest"}

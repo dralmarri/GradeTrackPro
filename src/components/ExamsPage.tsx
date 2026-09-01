@@ -262,7 +262,7 @@ export default function ExamsPage({
       {/* Import Preview Dialog */}
       {preview && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-2 sm:p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-card shadow-2xl border border-border">
+          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl bg-card shadow-2xl border border-border">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div>
                 <h3 className="font-display text-lg font-bold">{t("reviewGrades")}</h3>
@@ -324,7 +324,7 @@ export default function ExamsPage({
         {filteredStudents.map((student, idx) => {
           const currentVal = getVal(student);
           return (
-            <div key={student.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+            <div key={student.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground">
                 {idx + 1}
               </span>
@@ -354,7 +354,7 @@ export default function ExamsPage({
       </div>
 
       {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+      <div className="hidden sm:block overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-secondary/50">

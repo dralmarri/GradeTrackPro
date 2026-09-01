@@ -114,7 +114,7 @@ export default function CourseManager({
       {courses.map((course) => (
         <div
           key={course.id}
-          className="rounded-xl border border-border bg-card p-5 shadow-sm"
+          className="rounded-3xl border border-border bg-card p-5 md:p-6 shadow-sm"
         >
           {editingId === course.id ? (
             // Edit mode
@@ -250,23 +250,31 @@ export default function CourseManager({
           ) : (
             // View mode
             <>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
-                  {course.section && (
-                    <p className="text-xs text-muted-foreground">{t("sectionLabel")}: {course.section}</p>
-                  )}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary md:h-12 md:w-12">
+                    <BookOpen size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
+                    {course.section && (
+                      <p className="text-xs text-muted-foreground">{t("sectionLabel")}: {course.section}</p>
+                    )}
+                  </div>
                 </div>
+                <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                  {course.students.length} {t("student")}
+                </span>
               </div>
 
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "exam1")}: {course.maxExam1}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "exam2")}: {course.maxExam2}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "finalExam")}: {course.maxFinal}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "participation")}: {course.maxParticipation}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "homework")}: {course.maxHomework ?? 10}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "bonus")}: {course.maxBonus}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{t("lectures")}: {course.lectureCount}</span>
+              <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "exam1")}: {course.maxExam1}</span>
+                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "exam2")}: {course.maxExam2}</span>
+                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "finalExam")}: {course.maxFinal}</span>
+                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "participation")}: {course.maxParticipation}</span>
+                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "homework")}: {course.maxHomework ?? 10}</span>
+                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "bonus")}: {course.maxBonus}</span>
+                <span className="rounded-full bg-muted px-2.5 py-1">{t("lectures")}: {course.lectureCount}</span>
               </div>
 
               {/* Schedule info */}
@@ -306,21 +314,21 @@ export default function CourseManager({
                 />
                 <button
                   onClick={() => startEdit(course)}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   <Edit3 size={13} />
                   {t("editData")}
                 </button>
                 <button
                   onClick={() => onSelectCourse(course.id)}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   <Calendar size={13} />
                   {t("manageLectures")}
                 </button>
                 <button
                   onClick={() => setPendingDelete({ id: course.id, name: course.name })}
-                  className="flex items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                  className="flex items-center gap-1.5 rounded-xl border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
                 >
                   <Trash2 size={13} />
                   {t("deleteCourse")}

@@ -267,11 +267,11 @@ export default function Help() {
 
   return (
     <div dir={dir} className="min-h-screen bg-background">
-      <header className="border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-5">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-md safe-top">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-4">
           <Link
             to="/"
-            className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-muted"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-muted transition-colors hover:bg-muted/70"
           >
             <ChevronLeft size={20} className={dir === "rtl" ? "rotate-180" : ""} />
           </Link>
@@ -299,9 +299,9 @@ export default function Help() {
 
         <div className="space-y-4">
           {sections.map(({ icon: Icon, title, items }) => (
-            <section key={title} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <section key={title} className="rounded-[32px] border border-border bg-card p-5 md:p-6 shadow-sm">
               <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <Icon size={18} />
                 </div>
                 <h3 className="font-display text-base font-bold text-foreground">{title}</h3>
@@ -318,9 +318,9 @@ export default function Help() {
           ))}
         </div>
 
-        <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <section className="mt-6 rounded-[32px] border border-border bg-card p-5 md:p-6 shadow-sm">
           <div className="mb-3 flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Smartphone size={18} />
             </div>
             <h3 className="font-display text-base font-bold text-foreground">{installTitle}</h3>
@@ -401,14 +401,14 @@ export default function Help() {
           </p>
         </section>
 
-        <div className="mt-8 rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center">
+        <div className="mt-8 rounded-3xl border border-primary/20 bg-primary/5 p-5 text-center">
           <p className="text-sm font-medium text-foreground">
             {ar ? "هل تواجه مشكلة أو لديك اقتراح؟" : "Having an issue or have a suggestion?"}
           </p>
           <div className="mt-3 flex justify-center">
             <Link
               to="/contact"
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-display text-sm font-bold text-primary-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98]"
             >
               <MessageSquare size={16} />
               {ar ? "تواصل معنا" : "Contact us"}
