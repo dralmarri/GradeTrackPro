@@ -57,6 +57,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [institution, setInstitution] = useState(() => localStorage.getItem("gtp_institution") || "");
   const [college, setCollege] = useState(() => localStorage.getItem("gtp_college") || "");
   const [department, setDepartment] = useState(() => localStorage.getItem("gtp_department") || "");
+  // The exam-management list (print/edit/key/stats/history/delete per exam)
+  // stays tucked away by default — it's reference material a professor
+  // occasionally needs, not something that should always occupy the page.
+  const [examsOpen, setExamsOpen] = useState(false);
+  // When more than one exam has a saved key, "Start scanning" can't just
+  // guess which one — this opens a small picker instead.
+  const [scanPickerOpen, setScanPickerOpen] = useState(false);
 
   // batch stats card — real numbers only, aggregated across this course's
   // exams' archived scans (scanned count, average accuracy, and how many
@@ -94,10 +101,20 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exams.map((e) => e.id).join(","), exams.map((e) => e.questionCount).join(",")]);
 
-  // pick a sensible exam for the "quick scan" card: most recently updated exam that has a saved key
-  const quickScanExam = [...exams]
+  // Every exam that actually has a saved key — these are the ones
+  // "Start scanning" can offer, most-recently-updated first.
+  const scannableExams = [...exams]
     .filter((e) => e.answerKey.some((k) => k >= 0))
-    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0] || null;
+    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+  const quickScanExam = scannableExams[0] || null;
+
+  // One exam → scan it directly. More than one → let the professor pick
+  // which exam this sheet belongs to instead of silently guessing.
+  const handleStartScan = () => {
+    if (scannableExams.length === 0) return;
+    if (scannableExams.length === 1) { setScanExam(scannableExams[0]); return; }
+    setScanPickerOpen(true);
+  };
 
   const sheetHeader = () => ({
     institution: institution.trim() || undefined,
@@ -172,6 +189,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         { duration: 6000 },
       );
       setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4 }]); setMaxScore(20); setFormsCount(1);
+      setExamsOpen(true);
       setOpenKeyExamId(firstId);
       setDraftKey(new Array(totalQuestions).fill(-1));
       setDraftWeights(new Array(totalQuestions).fill(Math.round((maxScore / totalQuestions) * 100) / 100));
@@ -269,14 +287,14 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         </button>
       </div>
 
-      {/* quick scan — a normal button like the two above it. The camera
-          view itself only appears once tapped (inside OmrScanDialog),
-          instead of a large decorative camera mockup sitting on the page
-          at all times before there's anything to scan. */}
+      {/* quick scan — a normal button like the two above it, not tied to
+          any one exam. One scannable exam → scans it directly; more than
+          one → asks which exam this sheet is for. The camera view itself
+          only appears once tapped (inside OmrScanDialog). */}
       <button
         type="button"
-        onClick={() => quickScanExam && setScanExam(quickScanExam)}
-        disabled={!quickScanExam}
+        onClick={handleStartScan}
+        disabled={scannableExams.length === 0}
         className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60 sm:gap-5 sm:p-5"
       >
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground sm:h-14 sm:w-14">
@@ -285,14 +303,57 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold text-foreground">
             {ar ? "بدء المسح الآن" : "Start scanning"}
-            {quickScanExam ? ` — ${quickScanExam.title}` : ""}
           </span>
           <span className="block text-xs text-muted-foreground">
-            {quickScanExam ? (ar ? "جاهز للاستخدام" : "Ready to use") : (ar ? "أدخل مفتاح إجابة أولاً" : "Set an answer key first")}
+            {scannableExams.length === 0
+              ? (ar ? "أدخل مفتاح إجابة أولاً" : "Set an answer key first")
+              : scannableExams.length === 1
+              ? (ar ? `جاهز — ${scannableExams[0].title}` : `Ready — ${scannableExams[0].title}`)
+              : (ar ? `اختر أحد ${scannableExams.length} اختبارات جاهزة` : `Choose one of ${scannableExams.length} ready exams`)}
           </span>
         </span>
         <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
       </button>
+
+      {/* exam picker — only needed when more than one exam has a key */}
+      {scanPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={() => setScanPickerOpen(false)}>
+          <div
+            className="w-full max-w-md rounded-t-3xl bg-background p-5 sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-3 font-display text-base font-bold text-foreground">
+              {ar ? "لأي اختبار هذه الورقة؟" : "Which exam is this sheet for?"}
+            </h3>
+            <div className="space-y-2">
+              {scannableExams.map((exam) => (
+                <button
+                  key={exam.id}
+                  onClick={() => { setScanExam(exam); setScanPickerOpen(false); }}
+                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-border p-3 text-start hover:bg-muted"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-foreground">
+                      {exam.title}
+                      {exam.version ? ` — ${ar ? "نموذج" : "Form"} ${exam.version}` : ""}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {exam.questionCount} {ar ? "سؤال" : "Qs"} · {exam.maxScore} {ar ? "درجة" : "pts"}
+                    </span>
+                  </span>
+                  <ChevronRight size={16} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setScanPickerOpen(false)}
+              className="mt-3 w-full rounded-xl border border-border py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              {ar ? "إلغاء" : "Cancel"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* batch stats — real numbers only, aggregated from archived scans */}
       {batchStats && batchStats.scanned > 0 && (
@@ -506,7 +567,24 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         </p>
       </details>
 
-      {/* exams list */}
+      {/* exams list — tucked behind a toggle, not always on the page.
+          Reference/management material (print, edit, key, stats, history,
+          delete per exam) the professor comes back to occasionally, not
+          something that needs to be visible every time this page opens. */}
+      <button
+        type="button"
+        onClick={() => setExamsOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-bold text-foreground transition-colors hover:bg-muted/40"
+      >
+        <span className="flex items-center gap-2">
+          <ScanLine size={16} className="text-primary" />
+          {ar ? `نماذج الاختبارات (${exams.length})` : `Exam forms (${exams.length})`}
+        </span>
+        <ChevronRight size={16} className={cn("shrink-0 text-muted-foreground/50 transition-transform", examsOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
+      </button>
+
+      {examsOpen && (
+      <>
       {exams.length === 0 && !showCreate && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center text-muted-foreground">
           <ScanLine size={32} className="mb-2 opacity-50" />
@@ -723,6 +801,8 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           </div>
         );
       })}
+      </>
+      )}
 
       {/* question bank + auto exam generation */}
       <div id="question-bank-section" className="border-t border-border pt-4 scroll-mt-4">
