@@ -24,6 +24,8 @@ import { useTheme } from "@/hooks/useTheme";
 import ShareApp from "./ShareApp";
 import CourseSettingsSection from "./CourseSettingsSection";
 import { Course } from "@/types/student";
+import { useScanArchiveCleanup } from "@/hooks/useScanArchiveCleanup";
+import { Archive, ImageOff } from "lucide-react";
 
 
 import {
@@ -161,6 +163,11 @@ export default function SettingsPage({ courses, onUpdateCourse }: SettingsPagePr
       {courses && onUpdateCourse && (
         <CourseSettingsSection courses={courses} onUpdateCourse={onUpdateCourse} />
       )}
+
+      {/* 0.5. Scan-archive storage cleanup — free-tier Supabase storage is the
+          resource this app actually risks running out of at scale; scores are
+          never touched, only the archived answer-sheet photos */}
+      {courses && courses.length > 0 && <ScanArchiveCleanupSection courses={courses} />}
 
       {/* 1. Grade Management (merged: tiers + letter scale) */}
       <div className="rounded-2xl border border-border bg-card shadow-sm">
@@ -543,6 +550,117 @@ export default function SettingsPage({ courses, onUpdateCourse }: SettingsPagePr
         </AlertDialog>
       </div>
 
+    </div>
+  );
+}
+
+// Storage-management card: lets the professor free Supabase Storage space by
+// deleting archived scan PHOTOS for courses whose semester has ended — the
+// scores were already applied to the gradebook when each sheet was scanned,
+// so deleting the photo doesn't touch anything the professor still needs.
+// Real, derivable data only: "ended" comes from the course's own semesterEnd
+// (same rule CourseManager uses for its status pill), never invented.
+function ScanArchiveCleanupSection({ courses }: { courses: Course[] }) {
+  const { lang } = useLanguage();
+  const ar = lang === "ar";
+  const { cleaning, purgeCourseArchive, purgeOlderThan } = useScanArchiveCleanup();
+  const [open, setOpen] = useState(false);
+  const [cleanedCourseId, setCleanedCourseId] = useState<string | null>(null);
+
+  const endedCourses = courses.filter((c) => {
+    if (!c.semesterEnd) return false;
+    const end = new Date(c.semesterEnd);
+    return !Number.isNaN(end.getTime()) && end.getTime() < Date.now();
+  });
+
+  const handlePurgeCourse = async (course: Course) => {
+    setCleanedCourseId(course.id);
+    try {
+      const n = await purgeCourseArchive(course.id);
+      toast.success(
+        n > 0
+          ? (ar ? `حُذفت ${n} صورة أرشيف — الدرجات لم تتأثر` : `Deleted ${n} archived photo(s) — grades untouched`)
+          : (ar ? "لا صور مؤرشفة لهذا المقرر" : "No archived photos for this course"),
+      );
+    } finally {
+      setCleanedCourseId(null);
+    }
+  };
+
+  const handlePurgeOld = async (months: number) => {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - months);
+    const n = await purgeOlderThan(cutoff);
+    toast.success(
+      n > 0
+        ? (ar ? `حُذفت ${n} صورة أرشيف أقدم من ${months} أشهر` : `Deleted ${n} photo(s) older than ${months} months`)
+        : (ar ? "لا صور أقدم من هذه المدة" : "No photos older than that"),
+    );
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 p-6 text-right"
+      >
+        <div className="flex items-center gap-2">
+          <Archive className="text-primary" size={20} />
+          <h2 className="font-display text-lg font-bold">
+            {ar ? "أرشيف صور المسح الضوئي" : "Scan photo archive"}
+          </h2>
+        </div>
+        <ChevronDown size={18} className={`text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="space-y-4 px-6 pb-6">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {ar
+              ? "كل ورقة إجابة تُمسح تُؤرشف صورتها لمراجعتها لاحقاً. هذه الصور هي ما يستهلك مساحة التخزين المجانية — وليس الدرجات نفسها. حذف الأرشيف هنا لا يغيّر أي درجة مرصودة."
+              : "Every scanned sheet archives its photo for later review. These photos are what uses up free storage — not the grades themselves. Deleting the archive here never changes a recorded grade."}
+          </p>
+
+          {endedCourses.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-foreground">
+                {ar ? "مقررات انتهى فصلها الدراسي:" : "Courses whose semester has ended:"}
+              </p>
+              {endedCourses.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-background p-3">
+                  <span className="min-w-0 truncate text-sm font-semibold text-foreground">{c.name}</span>
+                  <button
+                    onClick={() => handlePurgeCourse(c)}
+                    disabled={cleaning}
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                  >
+                    {cleaning && cleanedCourseId === c.id ? <Loader2 size={13} className="animate-spin" /> : <ImageOff size={13} />}
+                    {ar ? "تنظيف الأرشيف" : "Clean archive"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="rounded-xl border border-dashed border-border p-3">
+            <p className="mb-2 text-xs font-bold text-foreground">
+              {ar ? "أو نظّف كل الأرشيف الأقدم من مدة معينة (كل المقررات):" : "Or clean all archives older than a set period (all courses):"}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {[3, 6, 12].map((months) => (
+                <button
+                  key={months}
+                  onClick={() => handlePurgeOld(months)}
+                  disabled={cleaning}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                  {ar ? `أقدم من ${months} أشهر` : `Older than ${months} months`}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
