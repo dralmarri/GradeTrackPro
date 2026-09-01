@@ -56,6 +56,7 @@ export default function Index() {
     syncStudentsToCourse,
     updateStudent,
     updateAttendance,
+    updateLectureNote,
     importPaaetAttendance,
     deleteCourse,
     deleteStudent,
@@ -610,6 +611,7 @@ export default function Index() {
               lectures={activeCourse.lectures}
               course={activeCourse}
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
+              onUpdateNote={(sid, li, note) => updateLectureNote(activeCourse.id, sid, li, note)}
               onImportPaaet={(matched, newStudents) => importPaaetAttendance(activeCourse.id, matched, newStudents)}
             />
 

@@ -38,6 +38,7 @@ function dbRowToStudent(row: any): Student {
     studentNumber: row.student_number || undefined,
     lectureBonus: (row.lecture_bonus || []) as number[],
     attendance: (row.attendance || []) as boolean[],
+    lectureNotes: (row.lecture_notes || []) as string[],
     exam1: Number(row.exam1) || 0,
     exam2: Number(row.exam2) || 0,
     finalExam: Number(row.final_exam) || 0,
@@ -145,6 +146,7 @@ export function useCourses() {
       for (const s of course.students) {
         const oldBonus = s.lectureBonus || [];
         const oldAtt = s.attendance || [];
+        const oldNotes = s.lectureNotes || [];
         const newBonus =
           newCount > oldBonus.length
             ? [...oldBonus, ...new Array(newCount - oldBonus.length).fill(0)]
@@ -153,7 +155,11 @@ export function useCourses() {
           newCount > oldAtt.length
             ? [...oldAtt, ...new Array(newCount - oldAtt.length).fill(true)]
             : oldAtt.slice(0, newCount);
-        await db.from("students").update({ lecture_bonus: newBonus, attendance: newAtt }).eq("id", s.id);
+        const newNotes =
+          newCount > oldNotes.length
+            ? [...oldNotes, ...new Array(newCount - oldNotes.length).fill("")]
+            : oldNotes.slice(0, newCount);
+        await db.from("students").update({ lecture_bonus: newBonus, attendance: newAtt, lecture_notes: newNotes }).eq("id", s.id);
       }
     }
     await fetchCourses();
@@ -168,6 +174,7 @@ export function useCourses() {
       course_id: courseId, user_id: user.id, name: st.name,
       student_number: st.civilId || null,
       lecture_bonus: new Array(lc).fill(0), attendance: new Array(lc).fill(true),
+      lecture_notes: new Array(lc).fill(""),
       exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
     }));
     const { error } = await db.from("students").insert(rows);
@@ -181,6 +188,7 @@ export function useCourses() {
     if (updates.studentNumber !== undefined) u.student_number = updates.studentNumber || null;
     if (updates.lectureBonus !== undefined) u.lecture_bonus = updates.lectureBonus;
     if (updates.attendance !== undefined) u.attendance = updates.attendance;
+    if (updates.lectureNotes !== undefined) u.lecture_notes = updates.lectureNotes;
     if (updates.exam1 !== undefined) u.exam1 = updates.exam1;
     if (updates.exam2 !== undefined) u.exam2 = updates.exam2;
     if (updates.finalExam !== undefined) u.final_exam = updates.finalExam;
@@ -213,6 +221,17 @@ export function useCourses() {
     else await fetchCourses();
   }, [courses, fetchCourses]);
 
+  const updateLectureNote = useCallback(async (courseId: string, studentId: string, lectureIndex: number, note: string) => {
+    const course = courses.find((c) => c.id === courseId);
+    const student = course?.students.find((s) => s.id === studentId);
+    if (!student || !course) return;
+    const newNotes = [...(student.lectureNotes || new Array(course.lectureCount).fill(""))];
+    newNotes[lectureIndex] = note;
+    const { error } = await db.from("students").update({ lecture_notes: newNotes }).eq("id", studentId);
+    if (error) console.error("Error updating note:", error);
+    else await fetchCourses();
+  }, [courses, fetchCourses]);
+
   const importPaaetAttendance = useCallback(async (
     courseId: string,
     matched: { studentId: string; attendance: boolean[] }[],
@@ -232,6 +251,7 @@ export function useCourses() {
         course_id: courseId, user_id: user.id, name: s.name,
         lecture_bonus: new Array(lc).fill(0),
         attendance: s.attendance.length ? s.attendance : new Array(lc).fill(true),
+        lecture_notes: new Array(lc).fill(""),
         exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
       }));
       const { error } = await db.from("students").insert(rows);
@@ -273,6 +293,7 @@ export function useCourses() {
         course_id: courseId, user_id: user.id, name: st.name,
         student_number: st.civilId || null,
         lecture_bonus: new Array(lc).fill(0), attendance: new Array(lc).fill(true),
+        lecture_notes: new Array(lc).fill(""),
         exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
       }));
       await db.from("students").insert(rows);
@@ -306,6 +327,7 @@ export function useCourses() {
       await db.from("students").update({
         lecture_bonus: [...s.lectureBonus, 0],
         attendance: [...(s.attendance || []), true],
+        lecture_notes: [...(s.lectureNotes || []), ""],
       }).eq("id", s.id);
     }
     await fetchCourses();
@@ -351,6 +373,7 @@ export function useCourses() {
               await db.from("students").insert(course.students.map((s: Student) => ({
                 course_id: nc.id, user_id: user.id, name: s.name,
                 lecture_bonus: s.lectureBonus, attendance: s.attendance,
+                lecture_notes: (s as any).lectureNotes || [],
                 exam1: s.exam1, exam2: s.exam2, final_exam: s.finalExam, participation: s.participation,
                 homework: (s as any).homework || 0,
                 custom_scores: (s as any).customScores || {},
@@ -368,7 +391,7 @@ export function useCourses() {
 
   return {
     courses, loading, addCourse, updateCourse, addStudentsToCourse, syncStudentsToCourse,
-    updateStudent, updateLectureBonus, updateAttendance, importPaaetAttendance,
+    updateStudent, updateLectureBonus, updateAttendance, updateLectureNote, importPaaetAttendance,
     deleteCourse, deleteStudent, addLecture, deleteAllData, exportAllData, importAllData,
   };
 }

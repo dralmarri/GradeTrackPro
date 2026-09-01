@@ -1,23 +1,96 @@
 import { useRef, useState, useMemo } from "react";
 import { Student, LectureInfo, Course } from "@/types/student";
-import { ChevronRight, ChevronLeft, Search, Download, Upload, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Download, Upload, Loader2, StickyNote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { exportAttendanceTemplate, parseAttendanceFile, parsePaaetAttendanceFile } from "@/lib/excel";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Props {
   students: Student[];
   lectures: LectureInfo[];
   course: Course;
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
+  onUpdateNote: (studentId: string, lectureIndex: number, note: string) => void;
   onImportPaaet: (
     matched: { studentId: string; attendance: boolean[] }[],
     newStudents: { name: string; attendance: boolean[] }[],
   ) => Promise<void>;
 }
 
-export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onImportPaaet }: Props) {
+function NoteButton({
+  note,
+  lang,
+  onSave,
+}: {
+  note: string;
+  lang: string;
+  onSave: (text: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(note);
+  const hasNote = !!note?.trim();
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setDraft(note);
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl transition-colors",
+            hasNote ? "bg-warning/20 text-warning" : "bg-muted/60 text-muted-foreground hover:text-foreground"
+          )}
+          aria-label={lang === "ar" ? "ملاحظة" : "Note"}
+        >
+          <StickyNote size={16} fill={hasNote ? "currentColor" : "none"} />
+          {hasNote && (
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-warning ring-2 ring-card" />
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 rounded-2xl p-3" align="end">
+        <p className="mb-2 text-xs font-bold text-foreground">
+          {lang === "ar" ? "ملاحظة" : "Note"}
+        </p>
+        <Textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={lang === "ar" ? "اكتب ملاحظة عن هذا الطالب..." : "Write a note about this student..."}
+          className="min-h-[90px] resize-none text-sm"
+          autoFocus
+        />
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={() => { onSave(draft); setOpen(false); }}
+            className="flex-1 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-colors hover:opacity-90"
+          >
+            {lang === "ar" ? "حفظ" : "Save"}
+          </button>
+          {hasNote && (
+            <button
+              type="button"
+              onClick={() => { onSave(""); setDraft(""); setOpen(false); }}
+              className="rounded-xl border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:text-destructive"
+            >
+              {lang === "ar" ? "مسح" : "Clear"}
+            </button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onUpdateNote, onImportPaaet }: Props) {
   const { t, lang } = useLanguage();
   const safeStudents = students || [];
   const safeLectures = lectures || [];
@@ -208,6 +281,12 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
                 {idx + 1}
               </span>
               <p className="flex-1 truncate text-sm sm:text-base font-bold text-foreground">{student.name}</p>
+
+              <NoteButton
+                note={student.lectureNotes?.[selectedLecture] || ""}
+                lang={lang}
+                onSave={(text) => onUpdateNote(student.id, selectedLecture, text)}
+              />
 
               {/* Toggle pill */}
               <div className="flex shrink-0 items-center rounded-2xl bg-muted/60 p-1">
