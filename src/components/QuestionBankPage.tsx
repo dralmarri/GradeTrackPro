@@ -78,11 +78,24 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const [genMode, setGenMode] = useState<"full" | "paper">("full");
   const [genChapters, setGenChapters] = useState<Set<string>>(new Set());
   const [genTopics, setGenTopics] = useState<Set<string>>(new Set());
+  // manual question selection (alternative to random pick)
+  const [genPickMode, setGenPickMode] = useState<"random" | "manual">("random");
+  const [manualSelected, setManualSelected] = useState<Set<string>>(new Set());
+  const [manualPoints, setManualPoints] = useState<Record<string, number>>({});
+  const [bulkPoints, setBulkPoints] = useState(1);
   const [genForms, setGenForms] = useState(2);
   const [genTarget, setGenTarget] = useState("exam1");
   const [genMax, setGenMax] = useState(20);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{ exam: OmrExam | null; form: GeneratedForm }[]>([]);
+
+  // filtered pool used both for random generation and the manual selection list
+  const genPool = useMemo(
+    () => questions.filter((q) =>
+      (genChapters.size === 0 || genChapters.has(q.chapter || "")) &&
+      (genTopics.size === 0 || genTopics.has(q.topic || ""))),
+    [questions, genChapters, genTopics],
+  );
 
   const topics = useMemo(
     () => Array.from(new Set(questions.map((q) => q.topic).filter(Boolean))) as string[],
@@ -250,18 +263,24 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   }, [pasteText, pasteType, tfRange, mcqRange]);
 
   const handleGenerate = async () => {
-    const pool = questions.filter((q) =>
-      (genChapters.size === 0 || genChapters.has(q.chapter || "")) &&
-      (genTopics.size === 0 || genTopics.has(q.topic || "")));
+    const pool = genPool;
     if (!genTitle.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
-    if (pool.length < genCount) {
+    if (genPickMode === "manual") {
+      if (manualSelected.size === 0) {
+        toast.error(ar ? "اختر سؤالاً واحداً على الأقل من القائمة" : "Select at least one question"); return;
+      }
+    } else if (pool.length < genCount) {
       toast.error(ar ? `البنك يحتوي ${pool.length} سؤالاً فقط بهذا التصفية` : `Only ${pool.length} questions match`); return;
     }
     setGenerating(true);
     try {
-      // pick genCount questions fairly across all types (no MCQ/TF bias)
+      // pick genCount questions fairly across all types (no MCQ/TF bias) — or,
+      // in manual mode, use exactly what the professor checked off (pool order),
+      // applying any per-question point overrides set in the manual list
       const seedBase = (genTitle.trim().length * 2654435761) ^ pool.length;
-      const picked = seededShuffle(pool, seedBase).slice(0, genCount);
+      const picked = genPickMode === "manual"
+        ? pool.filter((q) => manualSelected.has(q.id)).map((q) => ({ ...q, points: manualPoints[q.id] ?? q.points ?? 1 }))
+        : seededShuffle(pool, seedBase).slice(0, genCount);
       const forms = generateForms(picked, genForms, seedBase + 17);
 
       // ورقة أسئلة فقط — طباعة بدون إنشاء اختبار تصحيح في قاعدة البيانات
@@ -802,19 +821,40 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
           )}
           <p className="text-[11px] text-muted-foreground">
             {ar
-              ? `الأسئلة المتاحة بهذا الاختيار: ${questions.filter((q) => (genChapters.size === 0 || genChapters.has(q.chapter || "")) && (genTopics.size === 0 || genTopics.has(q.topic || ""))).length}`
-              : `Questions matching: ${questions.filter((q) => (genChapters.size === 0 || genChapters.has(q.chapter || "")) && (genTopics.size === 0 || genTopics.has(q.topic || ""))).length}`}
+              ? `الأسئلة المتاحة بهذا الاختيار: ${genPool.length}`
+              : `Questions matching: ${genPool.length}`}
           </p>
 
+          {/* random vs manual question selection */}
+          <div className="flex gap-2">
+            {([
+              { key: "random", label: ar ? "اختيار عشوائي" : "Random" },
+              { key: "manual", label: ar ? "اختيار يدوي" : "Manual selection" },
+            ] as const).map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setGenPickMode(m.key)}
+                className={cn(
+                  "flex-1 rounded-xl border px-3 py-2 text-xs font-bold transition-colors",
+                  genPickMode === m.key
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <label className="space-y-1 text-xs text-muted-foreground">
+            {genPickMode === "random" && <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "عدد الأسئلة" : "Questions"}
               <input
                 type="number" min={1} max={questions.length} value={genCount}
                 onChange={(e) => setGenCount(Number(e.target.value) || 1)}
                 className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
-            </label>
+            </label>}
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "عدد النماذج" : "Forms"}
               <select
@@ -849,9 +889,99 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
               </select>
             </label>}
           </div>
+
+          {/* manual selection list */}
+          {genPickMode === "manual" && (
+            <div className="space-y-2 rounded-xl border border-border bg-card p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold text-foreground">
+                  {ar ? `المحدد: ${manualSelected.size} / ${genPool.length}` : `Selected: ${manualSelected.size} / ${genPool.length}`}
+                </span>
+                <button
+                  onClick={() => setManualSelected(
+                    manualSelected.size === genPool.length && genPool.length > 0
+                      ? new Set()
+                      : new Set(genPool.map((q) => q.id)),
+                  )}
+                  className="rounded-lg border border-border px-2.5 py-1 text-[11px] font-bold text-foreground hover:bg-muted"
+                >
+                  {manualSelected.size === genPool.length && genPool.length > 0
+                    ? (ar ? "إلغاء التحديد" : "Clear selection")
+                    : (ar ? "تحديد الكل" : "Select all")}
+                </button>
+              </div>
+
+              {manualSelected.size > 0 && (
+                <div className="flex items-center gap-2 rounded-lg bg-primary/5 px-2.5 py-2">
+                  <span className="text-[11px] font-bold text-muted-foreground">
+                    {ar ? "درجة موحدة للمحدد" : "Uniform points for selection"}
+                  </span>
+                  <input
+                    type="number" min={0.25} step={0.25} value={bulkPoints}
+                    onChange={(e) => setBulkPoints(Number(e.target.value) || 1)}
+                    className="w-16 shrink-0 rounded-lg border border-input bg-background px-1.5 py-1 text-center text-xs text-foreground outline-none focus:border-primary"
+                  />
+                  <button
+                    onClick={() => setManualPoints((mp) => {
+                      const n = { ...mp };
+                      manualSelected.forEach((id) => { n[id] = bulkPoints; });
+                      return n;
+                    })}
+                    className="rounded-lg bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground"
+                  >
+                    {ar ? "تطبيق" : "Apply"}
+                  </button>
+                </div>
+              )}
+
+              <div className="max-h-72 space-y-1.5 overflow-y-auto rounded-lg border border-border bg-background p-1.5">
+                {genPool.length === 0 && (
+                  <p className="p-2 text-center text-xs text-muted-foreground">
+                    {ar ? "لا توجد أسئلة مطابقة لهذا التصفية" : "No questions match this filter"}
+                  </p>
+                )}
+                {genPool.map((q) => (
+                  <div
+                    key={q.id}
+                    className={cn(
+                      "flex items-start gap-2 rounded-lg px-2 py-1.5",
+                      manualSelected.has(q.id) ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted/50",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={manualSelected.has(q.id)}
+                      onChange={(e) => setManualSelected((s) => {
+                        const n = new Set(s);
+                        if (e.target.checked) n.add(q.id); else n.delete(q.id);
+                        return n;
+                      })}
+                      className="mt-1 h-4 w-4 shrink-0 accent-primary"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-foreground">{q.text}</p>
+                      <div className="mt-0.5 flex flex-wrap gap-1">
+                        {q.chapter && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{q.chapter}</span>}
+                        {q.topic && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{q.topic}</span>}
+                        {q.difficulty && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{DIFFICULTY_LABELS[q.difficulty]}</span>}
+                      </div>
+                    </div>
+                    <input
+                      type="number" min={0.25} step={0.25}
+                      value={manualPoints[q.id] ?? q.points ?? 1}
+                      onChange={(e) => setManualPoints((mp) => ({ ...mp, [q.id]: Number(e.target.value) || 1 }))}
+                      title={ar ? "درجة السؤال" : "Points"}
+                      className="mt-0.5 w-14 shrink-0 rounded-lg border border-input bg-background px-1.5 py-1 text-center text-xs text-foreground outline-none focus:border-primary"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button
             onClick={handleGenerate}
-            disabled={generating}
+            disabled={generating || (genPickMode === "manual" && manualSelected.size === 0)}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-success py-2.5 text-sm font-bold text-success-foreground disabled:opacity-50"
           >
             {generating ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
