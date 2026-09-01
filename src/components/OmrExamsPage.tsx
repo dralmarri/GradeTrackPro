@@ -9,6 +9,7 @@ import OmrScanDialog from "@/components/OmrScanDialog";
 import OmrScansDialog from "@/components/OmrScansDialog";
 import OmrStatsDialog from "@/components/OmrStatsDialog";
 import QuestionBankPage from "@/components/QuestionBankPage";
+import GenerateExamPanel from "@/components/GenerateExamPanel";
 import { GeneratedForm } from "@/types/questionBank";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
@@ -246,9 +247,10 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         {ar ? "التصحيح الآلي" : "Auto Grading"}
       </h3>
 
-      {/* Section 1: Question bank — everything about writing/managing
-          questions and generating exams from them lives inside
-          QuestionBankPage's own UI, under one toggle. */}
+      {/* Section 1: Question bank — purely about managing the bank's own
+          content (add/import/paste/browse/delete questions). Generating an
+          exam FROM the bank is a separate action under "نماذج الاختبارات"
+          below, since it produces an exam, not bank content. */}
       <button
         type="button"
         onClick={() => setBankOpen((v) => !v)}
@@ -259,39 +261,16 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold text-foreground">{ar ? "بنك الأسئلة" : "Question bank"}</span>
-          <span className="block text-xs text-muted-foreground">{ar ? "إدارة الأسئلة، ونماذج الإجابة، وتوليد أوراق الاختبار منها" : "Manage questions, answer keys, and generate exam papers from them"}</span>
+          <span className="block text-xs text-muted-foreground">{ar ? "إضافة الأسئلة واستيرادها وإدارتها" : "Add, import, and manage questions"}</span>
         </span>
         <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", bankOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
       </button>
       {bankOpen && (
-        <QuestionBankPage
-          course={course}
-          bankCourseIds={bankCourseIds}
-          sheetHeader={sheetHeader}
-          componentOptions={componentOptions}
-          onCreateExam={addExam}
-          onSetAnswerKey={updateAnswerKey}
-          buildExam={(id, form: GeneratedForm, t, target, max, mode) => ({
-            id,
-            courseId: course.id,
-            title: t,
-            questionCount: form.questions.length,
-            choiceCount: form.sections[0].choiceCount,
-            targetComponent: target,
-            maxScore: max,
-            answerKey: form.answerKey,
-            studentIdDigits: 12,
-            sections: form.sections.length > 1 ? form.sections : undefined,
-            version: form.version,
-            idMode: mode,
-            createdAt: "",
-            updatedAt: "",
-          })}
-        />
+        <QuestionBankPage course={course} bankCourseIds={bankCourseIds} />
       )}
 
-      {/* Section 2: Exam forms — create/print/edit/key per exam, all under
-          one toggle instead of scattered across the page. */}
+      {/* Section 2: Exam forms — create/print/edit/key per exam, plus
+          generating exams from the question bank, all under one toggle. */}
       <button
         type="button"
         onClick={() => setFormsOpen((v) => !v)}
@@ -302,13 +281,37 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold text-foreground">{ar ? `نماذج الاختبارات (${exams.length})` : `Exam forms (${exams.length})`}</span>
-          <span className="block text-xs text-muted-foreground">{ar ? "إنشاء، طباعة، تعديل، مفاتيح الإجابة" : "Create, print, edit, answer keys"}</span>
+          <span className="block text-xs text-muted-foreground">{ar ? "إنشاء، توليد من البنك، طباعة، تعديل، مفاتيح الإجابة" : "Create, generate from bank, print, edit, answer keys"}</span>
         </span>
         <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", formsOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
       </button>
 
       {formsOpen && (
       <>
+      <GenerateExamPanel
+        course={course}
+        bankCourseIds={bankCourseIds}
+        sheetHeader={sheetHeader}
+        componentOptions={componentOptions}
+        onCreateExam={addExam}
+        onSetAnswerKey={updateAnswerKey}
+        buildExam={(id, form: GeneratedForm, t, target, max, mode) => ({
+          id,
+          courseId: course.id,
+          title: t,
+          questionCount: form.questions.length,
+          choiceCount: form.sections[0].choiceCount,
+          targetComponent: target,
+          maxScore: max,
+          answerKey: form.answerKey,
+          studentIdDigits: 12,
+          sections: form.sections.length > 1 ? form.sections : undefined,
+          version: form.version,
+          idMode: mode,
+          createdAt: "",
+          updatedAt: "",
+        })}
+      />
       <button
         onClick={() => setShowCreate((v) => !v)}
         className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
