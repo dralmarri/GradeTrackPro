@@ -6,7 +6,7 @@ export type Lang = "en" | "ar";
 export const content = {
   en: {
     dir: "ltr" as const,
-    nav: { features: "Features", pricing: "Pricing", contact: "Contact", download: "Download", getStarted: "Get Started" },
+    nav: { features: "Features", pricing: "Download", contact: "Contact", download: "Download", getStarted: "Get Started" },
     hero: {
       eyebrow: "Academic Management Platform",
       title: "Master Your Classroom, Not Your Paperwork",
@@ -158,7 +158,7 @@ export const content = {
   },
   ar: {
     dir: "rtl" as const,
-    nav: { features: "المميزات", pricing: "الأسعار", contact: "اتصل بنا", download: "تحميل التطبيق", getStarted: "ابدأ الآن" },
+    nav: { features: "المميزات", pricing: "تحميل التطبيق", contact: "اتصل بنا", download: "تحميل التطبيق", getStarted: "ابدأ الآن" },
     hero: {
       eyebrow: "منصة الإدارة الأكاديمية",
       title: "أتقن إدارة فصلك الدراسي، لا أوراقك",
