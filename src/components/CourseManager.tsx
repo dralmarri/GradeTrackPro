@@ -412,8 +412,8 @@ export default function CourseManager({
                   instead of six unlabeled buttons in one line. */}
               <div className="mt-3 space-y-2.5">
                 <div>
-                  <p className="mb-1.5 flex items-center gap-1 px-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    <Users size={11} />
+                  <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
+                    <Users size={13} />
                     {lang === "ar" ? "الطلاب" : "Students"}
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -430,8 +430,8 @@ export default function CourseManager({
                   </div>
                 </div>
                 <div>
-                  <p className="mb-1.5 flex items-center gap-1 px-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    <BookOpen size={11} />
+                  <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
+                    <BookOpen size={13} />
                     {lang === "ar" ? "المقرر" : "Course"}
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
