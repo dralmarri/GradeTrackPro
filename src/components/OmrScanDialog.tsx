@@ -131,16 +131,24 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={onClose}>
       <div
-        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-background p-5 sm:rounded-3xl"
+        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[32px] bg-background p-5 sm:rounded-[32px]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* header */}
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-display text-lg font-bold text-foreground">
-            {ar ? "تصحيح بالكاميرا" : "Scan & grade"} · {exam.title}
-          </h3>
-          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted">
-            <X size={18} />
+        <div className="mb-4 flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <Camera size={17} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-lg font-bold leading-none text-foreground">
+              {ar ? "تصحيح بالكاميرا" : "Scan & grade"}
+            </h3>
+            <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              OMR · {exam.title}
+            </p>
+          </div>
+          <button onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/70">
+            <X size={17} />
           </button>
         </div>
 
@@ -154,13 +162,25 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
             <button
               onClick={() => fileRef.current?.click()}
               disabled={scanning}
-              className="flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-primary/50 bg-primary/5 py-10 text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
+              className="group relative flex aspect-[3/4] w-full flex-col items-center justify-center overflow-hidden rounded-[32px] border-4 border-card bg-foreground/90 shadow-2xl disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {scanning ? <Loader2 size={36} className="animate-spin" /> : <Camera size={36} />}
-              <span className="text-sm font-bold">
-                {scanning ? (ar ? "جارٍ التحليل…" : "Analysing…") : (ar ? "التقاط / اختيار صورة" : "Capture / choose photo")}
-              </span>
+              <div className="absolute inset-8 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-background/40">
+                <div className="h-56 w-44 rounded-xl border-2 border-primary/80 sm:h-64 sm:w-52" />
+                <p className="mt-5 rounded-full bg-black/40 px-4 py-2 text-xs font-bold text-white backdrop-blur-md">
+                  {ar ? "قم بمحاذاة ورقة الإجابة داخل المربع" : "Align the answer sheet inside the box"}
+                </p>
+              </div>
+              <div className="absolute bottom-6 flex items-center justify-center">
+                <span className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/90 transition-transform group-hover:scale-105 group-active:scale-95">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-foreground">
+                    {scanning ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
+                  </span>
+                </span>
+              </div>
             </button>
+            <p className="text-center text-xs font-bold text-muted-foreground">
+              {scanning ? (ar ? "جارٍ التحليل…" : "Analysing…") : (ar ? "التقاط / اختيار صورة" : "Tap to capture / choose photo")}
+            </p>
             <input
               ref={fileRef}
               type="file"

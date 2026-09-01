@@ -345,19 +345,25 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   return (
     <div className="space-y-4">
       {/* header */}
-      <div className="flex items-center gap-2">
-        <Library size={18} className="text-primary" />
-        <h3 className="font-display text-lg font-bold text-foreground">
-          {ar ? "بنك الأسئلة" : "Question Bank"}
-        </h3>
-        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
-          {questions.length} {ar ? "سؤالاً" : "questions"}
+      <div className="flex items-center gap-3 rounded-[28px] border border-border bg-card p-4 shadow-sm sm:p-5">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Library size={20} />
         </span>
-        {bankCourseIds.length > 1 && (
-          <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-            {ar ? "مشترك بين الشعب" : "Shared across sections"}
-          </span>
-        )}
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-display text-lg font-bold text-foreground">
+            {ar ? "بنك الأسئلة" : "Question Bank"}
+          </h3>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
+              {questions.length} {ar ? "سؤالاً" : "questions"}
+            </span>
+            {bankCourseIds.length > 1 && (
+              <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                {ar ? "مشترك بين الشعب" : "Shared across sections"}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* actions — grouped: add questions | generate from bank */}
@@ -405,7 +411,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             onClick={b.onClick}
             disabled={b.disabled}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-2xl border p-3 text-center transition-colors disabled:opacity-40",
+              "flex flex-col items-center gap-1.5 rounded-[22px] border p-3.5 text-center transition-colors disabled:opacity-40",
               b.active
                 ? "border-primary bg-primary/10 text-primary"
                 : b.key === "gen"
@@ -413,7 +419,14 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                   : "border-border bg-card text-foreground hover:bg-muted",
             )}
           >
-            {b.icon}
+            <span
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-xl",
+                b.active ? "bg-primary/15" : b.key === "gen" ? "bg-success/15" : "bg-muted",
+              )}
+            >
+              {b.icon}
+            </span>
             <span className="text-xs font-bold">{b.title}</span>
             <span className={cn("text-[10px]", b.active ? "text-primary/80" : "text-muted-foreground")}>{b.desc}</span>
           </button>

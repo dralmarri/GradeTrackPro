@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Course, getLabel } from "@/types/student";
 import { OmrExam, ChoiceCount, OmrSection, choiceLabels, choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import { useOmrExams } from "@/hooks/useOmrExams";
@@ -12,8 +12,10 @@ import { GeneratedForm } from "@/types/questionBank";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, CheckCircle2, Pencil, History, BarChart3,
+  Database, Wand2, Camera, ChevronRight,
 } from "lucide-react";
 
 
@@ -54,6 +56,41 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [institution, setInstitution] = useState(() => localStorage.getItem("gtp_institution") || "");
   const [college, setCollege] = useState(() => localStorage.getItem("gtp_college") || "");
   const [department, setDepartment] = useState(() => localStorage.getItem("gtp_department") || "");
+
+  // batch stats card — real numbers only (scanned count + average accuracy),
+  // aggregated across this course's exams' archived scans. No "needs review"
+  // figure is shown since that isn't persisted per-scan anywhere.
+  const [batchStats, setBatchStats] = useState<{ scanned: number; accuracy: number | null } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const examIds = exams.map((e) => e.id);
+    if (examIds.length === 0) { setBatchStats(null); return; }
+    (async () => {
+      const { data, error } = await (supabase as any)
+        .from("omr_scans")
+        .select("exam_id, raw_correct")
+        .in("exam_id", examIds);
+      if (cancelled) return;
+      if (error || !data) { setBatchStats(null); return; }
+      const qcById = new Map(exams.map((e) => [e.id, e.questionCount]));
+      const ratios: number[] = [];
+      for (const row of data as { exam_id: string; raw_correct: number }[]) {
+        const qc = qcById.get(row.exam_id);
+        if (qc && qc > 0) ratios.push((Number(row.raw_correct) || 0) / qc);
+      }
+      setBatchStats({
+        scanned: data.length,
+        accuracy: ratios.length ? Math.round((ratios.reduce((a, b) => a + b, 0) / ratios.length) * 100) : null,
+      });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exams.map((e) => e.id).join(","), exams.map((e) => e.questionCount).join(",")]);
+
+  // pick a sensible exam for the "quick scan" card: most recently updated exam that has a saved key
+  const quickScanExam = [...exams]
+    .filter((e) => e.answerKey.some((k) => k >= 0))
+    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0] || null;
 
   const sheetHeader = () => ({
     institution: institution.trim() || undefined,
@@ -190,6 +227,106 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           {ar ? "اختبار جديد" : "New exam"}
         </button>
       </div>
+
+      {/* feature doorways — bank + generation live further down this page;
+          these cards give them the entry-point treatment from the approved
+          mockup instead of duplicating their functionality */}
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => document.getElementById("question-bank-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 sm:gap-5 sm:p-5"
+        >
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:h-14 sm:w-14">
+            <Database size={22} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-bold text-foreground">{ar ? "بنك الأسئلة" : "Question bank"}</span>
+            <span className="block text-xs text-muted-foreground">{ar ? "إدارة الأسئلة ونماذج الإجابة" : "Manage questions & answer keys"}</span>
+          </span>
+          <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
+        </button>
+        <button
+          type="button"
+          onClick={() => document.getElementById("question-bank-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 sm:gap-5 sm:p-5"
+        >
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-success/10 text-success sm:h-14 sm:w-14">
+            <Wand2 size={22} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-bold text-foreground">{ar ? "توليد أوراق الاختبار" : "Generate exam papers"}</span>
+            <span className="block text-xs text-muted-foreground">{ar ? "تصميم ونماذج تظليل فقاعات" : "Multi-form bubble-sheet generation"}</span>
+          </span>
+          <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
+        </button>
+      </div>
+
+      {/* quick scan */}
+      <div>
+        <div className="mb-3 flex items-center justify-between px-1">
+          <h3 className="text-lg font-bold text-foreground">{ar ? "بدء المسح الآن" : "Start scanning"}</h3>
+          <span
+            className={cn(
+              "rounded-full px-3 py-1 text-[10px] font-bold",
+              quickScanExam ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+            )}
+          >
+            {quickScanExam ? (ar ? "جاهز للاستخدام" : "Ready to use") : (ar ? "أدخل مفتاح إجابة أولاً" : "Set an answer key first")}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => quickScanExam && setScanExam(quickScanExam)}
+          disabled={!quickScanExam}
+          className="group relative flex aspect-[16/9] w-full flex-col items-center justify-center overflow-hidden rounded-[32px] border-4 border-card bg-foreground/90 shadow-2xl disabled:cursor-not-allowed disabled:opacity-60 sm:aspect-[21/9]"
+        >
+          <div className="absolute inset-6 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-background/40">
+            <div className="relative h-24 w-32 rounded-xl border-2 border-primary/80 sm:h-28 sm:w-40" />
+            <p className="mt-4 rounded-full bg-black/40 px-4 py-2 text-xs font-bold text-white backdrop-blur-md">
+              {quickScanExam
+                ? (ar ? `تصوير ورقة إجابة — ${quickScanExam.title}` : `Scan an answer sheet — ${quickScanExam.title}`)
+                : (ar ? "لا يوجد اختبار جاهز للمسح بعد" : "No exam ready to scan yet")}
+            </p>
+          </div>
+          <div className="absolute bottom-5 flex items-center justify-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/90 transition-transform group-hover:scale-105 group-active:scale-95">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-foreground">
+                <Camera size={20} />
+              </span>
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* batch stats — real numbers only, aggregated from archived scans */}
+      {batchStats && batchStats.scanned > 0 && (
+        <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h4 className="font-bold text-foreground">{ar ? "إحصائيات الدفعة الحالية" : "Current batch statistics"}</h4>
+            {historyExam === null && exams.length > 0 && (
+              <button
+                onClick={() => setHistoryExam(quickScanExam ?? exams[0])}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                {ar ? "التفاصيل" : "Details"}
+              </button>
+            )}
+          </div>
+          <div className={cn("grid gap-4 text-center", batchStats.accuracy !== null ? "grid-cols-2" : "grid-cols-1")}>
+            <div>
+              <p className="text-2xl font-bold text-primary">{batchStats.scanned}</p>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "تم مسحها" : "Scanned"}</p>
+            </div>
+            {batchStats.accuracy !== null && (
+              <div className="border-s border-border">
+                <p className="text-2xl font-bold text-success">{batchStats.accuracy}%</p>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "متوسط الإجابات الصحيحة" : "Avg. correct"}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {showCreate && (
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -571,7 +708,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       })}
 
       {/* question bank + auto exam generation */}
-      <div className="border-t border-border pt-4">
+      <div id="question-bank-section" className="border-t border-border pt-4 scroll-mt-4">
         <QuestionBankPage
           course={course}
           bankCourseIds={bankCourseIds}
