@@ -23,7 +23,7 @@ function circle(x: number, y: number, r: number, letter: string): string {
   // letter drawn in light gray so it thresholds out during scanning
   return `
     <circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#000" stroke-width="0.35"/>
-    <text x="${x}" y="${y + 1.15}" font-size="3.2" fill="#a8a8a8" text-anchor="middle" font-family="${FONT}">${letter}</text>`;
+    <text x="${x}" y="${y + 1.3}" font-size="3.6" fill="#a8a8a8" text-anchor="middle" font-family="${FONT}">${letter}</text>`;
 }
 
 const NAVY = "#1e3a5f";
@@ -81,13 +81,13 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   }
 
   // ---------- title block ----------
-  parts.push(`<text x="${PAGE_W / 2}" y="20.5" font-size="5" font-weight="bold" fill="${NAVY}" text-anchor="middle" font-family="${FONT}">${escapeXml(exam.title)}</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="16.5" font-size="5" font-weight="bold" fill="${NAVY}" text-anchor="middle" font-family="${FONT}">${escapeXml(exam.title)}</text>`);
   const infoBits = [
     header?.courseName ? `المقرر: ${header.courseName}` : "",
     `عدد الأسئلة: ${exam.questionCount}`,
     `الدرجة: ${exam.maxScore}`,
   ].filter(Boolean).join("   ·   ");
-  parts.push(`<text x="${PAGE_W / 2}" y="22.5" font-size="2.7" fill="#556" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="23.3" font-size="3.1" fill="#556" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
 
   // ---------- name box (label sits just above the box, right-aligned, matching
   // the ID-strip label style below for a consistent form language). Box stays
@@ -95,7 +95,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   // rectangle to show the professor the handwriting, so it must not move.
   // Header card now ends at y=25 (see above), leaving a clear ~2.5mm gap
   // before this label's glyph tops start — verified visually, no overlap. ----------
-  parts.push(`<text x="182" y="29.5" direction="rtl" font-size="2.6" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">اسم الطالب بخط واضح:</text>`);
+  parts.push(`<text x="182" y="29.7" direction="rtl" font-size="3" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">اسم الطالب بخط واضح:</text>`);
   parts.push(`<rect x="25" y="31" width="160" height="11" fill="#fff" stroke="${NAVY}" stroke-width="0.5" rx="2.5"/>`);
 
   // ---------- student number block ----------
@@ -110,12 +110,12 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     // civil-ID crop) — keep this label small and hugging its own box
     // closely so it reads as "this box's caption", not a squeeze between
     // two unrelated elements.
-    parts.push(`<text x="${sx + stripW}" y="${sy - 1}" direction="rtl" font-size="2.2" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">الرقم الجامعي للطالب:</text>`);
+    parts.push(`<text x="${sx + stripW}" y="${sy - 0.9}" direction="rtl" font-size="2.5" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">الرقم الجامعي للطالب:</text>`);
     parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${cellH}" fill="#f6f9fc" stroke="${NAVY}" stroke-width="0.55" rx="2"/>`);
     for (let i = 1; i < cells; i++) {
       parts.push(`<line x1="${sx + i * cellW}" y1="${sy}" x2="${sx + i * cellW}" y2="${sy + cellH}" stroke="${NAVY}" stroke-width="0.3" opacity="0.55"/>`);
     }
-    parts.push(`<text x="${sx + stripW / 2}" y="${sy + cellH + 3.4}" direction="rtl" font-size="2.4" fill="#888" text-anchor="middle" font-family="${FONT}">يُكتب رقماً بخط واضح — سيُطابَق يدوياً مع قائمة الطلاب</text>`);
+    parts.push(`<text x="${sx + stripW / 2}" y="${sy + cellH + 2.6}" direction="rtl" font-size="2.5" fill="#777" text-anchor="middle" font-family="${FONT}">يُكتب رقماً بخط واضح — سيُطابَق يدوياً مع قائمة الطلاب</text>`);
   } else {
   const firstTop = idBubble(exam, 0, 0);
   const lastTop = idBubble(exam, exam.studentIdDigits - 1, 0);
@@ -154,9 +154,12 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
       const to = Math.min((b + 1) * rows, exam.questionCount);
       const firstBubble = questionBubble(exam, b * rows, 0);
       const bx = firstBubble.x + 14;
-      const by = firstBubble.y - 9;
-      parts.push(`<rect x="${bx - 16}" y="${by - 4.2}" width="32" height="6" fill="${NAVY}" rx="3"/>`);
-      parts.push(`<text x="${bx}" y="${by}" direction="rtl" font-size="2.9" font-weight="bold" fill="#fff" text-anchor="middle" font-family="${FONT}">الأسئلة ${from} - ${to}</text>`);
+      // Pulled in closer to the first question row (was -9) so it sits
+      // cleanly between the ID-strip hint text above and the bubbles below,
+      // instead of crowding the hint text.
+      const by = firstBubble.y - 7;
+      parts.push(`<rect x="${bx - 18}" y="${by - 4.4}" width="36" height="6.8" fill="${NAVY}" rx="3.2"/>`);
+      parts.push(`<text x="${bx}" y="${by}" direction="rtl" font-size="3.3" font-weight="bold" fill="#fff" text-anchor="middle" font-family="${FONT}">الأسئلة ${from} - ${to}</text>`);
     }
   }
   // light separators between question column blocks
@@ -180,15 +183,16 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     // very light zebra band behind every other row, purely decorative — a
     // near-white tint that never risks being read as a "filled" bubble.
     if (q % 2 === 1) {
-      const bandX = questionNumberX(exam, colBlock) - 7.5;
+      const bandX = questionNumberX(exam, colBlock) - 8.5;
       const lastP = questionBubble(exam, q, qChoices - 1);
-      parts.push(rowBand(bandX, numPos.y - 3, lastP.x - bandX + 6, 6, true));
+      parts.push(rowBand(bandX, numPos.y - 3.6, lastP.x - bandX + 7, 7.2, true));
     }
 
-    // question number in a small navy-outlined circle instead of bare text
+    // question number in a small navy-outlined circle instead of bare text —
+    // enlarged for legibility, matching the bigger answer bubbles
     const nx = questionNumberX(exam, colBlock);
-    parts.push(`<circle cx="${nx}" cy="${numPos.y}" r="2.6" fill="#fff" stroke="${NAVY}" stroke-width="0.4"/>`);
-    parts.push(`<text x="${nx}" y="${numPos.y + 1.05}" font-size="2.9" font-weight="bold" fill="${NAVY}" text-anchor="middle" font-family="${FONT}">${q + 1}</text>`);
+    parts.push(`<circle cx="${nx}" cy="${numPos.y}" r="3" fill="#fff" stroke="${NAVY}" stroke-width="0.45"/>`);
+    parts.push(`<text x="${nx}" y="${numPos.y + 1.15}" font-size="3.3" font-weight="bold" fill="${NAVY}" text-anchor="middle" font-family="${FONT}">${q + 1}</text>`);
 
     for (let c = 0; c < qChoices; c++) {
       const p = questionBubble(exam, q, c);
@@ -198,8 +202,8 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
 
   // ---------- footer ----------
   parts.push(`<rect x="20" y="${PAGE_H - 17}" width="170" height="10" fill="${NAVY_SOFT}" rx="2.5"/>`);
-  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 11.3}" font-size="3" font-weight="bold" fill="${NAVY}" text-anchor="middle" direction="rtl" font-family="${FONT}">تمنياتنا لكم بالتوفيق والنجاح</text>`);
-  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 7.3}" font-size="2.2" fill="#778" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 11.2}" font-size="3.4" font-weight="bold" fill="${NAVY}" text-anchor="middle" direction="rtl" font-family="${FONT}">تمنياتنا لكم بالتوفيق والنجاح</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 7.2}" font-size="2.5" fill="#778" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}">${parts.join("")}</svg>`;
 }

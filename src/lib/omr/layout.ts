@@ -25,17 +25,21 @@ export const MARKS = [
 // The scanner tries all 4 rotations and keeps the one where this dot is dark.
 export const ORIENT_MARK = { x: 22.5, y: 11, size: 5 } as const;
 
-export const BUBBLE_R = 3.4;      // bubble radius (mm) — enlarged for easier shading
+// Bubble radius and every pitch below were enlarged together (from the
+// original 3.4mm bubble) for readability — bigger targets and more
+// whitespace between rows/columns for students with lower vision, while
+// keeping every bubble edge clear of its neighbours (no touching circles).
+export const BUBBLE_R = 3.8;      // bubble radius (mm)
 
 // Student-ID grid
-const ID_COL_PITCH = 9;           // horizontal distance between digit columns
-const ID_ROW_PITCH = 7.4;         // vertical distance between digits 0-9
+const ID_COL_PITCH = 9.6;         // horizontal distance between digit columns
+const ID_ROW_PITCH = 8.4;         // vertical distance between digits 0-9
 const ID_TOP_Y = 57.5;            // y of digit-0 row (below the handwritten boxes)
 export const ID_PITCH = ID_COL_PITCH;
 
 // Question grid
-const Q_ROW_PITCH = 7.8;
-const Q_CHOICE_PITCH = 10;
+const Q_ROW_PITCH = 8.6;
+const Q_CHOICE_PITCH = 11;
 const Q_TOP_BUBBLES = 136;        // first question row (below the taller civil-ID grid)
 const Q_TOP_WRITTEN = 72;         // first question row when the ID is handwritten-only
 const Q_BOTTOM_Y = 274;
@@ -95,7 +99,7 @@ export function gridSpec(exam: GridExam): GridSpec {
   const rows = Math.ceil(n / cols);
   const avail = Q_BOTTOM_Y - qTopY(exam);
   const pitch = rows > 1
-    ? Math.max(Q_ROW_PITCH, Math.min(12, avail / (rows - 1)))
+    ? Math.max(Q_ROW_PITCH, Math.min(13, avail / (rows - 1)))
     : Q_ROW_PITCH;
   return { cols, rows, pitch, colXs: COL_X_SETS[cols] };
 }
