@@ -15,6 +15,8 @@ import {
   Clock,
   Sparkles,
   Users,
+  ChevronDown,
+  Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -61,6 +63,11 @@ export default function CourseManager({
   const [editSemesterEnd, setEditSemesterEnd] = useState("");
   const [editLabels, setEditLabels] = useState<Required<ComponentLabels>>({ ...DEFAULT_COMPONENT_LABELS });
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  // Course cards on Home stay compact by default (name + counts + the one
+  // "open course" action). All the management details — grade weights,
+  // schedule, excel import, edit, delete — only appear once "إدارة المقرر"
+  // is pressed, instead of always being shown inline for every course.
+  const [manageOpenId, setManageOpenId] = useState<string | null>(null);
 
   const startEdit = (course: Course) => {
     setEditingId(course.id);
@@ -360,44 +367,10 @@ export default function CourseManager({
                 </div>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "exam1")}: {course.maxExam1}</span>
-                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "exam2")}: {course.maxExam2}</span>
-                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "finalExam")}: {course.maxFinal}</span>
-                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "participation")}: {course.maxParticipation}</span>
-                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "homework")}: {course.maxHomework ?? 10}</span>
-                <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "bonus")}: {course.maxBonus}</span>
-                <span className="rounded-full bg-muted px-2.5 py-1">{t("lectures")}: {course.lectureCount}</span>
-              </div>
-
-              {/* Schedule info */}
-              <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
-                {course.lectureDays && course.lectureDays.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Calendar size={12} />
-                    <span>{t("daysLabel")}: {course.lectureDays.map(d => DAYS_AR[d]).join("، ")}</span>
-                  </div>
-                )}
-                {course.lectureTime && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={12} />
-                    <span>{t("timeLabel")}: {course.lectureTime}</span>
-                  </div>
-                )}
-                {course.semesterStart && course.semesterEnd && (
-                  <div className="flex items-center gap-1.5">
-                    <Calendar size={12} />
-                    <span>
-                      {tf(t("fromTo"), { start: format(new Date(course.semesterStart), "yyyy/MM/dd"), end: format(new Date(course.semesterEnd), "yyyy/MM/dd") })}
-                    </span>
-                  </div>
-                )}
-              </div>
-
               {/* Primary action: this is what a professor does almost every
                   visit (open the course to take attendance/grade), so it
-                  gets its own prominent button instead of blending into the
-                  row of secondary actions below. */}
+                  stays visible on the compact card instead of waiting behind
+                  "إدارة المقرر". */}
               <button
                 onClick={() => onSelectCourse(course.id)}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110"
@@ -406,52 +379,110 @@ export default function CourseManager({
                 {t("manageLectures")}
               </button>
 
-              {/* Secondary actions, grouped by what they actually do — each
-                  group has its own small caption so the row reads as "these
-                  buttons manage students" / "these manage the course record"
-                  instead of six unlabeled buttons in one line. */}
-              <div className="mt-3 space-y-2.5">
-                <div>
-                  <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
-                    <Users size={13} />
-                    {lang === "ar" ? "الطلاب" : "Students"}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ExcelImport onImport={(names) => {
-                      onAddStudents(course.id, names);
-                    }} />
-                    <ManualAddStudents
-                      onAdd={(names) => onAddStudents(course.id, names)}
-                    />
-                    <ManualDeleteStudents
-                      students={course.students}
-                      onDelete={(studentId) => onDeleteStudent(course.id, studentId)}
-                    />
+              {/* Everything below (grade weights, schedule, excel import,
+                  edit, delete) is management detail a professor needs
+                  occasionally, not on every visit — kept collapsed so the
+                  Home screen stays a clean list of courses, not a wall of
+                  detail per card. */}
+              <button
+                type="button"
+                onClick={() => setManageOpenId((v) => (v === course.id ? null : course.id))}
+                className="mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Settings2 size={13} />
+                  {lang === "ar" ? "إدارة المقرر" : "Manage course"}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`text-muted-foreground transition-transform ${manageOpenId === course.id ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {manageOpenId === course.id && (
+                <div className="mt-3 space-y-3 border-t border-border pt-3">
+                  <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "exam1")}: {course.maxExam1}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "exam2")}: {course.maxExam2}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "finalExam")}: {course.maxFinal}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "participation")}: {course.maxParticipation}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "homework")}: {course.maxHomework ?? 10}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "bonus")}: {course.maxBonus}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{t("lectures")}: {course.lectureCount}</span>
+                  </div>
+
+                  {/* Schedule info */}
+                  <div className="space-y-1.5 text-xs text-muted-foreground">
+                    {course.lectureDays && course.lectureDays.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={12} />
+                        <span>{t("daysLabel")}: {course.lectureDays.map(d => DAYS_AR[d]).join("، ")}</span>
+                      </div>
+                    )}
+                    {course.lectureTime && (
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={12} />
+                        <span>{t("timeLabel")}: {course.lectureTime}</span>
+                      </div>
+                    )}
+                    {course.semesterStart && course.semesterEnd && (
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={12} />
+                        <span>
+                          {tf(t("fromTo"), { start: format(new Date(course.semesterStart), "yyyy/MM/dd"), end: format(new Date(course.semesterEnd), "yyyy/MM/dd") })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Secondary actions, grouped by what they actually do —
+                      each group has its own small caption so the row reads
+                      as "these buttons manage students" / "these manage the
+                      course record" instead of unlabeled buttons in a row. */}
+                  <div className="space-y-2.5">
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
+                        <Users size={13} />
+                        {lang === "ar" ? "الطلاب" : "Students"}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ExcelImport onImport={(names) => {
+                          onAddStudents(course.id, names);
+                        }} />
+                        <ManualAddStudents
+                          onAdd={(names) => onAddStudents(course.id, names)}
+                        />
+                        <ManualDeleteStudents
+                          students={course.students}
+                          onDelete={(studentId) => onDeleteStudent(course.id, studentId)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
+                        <BookOpen size={13} />
+                        {lang === "ar" ? "المقرر" : "Course"}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => startEdit(course)}
+                          className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                        >
+                          <Edit3 size={13} />
+                          {t("editData")}
+                        </button>
+                        <button
+                          onClick={() => setPendingDelete({ id: course.id, name: course.name })}
+                          className="flex items-center gap-1.5 rounded-xl border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                        >
+                          <Trash2 size={13} />
+                          {t("deleteCourse")}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
-                    <BookOpen size={13} />
-                    {lang === "ar" ? "المقرر" : "Course"}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={() => startEdit(course)}
-                      className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                    >
-                      <Edit3 size={13} />
-                      {t("editData")}
-                    </button>
-                    <button
-                      onClick={() => setPendingDelete({ id: course.id, name: course.name })}
-                      className="flex items-center gap-1.5 rounded-xl border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
-                    >
-                      <Trash2 size={13} />
-                      {t("deleteCourse")}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              )}
             </>
           )}
         </div>
