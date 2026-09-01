@@ -18,15 +18,27 @@ import {
   HelpCircle,
   MessageSquare,
   Smartphone,
-
+  Search,
   Share,
   MoreVertical,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, useMemo, type ReactNode } from "react";
+
+// Flattens a ReactNode (string or JSX with string children) into plain text for search matching.
+function nodeToText(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(nodeToText).join(" ");
+  if (typeof node === "object" && "props" in (node as any)) {
+    return nodeToText((node as any).props?.children);
+  }
+  return "";
+}
 
 export default function Help() {
   const { lang, dir } = useLanguage();
   const ar = lang === "ar";
+  const [query, setQuery] = useState("");
 
   const sections: { icon: any; title: string; items: ReactNode[] }[] = ar
     ? [
@@ -224,6 +236,22 @@ export default function Help() {
         },
       ];
 
+  const slugify = (s: string) => s.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "");
+
+  const filteredSections = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sections;
+    return sections
+      .map((section) => {
+        const titleMatches = section.title.toLowerCase().includes(q);
+        const matchingItems = section.items.filter((item) => nodeToText(item).toLowerCase().includes(q));
+        if (titleMatches) return section;
+        if (matchingItems.length > 0) return { ...section, items: matchingItems };
+        return null;
+      })
+      .filter((s): s is typeof sections[number] => s !== null);
+  }, [query, sections]);
+
   const installTitle = ar ? "تثبيت التطبيق كأيقونة على موبايلك" : "Install the app on your phone";
   const installIntro = ar
     ? "تستطيع إضافة GradeTrackPro كأيقونة على شاشة موبايلك ليفتح كتطبيق مستقل بدون شريط المتصفح."
@@ -297,9 +325,44 @@ export default function Help() {
           </p>
         </div>
 
+        {/* Search */}
+        <div className="relative mb-4">
+          <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={ar ? "ابحث في الدليل..." : "Search the guide..."}
+            className="w-full rounded-xl border border-input bg-card pr-9 pl-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+
+        {/* Category grid — jumps to the matching section below */}
+        {!query && (
+          <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {sections.map(({ icon: Icon, title }) => (
+              <a
+                key={title}
+                href={`#help-${slugify(title)}`}
+                className="flex items-center gap-2 rounded-xl border border-border bg-card p-3 text-right transition-colors hover:bg-muted"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Icon size={14} />
+                </div>
+                <span className="truncate text-xs font-semibold text-foreground">{title}</span>
+              </a>
+            ))}
+          </div>
+        )}
+
         <div className="space-y-4">
-          {sections.map(({ icon: Icon, title, items }) => (
-            <section key={title} className="rounded-[32px] border border-border bg-card p-5 md:p-6 shadow-sm">
+          {filteredSections.length === 0 && (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {ar ? "لا توجد نتائج مطابقة" : "No matching results"}
+            </p>
+          )}
+          {filteredSections.map(({ icon: Icon, title, items }) => (
+            <section key={title} id={`help-${slugify(title)}`} className="rounded-[32px] border border-border bg-card p-5 md:p-6 shadow-sm scroll-mt-24">
               <div className="mb-3 flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <Icon size={18} />
