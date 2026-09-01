@@ -49,7 +49,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [statsExam, setStatsExam] = useState<OmrExam | null>(null);
   const [formsCount, setFormsCount] = useState(1);
   const [editVersion, setEditVersion] = useState("");
-  const [idMode, setIdMode] = useState<"bubbles" | "written">("bubbles");
+  const [idMode, setIdMode] = useState<"bubbles" | "written">("written");
   const [logo, setLogo] = useState(() => localStorage.getItem("gtp_logo") || "");
   const [institution, setInstitution] = useState(() => localStorage.getItem("gtp_institution") || "");
   const [college, setCollege] = useState(() => localStorage.getItem("gtp_college") || "");
@@ -263,8 +263,8 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                 onChange={(e) => setIdMode(e.target.value as "bubbles" | "written")}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               >
+                <option value="written">{ar ? "الاسم والرقم كتابة يدوية (يُطابق يدوياً من قائمة الطلاب)" : "Handwritten name & ID (matched manually from roster)"}</option>
                 <option value="bubbles">{ar ? "فقاعات الرقم المدني (تُقرأ آلياً)" : "Civil-ID bubbles (auto-read)"}</option>
-                <option value="written">{ar ? "مستطيل رقم مدني (كتابة يدوية — بدون قراءة آلية)" : "Civil-ID box (handwritten only)"}</option>
               </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">

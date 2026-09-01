@@ -116,50 +116,52 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
   return (
     <div className="space-y-4">
       {/* Lecture nav */}
-      <div className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-card p-3 shadow-sm">
-        <button
-          onClick={goPrev}
-          disabled={selectedLecture === 0}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted disabled:opacity-30"
-          aria-label="previous"
-        >
-          <ChevronRight size={18} />
-        </button>
-        <div className="flex-1 text-center">
-          <p className="font-display text-lg font-extrabold text-foreground">{title}</p>
-          <p className="mt-1 text-sm sm:text-base font-bold text-foreground">{subtitle}</p>
+      <div className="sticky top-0 z-30 -mx-1 bg-background/80 px-1 pb-1 pt-1 backdrop-blur-md">
+        <div className="flex items-center justify-between gap-2 rounded-[32px] border border-border bg-card p-3 shadow-sm">
+          <button
+            onClick={goPrev}
+            disabled={selectedLecture === 0}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors hover:bg-primary/20 disabled:opacity-30"
+            aria-label="previous"
+          >
+            <ChevronRight size={18} />
+          </button>
+          <div className="flex-1 text-center">
+            <p className="font-display text-lg font-extrabold text-foreground">{title}</p>
+            <p className="mt-1 text-sm sm:text-base font-bold text-foreground">{subtitle}</p>
+          </div>
+          <button
+            onClick={goNext}
+            disabled={selectedLecture === safeLectures.length - 1}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors hover:bg-primary/20 disabled:opacity-30"
+            aria-label="next"
+          >
+            <ChevronLeft size={18} />
+          </button>
         </div>
-        <button
-          onClick={goNext}
-          disabled={selectedLecture === safeLectures.length - 1}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted disabled:opacity-30"
-          aria-label="next"
-        >
-          <ChevronLeft size={18} />
-        </button>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
+        <div className="rounded-3xl border border-border bg-card p-4 text-center shadow-sm">
           <p className="font-display text-2xl sm:text-3xl font-extrabold text-success">{presentCount}</p>
           <p className="mt-1 text-xs text-muted-foreground">{t("presentLabel")}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
+        <div className="rounded-3xl border border-border bg-card p-4 text-center shadow-sm">
           <p className="font-display text-2xl sm:text-3xl font-extrabold text-destructive">{absentCount}</p>
           <p className="mt-1 text-xs text-muted-foreground">{t("absentLabel")}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
+        <div className="rounded-3xl border border-border bg-card p-4 text-center shadow-sm">
           <p className="font-display text-2xl sm:text-3xl font-extrabold text-primary">{pct}%</p>
           <p className="mt-1 text-xs text-muted-foreground">{t("attendanceRate")}</p>
         </div>
       </div>
 
       {/* Import / Export attendance */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 rounded-[32px] border border-border bg-card p-3 shadow-sm">
         <button
           onClick={() => exportAttendanceTemplate(course)}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-border bg-background px-3 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
         >
           <Download size={14} />
           {lang === "ar" ? "تصدير قالب الحضور" : "Export Template"}
@@ -167,7 +169,7 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={importing}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
         >
           {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
           {lang === "ar" ? "استيراد الحضور (Excel / نظام الكلية)" : "Import (Excel / College system)"}
@@ -182,14 +184,14 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
       </div>
 
       {/* Search */}
-      <div className="relative">
-        <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative rounded-[32px] border border-border bg-card p-3 shadow-sm">
+        <Search size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           placeholder={t("searchByName")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-input bg-background py-2.5 pr-9 pl-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="w-full rounded-xl border border-input bg-background py-2.5 pr-9 pl-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
@@ -200,19 +202,19 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
           return (
             <div
               key={student.id}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 sm:p-4 shadow-sm"
+              className="flex items-center gap-3 rounded-3xl border border-border bg-card p-3 sm:p-4 shadow-sm"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold text-muted-foreground">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
                 {idx + 1}
               </span>
               <p className="flex-1 truncate text-sm sm:text-base font-bold text-foreground">{student.name}</p>
 
               {/* Toggle pill */}
-              <div className="flex shrink-0 items-center rounded-xl bg-muted/60 p-1">
+              <div className="flex shrink-0 items-center rounded-2xl bg-muted/60 p-1">
                 <button
                   onClick={() => onUpdateAttendance(student.id, selectedLecture, true)}
                   className={cn(
-                    "rounded-lg px-3 py-1.5 text-xs sm:text-sm font-bold transition-all",
+                    "rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold transition-all",
                     isPresent
                       ? "bg-success text-success-foreground shadow"
                       : "text-muted-foreground hover:text-foreground"
@@ -223,7 +225,7 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
                 <button
                   onClick={() => onUpdateAttendance(student.id, selectedLecture, false)}
                   className={cn(
-                    "rounded-lg px-3 py-1.5 text-xs sm:text-sm font-bold transition-all",
+                    "rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold transition-all",
                     !isPresent
                       ? "bg-destructive text-destructive-foreground shadow"
                       : "text-muted-foreground hover:text-foreground"

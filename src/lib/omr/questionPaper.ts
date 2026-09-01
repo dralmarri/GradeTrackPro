@@ -36,20 +36,25 @@ export function buildQuestionPaperHtml(
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/dubai" />
 <title>${esc(title)} — نموذج ${esc(form.version)}</title>
 <style>
+  :root { --navy: #1e3a5f; --navy-soft: #eef3f9; --line: #d5e2f0; }
   @page { size: A4; margin: 18mm 16mm; }
   body { font-family: 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; margin: 0; }
-  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1e3a5f; padding-bottom: 4mm; }
-  .inst { font-size: 11px; color: #333; line-height: 1.6; }
-  .inst div:first-child { font-weight: bold; font-size: 12px; }
-  .badge { border: 1.5px solid #1e3a5f; color: #1e3a5f; border-radius: 6px; padding: 3px 12px; font-weight: bold; font-size: 14px; }
-  h1 { text-align: center; font-size: 20pt; color: #1e3a5f; margin: 6mm 0 1mm; }
-  .meta { text-align: center; font-size: 11px; color: #555; margin-bottom: 5mm; }
-  .note { background: #f2f6fb; border: 1px solid #d5e2f0; border-radius: 6px; padding: 3mm; font-size: 11px; margin-bottom: 5mm; }
-  .q { margin-bottom: 4.5mm; page-break-inside: avoid; }
-  .qtext { font-size: 14pt; font-weight: 700; margin-bottom: 1.5mm; }
-  .choices { display: flex; flex-wrap: wrap; gap: 2mm 8mm; padding-inline-start: 7mm; font-size: 14pt; }
+  .head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid var(--navy); padding-bottom: 4mm; }
+  .inst { font-size: 11px; color: #333; line-height: 1.65; }
+  .inst div:first-child { font-weight: bold; font-size: 12.5px; color: var(--navy); }
+  .badge { border: 1.5px solid var(--navy); background: var(--navy-soft); color: var(--navy); border-radius: 8px; padding: 4px 14px; font-weight: bold; font-size: 14px; }
+  h1 { text-align: center; font-size: 21pt; color: var(--navy); letter-spacing: 0.2px; margin: 6mm 0 1mm; }
+  .meta { text-align: center; font-size: 11px; color: #555; margin-bottom: 4mm; }
+  .rule { height: 2px; background: linear-gradient(90deg, transparent, var(--navy), transparent); opacity: 0.35; margin-bottom: 5mm; }
+  .note { background: var(--navy-soft); border: 1px solid var(--line); border-radius: 8px; padding: 3.2mm 4mm; font-size: 11px; margin-bottom: 6mm; color: #223; }
+  .q { margin-bottom: 5mm; padding-bottom: 3.5mm; border-bottom: 1px dashed var(--line); page-break-inside: avoid; }
+  .q:last-child { border-bottom: none; }
+  .qtext { font-size: 14pt; font-weight: 700; margin-bottom: 2mm; }
+  .qtext b { color: var(--navy); margin-inline-end: 1mm; }
+  .choices { display: flex; flex-wrap: wrap; gap: 2.2mm 8mm; padding-inline-start: 7mm; font-size: 14pt; }
   .choice { min-width: 38mm; }
-  .foot { text-align: center; color: #1e3a5f; font-weight: bold; font-size: 12px; margin-top: 8mm; }
+  .choice b { color: var(--navy); }
+  .foot { text-align: center; color: var(--navy); font-weight: bold; font-size: 12px; margin-top: 8mm; padding-top: 4mm; border-top: 1px solid var(--line); }
 </style>
 </head>
 <body>
@@ -62,6 +67,7 @@ export function buildQuestionPaperHtml(
     ${header?.courseName ? `المقرر: ${esc(header.courseName)} · ` : ""}
     عدد الأسئلة: ${form.questions.length}
   </div>
+  <div class="rule"></div>
   <div class="note">ظلّل إجابتك في <b>ورقة الإجابة المرفقة</b> ولا تكتب على ورقة الأسئلة. تأكد من تظليل رقم النموذج الصحيح المذكور أعلاه.</div>
   ${rows}
   <div class="foot">تمنياتنا لكم بالتوفيق والنجاح</div>

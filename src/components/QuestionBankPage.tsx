@@ -292,12 +292,12 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
           studentIdDigits: 12,
           sections: form.sections.length > 1 ? form.sections : undefined,
           version: genForms > 1 ? form.version : undefined,
-          idMode: "bubbles",
+          idMode: "written",
         });
         if (!id) throw new Error(ar ? "فشل إنشاء الاختبار" : "Failed to create exam");
         await onSetAnswerKey(id, form.answerKey, customWeights ? weights : undefined);
         out.push({
-          exam: buildExam(id, form, genTitle.trim(), genTarget, maxScore, "bubbles"),
+          exam: buildExam(id, form, genTitle.trim(), genTarget, maxScore, "written"),
           form,
         });
       }

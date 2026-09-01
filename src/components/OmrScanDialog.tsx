@@ -7,7 +7,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  Camera, Loader2, X, CheckCircle2, AlertTriangle, UserRound, RotateCcw,
+  Camera, Loader2, X, CheckCircle2, AlertTriangle, UserRound, RotateCcw, Search,
 } from "lucide-react";
 
 
@@ -35,11 +35,12 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   // intended answer from the row photo and the score is recomputed
   const [reviewItems, setReviewItems] = useState<{ q: number; imageUrl?: string; reason: "blank" | "multiple" }[]>([]);
   const [answers, setAnswers] = useState<number[]>([]);
+  const [studentSearch, setStudentSearch] = useState("");
   const { addScan } = useOmrScans(null); // used for recording only
 
   if (!open) return null;
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setStudentSearch(""); };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -252,14 +253,18 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
               </div>
             )}
 
-            {/* student number + picker */}
+            {/* handwriting reference + searchable student picker */}
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-foreground">
+                <UserRound size={14} />
+                {ar ? "طابق الاسم/الرقم المكتوبين مع قائمة الطلاب" : "Match the handwritten name/ID against the roster"}
+              </p>
               {(nameCrop || civilCrop) && (
-                <div className="mb-3 space-y-2">
+                <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {nameCrop && (
                     <div>
                       <p className="mb-1 text-[11px] font-bold text-muted-foreground">
-                        {ar ? "الاسم كما كُتب في الورقة — اقرأه واختر الطالب المطابق:" : "Name as written — read it and pick the student:"}
+                        {ar ? "الاسم كما كُتب:" : "Name as written:"}
                       </p>
                       <img
                         src={nameCrop}
@@ -271,7 +276,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                   {civilCrop && (
                     <div>
                       <p className="mb-1 text-[11px] font-bold text-muted-foreground">
-                        {ar ? "الرقم المدني كما كُتب:" : "Civil ID as written:"}
+                        {ar ? "الرقم الجامعي كما كُتب:" : "Student ID as written:"}
                       </p>
                       <img
                         src={civilCrop}
@@ -282,25 +287,48 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                   )}
                 </div>
               )}
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
-                <UserRound size={14} />
-                {ar ? `رقم الطالب المقروء: ${result.studentNumber || "—"}` : `Read student #: ${result.studentNumber || "—"}`}
-                {result.matchedStudentId && (
-                  <span className="rounded-md bg-success/10 px-1.5 py-0.5 text-[10px] font-bold text-success">
-                    {ar ? "تم التعرف تلقائياً ✓" : "Auto-matched ✓"}
+              {result.matchedStudentId && (
+                <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                  <span className="rounded-md bg-success/10 px-1.5 py-0.5 text-success">
+                    {ar ? "تلميح: رقم متطابق مع بيانات طالب محفوظة" : "Hint: number matches a saved student record"}
                   </span>
+                </p>
+              )}
+
+              {/* searchable roster */}
+              <div className="relative mb-2">
+                <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  placeholder={ar ? "ابحث عن اسم الطالب…" : "Search student name…"}
+                  className="w-full rounded-lg border border-input bg-background py-2.5 pr-9 pl-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-1.5">
+                {course.students
+                  .filter((s: Student) => !studentSearch.trim() || s.name.includes(studentSearch.trim()))
+                  .map((s: Student) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSelectedStudentId(s.id)}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-md px-2.5 py-2 text-start text-sm font-semibold transition-colors",
+                        selectedStudentId === s.id
+                          ? "bg-primary/15 text-primary"
+                          : "text-foreground hover:bg-muted",
+                      )}
+                    >
+                      <span className="truncate">{s.name}</span>
+                      {selectedStudentId === s.id && <CheckCircle2 size={15} className="shrink-0" />}
+                    </button>
+                  ))}
+                {course.students.filter((s: Student) => !studentSearch.trim() || s.name.includes(studentSearch.trim())).length === 0 && (
+                  <p className="p-2 text-center text-xs text-muted-foreground">{ar ? "لا نتائج" : "No results"}</p>
                 )}
-              </p>
-              <select
-                value={selectedStudentId}
-                onChange={(e) => setSelectedStudentId(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-              >
-                <option value="">{ar ? "اختر الطالب…" : "Select student…"}</option>
-                {course.students.map((s: Student) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+              </div>
             </div>
 
             {/* per-question detail */}

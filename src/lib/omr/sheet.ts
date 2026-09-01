@@ -26,6 +26,8 @@ function circle(x: number, y: number, r: number, letter: string): string {
     <text x="${x}" y="${y + 1.15}" font-size="3.2" fill="#a8a8a8" text-anchor="middle" font-family="${FONT}">${letter}</text>`;
 }
 
+const NAVY = "#1e3a5f";
+
 export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string {
   const parts: string[] = [];
 
@@ -65,21 +67,24 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   ].filter(Boolean).join("   ·   ");
   parts.push(`<text x="${PAGE_W / 2}" y="${instLines.length ? 30 : 23}" font-size="2.9" fill="#444" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
 
-  // ---------- name box (clear labelled rectangle) ----------
-  parts.push(`<rect x="25" y="32" width="160" height="9" fill="none" stroke="#000" stroke-width="0.45" rx="1.5"/>`);
-  parts.push(`<text x="180" y="37.6" direction="rtl" font-size="3.3" font-weight="bold" text-anchor="start" font-family="${FONT}">اسم الطالب:</text>`);
-  parts.push(`<line x1="30" y1="38.9" x2="152" y2="38.9" stroke="#bbb" stroke-width="0.25"/>`);
+  // ---------- name box (clear labelled rectangle, soft brand-tinted panel) ----------
+  parts.push(`<rect x="25" y="31" width="160" height="11" fill="#f6f9fc" stroke="${NAVY}" stroke-width="0.5" rx="2.5"/>`);
+  parts.push(`<text x="180" y="37.6" direction="rtl" font-size="3.5" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">اسم الطالب:</text>`);
+  parts.push(`<line x1="30" y1="39.4" x2="152" y2="39.4" stroke="#bbb" stroke-width="0.25"/>`);
 
   // ---------- student number block ----------
   if (exam.idMode === "written") {
-    // handwritten civil-ID strip: 12 joined cells inside a labelled rectangle
+    // handwritten name+ID mode: no bubble grid at all — just this clearly
+    // labelled, brand-tinted digit strip for the student's ID number, then
+    // straight into the question grid (see Q_TOP_WRITTEN in layout.ts).
     const cells = 12, cellW = 8, stripW = cells * cellW;
-    const sx = (PAGE_W - stripW) / 2, sy = 46.5, cellH = 9;
-    parts.push(`<text x="${sx + stripW}" y="${sy - 2.6}" direction="rtl" font-size="3.1" font-weight="bold" text-anchor="start" font-family="${FONT}">الرقم المدني للطالب:</text>`);
-    parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${cellH}" fill="none" stroke="#000" stroke-width="0.5" rx="1.5"/>`);
+    const sx = (PAGE_W - stripW) / 2, sy = 46, cellH = 10;
+    parts.push(`<text x="${sx + stripW}" y="${sy - 2.6}" direction="rtl" font-size="3.3" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">الرقم الجامعي للطالب:</text>`);
+    parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${cellH}" fill="#f6f9fc" stroke="${NAVY}" stroke-width="0.55" rx="2"/>`);
     for (let i = 1; i < cells; i++) {
-      parts.push(`<line x1="${sx + i * cellW}" y1="${sy}" x2="${sx + i * cellW}" y2="${sy + cellH}" stroke="#000" stroke-width="0.3"/>`);
+      parts.push(`<line x1="${sx + i * cellW}" y1="${sy}" x2="${sx + i * cellW}" y2="${sy + cellH}" stroke="${NAVY}" stroke-width="0.3" opacity="0.55"/>`);
     }
+    parts.push(`<text x="${sx + stripW / 2}" y="${sy + cellH + 3.4}" direction="rtl" font-size="2.4" fill="#888" text-anchor="middle" font-family="${FONT}">يُكتب رقماً بخط واضح — سيُطابَق يدوياً مع قائمة الطلاب</text>`);
   } else {
   const firstTop = idBubble(exam, 0, 0);
   const lastTop = idBubble(exam, exam.studentIdDigits - 1, 0);
@@ -108,7 +113,6 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   }
 
   // ---------- questions ----------
-  const NAVY = "#1e3a5f";
   const rows = questionRows(exam);
   // group badge above each column block: "الأسئلة X - Y" (written mode only —
   // in bubbles mode the ID grid leaves no room above the questions)
