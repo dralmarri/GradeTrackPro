@@ -394,38 +394,63 @@ export default function CourseManager({
                 )}
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <ExcelImport onImport={(names) => {
-                  onAddStudents(course.id, names);
-                }} />
-                <ManualAddStudents
-                  onAdd={(names) => onAddStudents(course.id, names)}
-                />
-                <ManualDeleteStudents
-                  students={course.students}
-                  onDelete={(studentId) => onDeleteStudent(course.id, studentId)}
-                />
-                <button
-                  onClick={() => startEdit(course)}
-                  className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                >
-                  <Edit3 size={13} />
-                  {t("editData")}
-                </button>
-                <button
-                  onClick={() => onSelectCourse(course.id)}
-                  className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                >
-                  <Calendar size={13} />
-                  {t("manageLectures")}
-                </button>
-                <button
-                  onClick={() => setPendingDelete({ id: course.id, name: course.name })}
-                  className="flex items-center gap-1.5 rounded-xl border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
-                >
-                  <Trash2 size={13} />
-                  {t("deleteCourse")}
-                </button>
+              {/* Primary action: this is what a professor does almost every
+                  visit (open the course to take attendance/grade), so it
+                  gets its own prominent button instead of blending into the
+                  row of secondary actions below. */}
+              <button
+                onClick={() => onSelectCourse(course.id)}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110"
+              >
+                <Calendar size={15} />
+                {t("manageLectures")}
+              </button>
+
+              {/* Secondary actions, grouped by what they actually do — each
+                  group has its own small caption so the row reads as "these
+                  buttons manage students" / "these manage the course record"
+                  instead of six unlabeled buttons in one line. */}
+              <div className="mt-3 space-y-2.5">
+                <div>
+                  <p className="mb-1.5 flex items-center gap-1 px-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <Users size={11} />
+                    {lang === "ar" ? "الطلاب" : "Students"}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ExcelImport onImport={(names) => {
+                      onAddStudents(course.id, names);
+                    }} />
+                    <ManualAddStudents
+                      onAdd={(names) => onAddStudents(course.id, names)}
+                    />
+                    <ManualDeleteStudents
+                      students={course.students}
+                      onDelete={(studentId) => onDeleteStudent(course.id, studentId)}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1.5 flex items-center gap-1 px-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <BookOpen size={11} />
+                    {lang === "ar" ? "المقرر" : "Course"}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => startEdit(course)}
+                      className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      <Edit3 size={13} />
+                      {t("editData")}
+                    </button>
+                    <button
+                      onClick={() => setPendingDelete({ id: course.id, name: course.name })}
+                      className="flex items-center gap-1.5 rounded-xl border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      <Trash2 size={13} />
+                      {t("deleteCourse")}
+                    </button>
+                  </div>
+                </div>
               </div>
             </>
           )}
