@@ -269,42 +269,30 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         </button>
       </div>
 
-      {/* quick scan */}
-      <div>
-        <div className="mb-3 flex items-center justify-between px-1">
-          <h3 className="text-lg font-bold text-foreground">{ar ? "بدء المسح الآن" : "Start scanning"}</h3>
-          <span
-            className={cn(
-              "rounded-full px-3 py-1 text-[10px] font-bold",
-              quickScanExam ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-            )}
-          >
+      {/* quick scan — a normal button like the two above it. The camera
+          view itself only appears once tapped (inside OmrScanDialog),
+          instead of a large decorative camera mockup sitting on the page
+          at all times before there's anything to scan. */}
+      <button
+        type="button"
+        onClick={() => quickScanExam && setScanExam(quickScanExam)}
+        disabled={!quickScanExam}
+        className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60 sm:gap-5 sm:p-5"
+      >
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground sm:h-14 sm:w-14">
+          <Camera size={22} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold text-foreground">
+            {ar ? "بدء المسح الآن" : "Start scanning"}
+            {quickScanExam ? ` — ${quickScanExam.title}` : ""}
+          </span>
+          <span className="block text-xs text-muted-foreground">
             {quickScanExam ? (ar ? "جاهز للاستخدام" : "Ready to use") : (ar ? "أدخل مفتاح إجابة أولاً" : "Set an answer key first")}
           </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => quickScanExam && setScanExam(quickScanExam)}
-          disabled={!quickScanExam}
-          className="group relative flex aspect-[16/9] w-full flex-col items-center justify-center overflow-hidden rounded-[32px] border-4 border-card bg-foreground/90 shadow-2xl disabled:cursor-not-allowed disabled:opacity-60 sm:aspect-[21/9]"
-        >
-          <div className="absolute inset-6 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-background/40">
-            <div className="relative h-24 w-32 rounded-xl border-2 border-primary/80 sm:h-28 sm:w-40" />
-            <p className="mt-4 rounded-full bg-black/40 px-4 py-2 text-xs font-bold text-white backdrop-blur-md">
-              {quickScanExam
-                ? (ar ? `تصوير ورقة إجابة — ${quickScanExam.title}` : `Scan an answer sheet — ${quickScanExam.title}`)
-                : (ar ? "لا يوجد اختبار جاهز للمسح بعد" : "No exam ready to scan yet")}
-            </p>
-          </div>
-          <div className="absolute bottom-5 flex items-center justify-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/90 transition-transform group-hover:scale-105 group-active:scale-95">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-foreground">
-                <Camera size={20} />
-              </span>
-            </span>
-          </div>
-        </button>
-      </div>
+        </span>
+        <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
+      </button>
 
       {/* batch stats — real numbers only, aggregated from archived scans */}
       {batchStats && batchStats.scanned > 0 && (
