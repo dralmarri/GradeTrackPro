@@ -187,11 +187,6 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
           const grade = getGrade(total, maxTotal);
           const letter = grade.letter.letter;
           const bonusOn = course.bonusEnabled !== false;
-          // A brand-new student with nothing entered yet (total === 0)
-          // is NOT the same as a student who scored zero — showing an "F"
-          // and a sad-face for someone simply not graded yet is misleading
-          // and needlessly alarming this early in the semester.
-          const hasAnyGrade = total !== 0;
           const isExpanded = expandedId === student.id;
           const isPositiveBonus = bonusTotal > 0;
           const isNegativeBonus = bonusTotal < 0;
@@ -236,6 +231,26 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             });
           }
 
+          // Only the REQUIRED components (excludes bonus, which is extra
+          // credit, not something everyone is expected to have) decide
+          // whether this student is "fully graded". A component counts as
+          // entered once its score is > 0 — same heuristic already used for
+          // the "graded" count on the Grades tab, kept consistent here.
+          const requiredCells = miniCells.filter((c) => c.key !== "bonus");
+          const gradedCells = requiredCells.filter((c) => Number(c.value) > 0);
+          const isFullyGraded = requiredCells.length > 0 && gradedCells.length === requiredCells.length;
+          // While partially graded, show the score out of what's ACTUALLY
+          // been recorded so far (e.g. "18 / 20" after only the first exam),
+          // never out of the course's full 100 — a partial score read
+          // against the full total looks like a near-failing grade for a
+          // student who's only sat one exam.
+          const gradedMax = gradedCells.reduce((s, c) => s + c.max, 0);
+          const gradedSum = gradedCells.reduce((s, c) => s + Number(c.value), 0) + (bonusOn ? bonusTotal : 0);
+          // Nothing recorded at all (not even bonus points) → don't show a
+          // score or a letter grade — a new student defaults to all zeros,
+          // which isn't the same as having earned a zero.
+          const hasAnyGrade = gradedCells.length > 0 || bonusTotal !== 0;
+
           // Absences
           const absenceIndices: number[] = [];
           (student.attendance || []).forEach((present, i) => {
@@ -272,12 +287,12 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                 className="flex w-full items-center justify-between gap-3 p-4 text-start"
               >
                 <div className="flex min-w-0 items-center gap-2">
-                  {hasAnyGrade && grade.tier?.emoji && (
+                  {isFullyGraded && grade.tier?.emoji && (
                     <span className="shrink-0 text-xl leading-none" aria-hidden>
                       {grade.tier.emoji}
                     </span>
                   )}
-                  {hasAnyGrade && (
+                  {isFullyGraded && (
                     <span
                       className={`shrink-0 rounded-md px-2 py-0.5 font-display text-xs font-bold ${letterBadgeClass}`}
                       dir="ltr"
@@ -294,10 +309,26 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {hasAnyGrade ? (
+                  {isFullyGraded ? (
+                    // All required components entered — the final score,
+                    // out of the course's real full total.
                     <span className="flex items-baseline gap-1 font-display" dir="ltr">
                       <span className="text-xl font-bold text-primary">{total}</span>
                       <span className="text-xs text-muted-foreground">/ {maxTotal}</span>
+                    </span>
+                  ) : hasAnyGrade ? (
+                    // Some, but not all, components entered — show the score
+                    // out of only what's been recorded so far (never against
+                    // the full 100), plus a "partial" label so it's clear
+                    // this isn't the final grade.
+                    <span className="flex items-center gap-1.5">
+                      <span className="flex items-baseline gap-1 font-display" dir="ltr">
+                        <span className="text-xl font-bold text-foreground">{gradedSum}</span>
+                        <span className="text-xs text-muted-foreground">/ {gradedMax}</span>
+                      </span>
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        جزئي
+                      </span>
                     </span>
                   ) : (
                     <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
