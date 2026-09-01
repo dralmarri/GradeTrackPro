@@ -67,7 +67,11 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
     const hasAnyGrade = graded.length > 0 || bonusTotal !== 0;
     const gradedMax = graded.reduce((s, c) => s + c.max, 0);
     const gradedSum = graded.reduce((s, c) => s + c.value, 0) + (bonusOn ? bonusTotal : 0);
-    return { isFullyGraded, hasAnyGrade, gradedMax, gradedSum };
+    // Provisional percentage from ONLY what's been entered so far — this is
+    // what makes a partially-graded student comparable to a fully-graded
+    // one (their raw scores aren't, since they're out of different maxes).
+    const percentage = gradedMax > 0 ? getPercentage(gradedSum, gradedMax) : 0;
+    return { isFullyGraded, hasAnyGrade, gradedMax, gradedSum, percentage };
   };
 
   if (students.length === 0) {
@@ -79,21 +83,26 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
   }
 
   const maxTotal = getMaxTotal(course);
-  // Everything below (average, highest/lowest, pass rate, the grade-letter
-  // chart, top students) is a FINAL-grade view — it only makes sense once
-  // a student's course grade is actually final. Mixing in students who are
-  // only partially graded would compare their partial score against the
-  // full course total, making them look like they're failing when really
-  // they just haven't sat the rest of the assessments yet.
-  const fullyGradedStudents = students.filter((s) => getCompleteness(s).isFullyGraded);
-  const totals = fullyGradedStudents.map((s) => getTotal(s, course));
-  const avg = totals.length > 0 ? totals.reduce((a, b) => a + b, 0) / totals.length : 0;
-  const highest = totals.length > 0 ? Math.max(...totals) : 0;
-  const lowest = totals.length > 0 ? Math.min(...totals) : 0;
-  const passCount = totals.filter((t) => getPercentage(t, maxTotal) >= 60).length;
+  // Every student who has ANY real grade entered contributes to the stats
+  // below — using their PROVISIONAL PERCENTAGE of what's actually been
+  // recorded so far (e.g. someone at 90% on just exam1 counts as 90%, not
+  // as failing the whole course), not their raw total against the full
+  // course max. Fully-graded students' percentage is naturally the same
+  // number either way, so this is a strict generalisation, not a
+  // different rule for two groups of students.
+  const gradedStudents = students
+    .map((s) => ({ student: s, completeness: getCompleteness(s) }))
+    .filter((x) => x.completeness.hasAnyGrade);
+  const pcts = gradedStudents.map((x) => x.completeness.percentage);
+  const avg = pcts.length > 0 ? pcts.reduce((a, b) => a + b, 0) / pcts.length : 0;
+  const highest = pcts.length > 0 ? Math.max(...pcts) : 0;
+  const lowest = pcts.length > 0 ? Math.min(...pcts) : 0;
+  const passCount = pcts.filter((p) => p >= 60).length;
+  const fullyGradedCount = gradedStudents.filter((x) => x.completeness.isFullyGraded).length;
 
   // Grade-letter distribution — built from this course's real, user-configured
-  // letter scale (letterTiers) rather than any invented buckets.
+  // letter scale (letterTiers), applied to each graded student's current
+  // provisional percentage.
   const colorVarByClass: Record<string, string> = {
     "text-success": "hsl(var(--success))",
     "text-primary": "hsl(var(--primary))",
@@ -106,46 +115,46 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
     .map((lt) => ({
       letter: lt.letter,
       fill: colorVarByClass[lt.color] || "hsl(var(--primary))",
-      count: totals.filter((t) => getLetterFor(getPercentage(t, maxTotal), letterTiers).letter === lt.letter).length,
+      count: pcts.filter((p) => getLetterFor(p, letterTiers).letter === lt.letter).length,
     }));
 
-  // Top students by real computed total, among fully-graded students only
-  // (ties broken by original order).
-  const topStudents = fullyGradedStudents
-    .map((s) => ({ student: s, total: getTotal(s, course) }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, Math.min(3, fullyGradedStudents.length));
+  // Top students by current provisional percentage — includes
+  // partially-graded students so an early leaderboard is actually useful,
+  // each tagged "جزئي" below if their grade isn't final yet.
+  const topStudents = gradedStudents
+    .sort((a, b) => b.completeness.percentage - a.completeness.percentage)
+    .slice(0, Math.min(3, gradedStudents.length));
 
   return (
     <div className="space-y-6">
-      {fullyGradedStudents.length === 0 ? (
-        // No one has a final grade yet (e.g. only exam1 has been entered
-        // for anyone) — showing a 0%/all-red-F summary here would be
-        // exactly the same misleading picture we just fixed per-student,
-        // just moved up a level. Say so honestly instead.
+      {gradedStudents.length === 0 ? (
+        // Nobody has any grade entered at all yet — there's genuinely
+        // nothing to summarize.
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-10 text-center text-muted-foreground">
           <BarChart3 size={28} className="mb-2 opacity-50" />
           <p className="font-display text-sm font-semibold">
-            الإحصائيات النهائية تظهر هنا بعد اكتمال درجات أي طالب
+            الإحصائيات تظهر هنا بمجرد رصد أول درجة لأي طالب
           </p>
           <p className="mt-1 text-xs">
-            لا يزال جميع الطلبة قيد الرصد الجزئي — تحقق من صفوفهم أدناه لمتابعة ما رُصد حتى الآن
+            لم تُرصد أي درجات بعد — ابدأ من تبويب الدرجات
           </p>
         </div>
       ) : (
         <>
-          {fullyGradedStudents.length < students.length && (
+          {fullyGradedCount < gradedStudents.length && (
             <p className="rounded-xl bg-primary/5 px-3 py-2 text-xs font-medium text-primary">
-              الإحصائيات أدناه محسوبة من {fullyGradedStudents.length} من {students.length} طالباً اكتملت درجاتهم فقط
+              الإحصائيات أدناه مبنية على النسبة الحالية من الدرجات المُدخلة لكل طالب — {fullyGradedCount} من {gradedStudents.length} طالباً فقط اكتملت درجاتهم النهائية
             </p>
           )}
-          {/* Stats */}
+          {/* Stats — average/highest/lowest are PERCENTAGES of what's been
+              graded so far for each student, not raw scores, since
+              students may have very different amounts graded */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: t("average"), value: avg.toFixed(1), icon: TrendingUp, color: "bg-primary/10 text-primary" },
-              { label: t("highestGrade"), value: highest.toString(), icon: Award, color: "bg-success/10 text-success" },
-              { label: t("lowestGrade"), value: lowest.toString(), icon: TrendingDown, color: "bg-destructive/10 text-destructive" },
-              { label: t("passRate"), value: `${((passCount / fullyGradedStudents.length) * 100).toFixed(0)}%`, icon: User, color: "bg-accent/10 text-accent" },
+              { label: t("average"), value: `${avg.toFixed(0)}%`, icon: TrendingUp, color: "bg-primary/10 text-primary" },
+              { label: t("highestGrade"), value: `${highest.toFixed(0)}%`, icon: Award, color: "bg-success/10 text-success" },
+              { label: t("lowestGrade"), value: `${lowest.toFixed(0)}%`, icon: TrendingDown, color: "bg-destructive/10 text-destructive" },
+              { label: t("passRate"), value: `${((passCount / gradedStudents.length) * 100).toFixed(0)}%`, icon: User, color: "bg-accent/10 text-accent" },
             ].map((stat) => (
               <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                 <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-xl ${stat.color}`}>
@@ -208,7 +217,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             <h3 className="font-display text-sm font-bold text-foreground">أعلى الطلبة تحصيلاً</h3>
           </div>
           <div className="space-y-2">
-            {topStudents.map(({ student, total }, i) => (
+            {topStudents.map(({ student, completeness }, i) => (
               <div key={student.id} className="flex items-center gap-3 rounded-xl bg-muted/40 p-2.5">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-display text-xs font-bold text-primary">
                   {i + 1}
@@ -216,8 +225,17 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                 <span className="flex-1 truncate font-display text-sm font-semibold text-foreground">
                   {student.name}
                 </span>
-                <span className="font-display text-sm font-bold text-primary" dir="ltr">
-                  {total} / {maxTotal}
+                <span className="flex items-center gap-1.5">
+                  <span className="font-display text-sm font-bold text-primary" dir="ltr">
+                    {completeness.isFullyGraded ? getTotal(student, course) : completeness.gradedSum}
+                    {" / "}
+                    {completeness.isFullyGraded ? maxTotal : completeness.gradedMax}
+                  </span>
+                  {!completeness.isFullyGraded && (
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
+                      جزئي
+                    </span>
+                  )}
                 </span>
               </div>
             ))}
