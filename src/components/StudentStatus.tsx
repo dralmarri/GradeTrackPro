@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Student, Course, getLabel } from "@/types/student";
 import { getBonusTotal, getMaxTotal, getPercentage, getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
-import { User, TrendingUp, TrendingDown, Award, Search } from "lucide-react";
+import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy } from "lucide-react";
 import { GradeTier, LetterTier, loadGradeTiers, loadLetterTiers, getTierFor, getLetterFor } from "@/lib/gradeTiers";
 import { useLanguage } from "@/hooks/useLanguage";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts";
 
 interface StudentStatusProps {
   students: Student[];
@@ -53,6 +54,29 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
   const lowest = Math.min(...totals);
   const passCount = totals.filter((t) => getPercentage(t, maxTotal) >= 60).length;
 
+  // Grade-letter distribution — built from this course's real, user-configured
+  // letter scale (letterTiers) rather than any invented buckets.
+  const colorVarByClass: Record<string, string> = {
+    "text-success": "hsl(var(--success))",
+    "text-primary": "hsl(var(--primary))",
+    "text-accent": "hsl(var(--accent))",
+    "text-warning": "hsl(var(--warning))",
+    "text-destructive": "hsl(var(--destructive))",
+  };
+  const letterDistribution = [...letterTiers]
+    .sort((a, b) => b.minPercent - a.minPercent)
+    .map((lt) => ({
+      letter: lt.letter,
+      fill: colorVarByClass[lt.color] || "hsl(var(--primary))",
+      count: totals.filter((t) => getLetterFor(getPercentage(t, maxTotal), letterTiers).letter === lt.letter).length,
+    }));
+
+  // Top students by real computed total (ties broken by original order).
+  const topStudents = students
+    .map((s, i) => ({ student: s, total: totals[i] }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, Math.min(3, students.length));
+
   return (
     <div className="space-y-6">
       {/* Stats */}
@@ -72,6 +96,72 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
           </div>
         ))}
       </div>
+
+      {/* Grade distribution */}
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <BarChart3 size={18} className="text-primary" />
+          <h3 className="font-display text-sm font-bold text-foreground">توزيع التقديرات</h3>
+        </div>
+        <div className="h-40 w-full" dir="ltr">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={letterDistribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <XAxis
+                dataKey="letter"
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={{ stroke: "hsl(var(--border))" }}
+                tickLine={false}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                cursor={{ fill: "hsl(var(--muted))" }}
+                contentStyle={{
+                  background: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+                formatter={(value: number) => [`${value}`, "عدد الطلبة"]}
+              />
+              <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                {letterDistribution.map((entry, i) => (
+                  <Cell key={i} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Top students */}
+      {topStudents.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <Trophy size={18} className="text-primary" />
+            <h3 className="font-display text-sm font-bold text-foreground">أعلى الطلبة تحصيلاً</h3>
+          </div>
+          <div className="space-y-2">
+            {topStudents.map(({ student, total }, i) => (
+              <div key={student.id} className="flex items-center gap-3 rounded-xl bg-muted/40 p-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-display text-xs font-bold text-primary">
+                  {i + 1}
+                </span>
+                <span className="flex-1 truncate font-display text-sm font-semibold text-foreground">
+                  {student.name}
+                </span>
+                <span className="font-display text-sm font-bold text-primary" dir="ltr">
+                  {total} / {maxTotal}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">

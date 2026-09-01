@@ -1,6 +1,6 @@
 import { useRef, useState, useMemo } from "react";
 import { Student, LectureInfo, Course } from "@/types/student";
-import { ChevronRight, ChevronLeft, Search, Download, Upload, Loader2, StickyNote } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Download, Upload, Loader2, StickyNote, CheckCheck, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { exportAttendanceTemplate, parseAttendanceFile, parsePaaetAttendanceFile } from "@/lib/excel";
@@ -109,6 +109,7 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
     return idx;
   });
   const [search, setSearch] = useState("");
+  const [sortMode, setSortMode] = useState<"default" | "name" | "status">("default");
 
   const { presentCount, absentCount, pct } = useMemo(() => {
     let p = 0, a = 0;
@@ -137,9 +138,32 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
 
   const current = safeLectures[selectedLecture];
 
-  const filtered = search
+  const searched = search
     ? safeStudents.filter((s) => s.name.includes(search.trim()))
     : safeStudents;
+
+  const filtered = useMemo(() => {
+    const arr = [...searched];
+    if (sortMode === "name") {
+      arr.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+    } else if (sortMode === "status") {
+      arr.sort((a, b) => {
+        const aPresent = a.attendance?.[selectedLecture] !== false;
+        const bPresent = b.attendance?.[selectedLecture] !== false;
+        if (aPresent === bPresent) return 0;
+        return aPresent ? 1 : -1; // absent students first
+      });
+    }
+    return arr;
+  }, [searched, sortMode, selectedLecture]);
+
+  const markAllPresent = () => {
+    safeStudents.forEach((s) => {
+      if (s.attendance?.[selectedLecture] === false) {
+        onUpdateAttendance(s.id, selectedLecture, true);
+      }
+    });
+  };
 
   const goNext = () => selectedLecture < safeLectures.length - 1 && setSelectedLecture(selectedLecture + 1);
   const goPrev = () => selectedLecture > 0 && setSelectedLecture(selectedLecture - 1);
@@ -214,6 +238,36 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
         </div>
       </div>
 
+      {/* Attendance percentage banner */}
+      <div className="rounded-[32px] border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground sm:text-sm">
+              {lang === "ar" ? "نسبة الحضور الحالية" : "Current Attendance Rate"}
+            </p>
+            <p className="mt-1 font-display text-3xl font-extrabold text-primary sm:text-4xl">{pct}%</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {lang === "ar"
+                ? `${presentCount} حاضر من أصل ${presentCount + absentCount}`
+                : `${presentCount} present of ${presentCount + absentCount}`}
+            </p>
+          </div>
+          <button
+            onClick={markAllPresent}
+            className="flex shrink-0 items-center gap-2 rounded-2xl bg-success/10 px-3.5 py-2.5 text-xs font-bold text-success transition-colors hover:bg-success/20 sm:text-sm"
+          >
+            <CheckCheck size={16} />
+            {lang === "ar" ? "الكل حاضر" : "Mark All Present"}
+          </button>
+        </div>
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted/60">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="rounded-3xl border border-border bg-card p-4 text-center shadow-sm">
@@ -256,16 +310,37 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
         />
       </div>
 
-      {/* Search */}
-      <div className="relative rounded-[32px] border border-border bg-card p-3 shadow-sm">
-        <Search size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder={t("searchByName")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-input bg-background py-2.5 pr-9 pl-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-        />
+      {/* Search + sort */}
+      <div className="flex gap-2">
+        <div className="relative flex-1 rounded-[32px] border border-border bg-card p-3 shadow-sm">
+          <Search size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder={t("searchByName")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-input bg-background py-2.5 pr-9 pl-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        <button
+          onClick={() =>
+            setSortMode((m) => (m === "default" ? "status" : m === "status" ? "name" : "default"))
+          }
+          className={cn(
+            "flex shrink-0 items-center gap-1.5 rounded-[32px] border border-border bg-card px-3.5 py-3 text-xs font-bold shadow-sm transition-colors sm:text-sm",
+            sortMode === "default" ? "text-muted-foreground hover:text-foreground" : "text-primary"
+          )}
+          aria-label={lang === "ar" ? "ترتيب" : "Sort"}
+        >
+          <ArrowUpDown size={15} />
+          <span className="hidden sm:inline">
+            {sortMode === "default"
+              ? (lang === "ar" ? "ترتيب" : "Sort")
+              : sortMode === "status"
+              ? (lang === "ar" ? "الغياب أولاً" : "Absent first")
+              : (lang === "ar" ? "الاسم" : "Name")}
+          </span>
+        </button>
       </div>
 
       {/* Student rows */}

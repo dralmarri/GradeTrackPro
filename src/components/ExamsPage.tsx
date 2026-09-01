@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Student, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS, StandardComponentKey } from "@/types/student";
 import { FileSpreadsheet, Loader2, Search, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -53,7 +53,7 @@ export default function ExamsPage({
   hiddenComponents,
   onUpdateStudent,
 }: ExamsPageProps) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const L = { ...DEFAULT_COMPONENT_LABELS, ...(componentLabels || {}) };
   const customs = customComponents || [];
   const hidden = new Set<StandardComponentKey>(hiddenComponents || []);
@@ -87,14 +87,38 @@ export default function ExamsPage({
     ? students.filter((s) => s.name.includes(searchQuery))
     : students;
 
-  const getVal = (s: Student): number => {
-    if (currentTab.key === "__bonus__") {
+  const getValFor = (s: Student, tab: ExamTabConfig): number => {
+    if (tab.key === "__bonus__") {
       const sum = (s.lectureBonus || []).reduce((a, b) => a + (Number(b) || 0), 0);
       return sum;
     }
-    if (currentTab.isCustom) return Number(s.customScores?.[currentTab.key] || 0);
-    return Number((s as any)[currentTab.key]) || 0;
+    if (tab.isCustom) return Number(s.customScores?.[tab.key] || 0);
+    return Number((s as any)[tab.key]) || 0;
   };
+
+  const getVal = (s: Student): number => getValFor(s, currentTab);
+
+  // Real per-exam stats derived from student scores: number of students who
+  // have a non-zero (i.e. entered) score, and the class average for that
+  // component. No fabricated data — computed straight from `students`.
+  const tabStats = useMemo(() => {
+    const map = new Map<string, { graded: number; average: number }>();
+    tabs.forEach((tab) => {
+      let sum = 0;
+      let graded = 0;
+      students.forEach((s) => {
+        const v = getValFor(s, tab);
+        if (v > 0) graded += 1;
+        sum += v;
+      });
+      map.set(tab.key, {
+        graded,
+        average: students.length > 0 ? sum / students.length : 0,
+      });
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs, students]);
 
   const setVal = (s: Student, v: number) => {
     const clamped = clamp(v, currentTab.max);
@@ -197,29 +221,53 @@ export default function ExamsPage({
 
   return (
     <div className="space-y-4">
-      {/* Pill tab cards */}
-      <div className={cn(
-        "grid gap-2",
-        tabs.length <= 3 ? "grid-cols-3" : tabs.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-5"
-      )}>
+      {/* Header */}
+      <div>
+        <h2 className="font-display text-lg font-extrabold text-foreground sm:text-xl">
+          {lang === "ar" ? "الدرجات والاختبارات" : "Grades & Assessments"}
+        </h2>
+        <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
+          {lang === "ar"
+            ? tf("عدد الطلبة: {n}", { n: students.length })
+            : `Students: ${students.length}`}
+        </p>
+      </div>
+
+      {/* Exam list cards — real per-component stats (graded count + class average) */}
+      <div className="space-y-2">
         {tabs.map((tab) => {
           const active = activeTabKey === tab.key;
+          const stats = tabStats.get(tab.key);
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTabKey(tab.key)}
               className={cn(
-                "rounded-2xl border-2 px-3 py-3 sm:py-4 text-center transition-all",
+                "flex w-full items-center gap-3 rounded-3xl border-2 p-3.5 text-right transition-all sm:p-4",
                 active ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/30"
               )}
             >
-              <p className={cn(
-                "font-display text-sm sm:text-base font-bold",
-                active ? "text-primary" : "text-foreground"
-              )}>{tab.label}</p>
-              <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground">
+              <span
+                className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-display text-sm font-extrabold",
+                  active ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+                )}
+              >
+                {tab.max}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className={cn("truncate font-display text-sm font-bold sm:text-base", active ? "text-primary" : "text-foreground")}>
+                  {tab.label}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground sm:text-xs">
+                  {lang === "ar"
+                    ? `${stats?.graded ?? 0} من ${students.length} طالب لديهم درجة · المعدل ${(stats?.average ?? 0).toFixed(1)}`
+                    : `${stats?.graded ?? 0} of ${students.length} graded · avg ${(stats?.average ?? 0).toFixed(1)}`}
+                </p>
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-muted-foreground sm:text-sm">
                 {tf(t("ofMaxGrade"), { max: tab.max })}
-              </p>
+              </span>
             </button>
           );
         })}
