@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { useCourses } from "@/hooks/useCourses";
@@ -9,7 +8,6 @@ import { generateLectureDates, WEEKDAYS } from "@/lib/lectures";
 import { LectureInfo } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
-import BonusTable from "@/components/BonusTable";
 import ExamsPage from "@/components/ExamsPage";
 import StudentStatus from "@/components/StudentStatus";
 import AttendanceSummary from "@/components/AttendanceSummary";
@@ -28,18 +26,9 @@ import {
   BookOpen,
   Plus,
   Upload,
-  Download,
   Trash2,
   ChevronLeft,
-  PlusCircle,
   CalendarIcon,
-  Star,
-  ClipboardList,
-  BarChart3,
-  UserCheck,
-  Settings,
-  
-  MessageCircle,
   Users,
   ChevronDown,
 } from "lucide-react";
@@ -65,14 +54,10 @@ export default function Index() {
     addStudentsToCourse,
     syncStudentsToCourse,
     updateStudent,
-    updateLectureBonus,
     updateAttendance,
+    importPaaetAttendance,
     deleteCourse,
     deleteStudent,
-    addLecture,
-    exportAllData,
-
-    importAllData,
   } = useCourses();
 
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
@@ -578,6 +563,7 @@ export default function Index() {
               lectures={activeCourse.lectures}
               course={activeCourse}
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
+              onImportPaaet={(matched, newStudents) => importPaaetAttendance(activeCourse.id, matched, newStudents)}
             />
 
 

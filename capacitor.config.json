@@ -8,17 +8,26 @@
     "limitsNavigationsToAppBoundDomains": true
   },
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor",
+    "cleartext": false
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 800,
+      "launchShowDuration": 400,
       "launchAutoHide": true,
       "backgroundColor": "#0ea5e9",
       "showSpinner": false,
       "iosSpinnerStyle": "small",
       "splashFullScreen": true,
-      "splashImmersive": true
+      "splashImmersive": true,
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP"
     }
   }
 }

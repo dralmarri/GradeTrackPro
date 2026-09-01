@@ -17,14 +17,10 @@ interface GradeTableProps {
   onDeleteStudent: (studentId: string) => void;
 }
 
-function clamp(val: number, max: number) {
-  return Math.max(0, Math.min(val, max));
-}
 
 export default function GradeTable({
   students,
   lectures,
-  lectureCount,
   maxBonus,
   maxExam1,
   maxExam2,
