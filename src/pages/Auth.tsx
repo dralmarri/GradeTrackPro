@@ -19,6 +19,8 @@ export default function Auth() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   if (loading) {
     return (
@@ -44,6 +46,7 @@ export default function Auth() {
     }
 
     setSubmitting(true);
+    setUnconfirmedEmail(null);
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -56,7 +59,17 @@ export default function Auth() {
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
-        if (data.user && !data.session) {
+        // Supabase returns success (no error) for a duplicate, already-confirmed
+        // email too — it comes back with no session AND an identities array
+        // that's empty, to avoid leaking which emails are registered. Surface
+        // that case explicitly instead of a misleading "account created".
+        if (data.user && !data.session && (data.user.identities?.length ?? 0) === 0) {
+          toast.error(
+            lang === "ar"
+              ? "هذا البريد مسجّل بالفعل. جرّب تسجيل الدخول، أو استخدم «نسيت كلمة المرور؟» إذا لزم"
+              : "This email is already registered. Try signing in, or use “Forgot password?”",
+          );
+        } else if (data.user && !data.session) {
           toast.success(
             lang === "ar"
               ? "تم إنشاء الحساب! تحقق من بريدك الإلكتروني للتأكيد. إذا لم تجد الرسالة تحقق من مجلد Spam."
@@ -68,9 +81,57 @@ export default function Auth() {
         }
       }
     } catch (err: any) {
-      toast.error(err.message || "حدث خطأ");
+      // Supabase's raw messages are English-only and don't distinguish "wrong
+      // password" from "never confirmed the signup email" — the single most
+      // common source of "it says I'm not registered" confusion, since the
+      // account genuinely does exist (which is also why signUp then correctly
+      // refuses it as a duplicate). Detect that specific case and offer to
+      // resend the confirmation email right from the error.
+      const code = err?.code as string | undefined;
+      const msg = String(err?.message || "");
+      if (code === "email_not_confirmed" || /email.*not.*confirm/i.test(msg)) {
+        setUnconfirmedEmail(email);
+        toast.error(
+          lang === "ar"
+            ? "هذا الحساب موجود لكن لم يُفعَّل بعد — تحقّق من بريدك الإلكتروني لتأكيد الحساب (أو أعد الإرسال أدناه)"
+            : "This account exists but hasn't been confirmed yet — check your email for the confirmation link (or resend it below)",
+          { duration: 8000 },
+        );
+      } else if (code === "invalid_credentials" || /invalid login credentials/i.test(msg)) {
+        toast.error(
+          lang === "ar"
+            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+            : "Incorrect email or password",
+        );
+      } else if (code === "user_already_exists" || /already registered|already exists/i.test(msg)) {
+        toast.error(
+          lang === "ar"
+            ? "هذا البريد مسجّل بالفعل. جرّب تسجيل الدخول بدلاً من إنشاء حساب"
+            : "This email is already registered. Try signing in instead",
+        );
+      } else {
+        toast.error(msg || (lang === "ar" ? "حدث خطأ" : "Something went wrong"));
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!unconfirmedEmail) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email: unconfirmedEmail });
+      if (error) throw error;
+      toast.success(
+        lang === "ar"
+          ? "أُعيد إرسال رسالة التأكيد. تحقق من بريدك (ومجلد Spam)"
+          : "Confirmation email resent. Check your inbox (and Spam folder)",
+      );
+    } catch (err: any) {
+      toast.error(err?.message || (lang === "ar" ? "تعذّر إعادة الإرسال" : "Could not resend"));
+    } finally {
+      setResending(false);
     }
   };
 
@@ -91,6 +152,7 @@ export default function Auth() {
     setIsLogin((v) => !v);
     setPassword("");
     setConfirmPassword("");
+    setUnconfirmedEmail(null);
   };
 
   return (
@@ -233,6 +295,26 @@ export default function Auth() {
             <p className="rounded-lg border border-amber-300/40 bg-amber-50 px-3 py-2 text-center text-[12px] leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
               {t("confirmHint")}
             </p>
+          )}
+
+          {unconfirmedEmail && (
+            <div className="rounded-lg border border-amber-300/40 bg-amber-50 px-3 py-2.5 text-center dark:border-amber-500/30 dark:bg-amber-500/10">
+              <p className="mb-1.5 text-[12px] leading-relaxed text-amber-900 dark:text-amber-200">
+                {lang === "ar"
+                  ? "لم تُفعِّل هذا الحساب بعد."
+                  : "This account hasn't been confirmed yet."}
+              </p>
+              <button
+                type="button"
+                onClick={handleResendConfirmation}
+                disabled={resending}
+                className="text-[12px] font-bold text-primary hover:underline disabled:opacity-50"
+              >
+                {resending
+                  ? (lang === "ar" ? "جارٍ الإرسال…" : "Sending…")
+                  : (lang === "ar" ? "إعادة إرسال رسالة التأكيد" : "Resend confirmation email")}
+              </button>
+            </div>
           )}
 
           {isLogin && (
