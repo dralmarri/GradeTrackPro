@@ -9,6 +9,7 @@ import { LectureInfo } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ExamsPage from "@/components/ExamsPage";
+import OmrExamsPage from "@/components/OmrExamsPage";
 import StudentStatus from "@/components/StudentStatus";
 import AttendanceSummary from "@/components/AttendanceSummary";
 import AttendancePerLecture from "@/components/AttendancePerLecture";
@@ -40,12 +41,12 @@ import { tf } from "@/lib/translations";
 import AppStoreBanner from "@/components/AppStoreBanner";
 
 
-type CourseTab = "attendance" | "exams" | "status";
+type CourseTab = "attendance" | "exams" | "omr" | "status";
 type MainView = "courses" | "settings";
 
 export default function Index() {
   
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const {
     courses,
     loading,
@@ -138,7 +139,10 @@ export default function Index() {
   // Bottom nav handlers shared across views
   const goHome = () => { setActiveCourseId(null); setMainView("courses"); };
   const goSettings = () => { setMainView("settings"); };
-  const goCourseTab = (tab: CourseTab) => { setMainView("courses"); setCourseTab(tab); };
+  const goCourseTab = (tab: "assess" | "status") => {
+    setMainView("courses");
+    setCourseTab(tab === "assess" ? "omr" : "status");
+  };
 
 
   // Settings / Course management view
@@ -469,6 +473,7 @@ export default function Index() {
           destructive
           onConfirm={() => {
             if (pendingDeleteCourse) {
+              if (pendingDeleteCourse.id === activeCourseId) setActiveCourseId(null);
               deleteCourse(pendingDeleteCourse.id);
               toast.success(t("courseDeleted"));
               setPendingDeleteCourse(null);
@@ -489,7 +494,7 @@ export default function Index() {
 
   // Course detail view
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <header className="flex-shrink-0 border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4">
           <button
@@ -535,24 +540,66 @@ export default function Index() {
       </header>
 
 
-      <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto px-4 py-6 pb-24">
+      <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto px-4 py-6 pb-32">
+
+        {(courseTab === "exams" || courseTab === "omr") && (
+          <div className="mb-4 flex gap-2">
+            {([
+              { key: "omr", label: lang === "ar" ? "التصحيح الآلي والاختبارات" : "Auto grading & exams" },
+              { key: "exams", label: lang === "ar" ? "رصد الدرجات" : "Grade entry" },
+            ] as const).map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setCourseTab(m.key)}
+                className={
+                  courseTab === m.key
+                    ? "flex-1 rounded-xl border border-primary bg-primary/10 px-3 py-2 text-xs font-bold text-primary"
+                    : "flex-1 rounded-xl border border-border px-3 py-2 text-xs font-bold text-muted-foreground hover:bg-muted"
+                }
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {courseTab === "exams" && (
-          <ExamsPage
-            students={activeCourse.students}
-            courseId={activeCourse.id}
-            maxExam1={activeCourse.maxExam1}
-            maxExam2={activeCourse.maxExam2}
-            maxFinal={activeCourse.maxFinal}
-            maxParticipation={activeCourse.maxParticipation}
-            maxHomework={activeCourse.maxHomework}
-            maxBonus={activeCourse.maxBonus}
-            bonusEnabled={activeCourse.bonusEnabled !== false}
-            lectureCount={activeCourse.lectureCount}
-            componentLabels={activeCourse.componentLabels}
-            customComponents={activeCourse.customComponents}
-            hiddenComponents={activeCourse.hiddenComponents}
-            onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
+          <div className="space-y-6">
+            <ExamsPage
+              students={activeCourse.students}
+              courseId={activeCourse.id}
+              maxExam1={activeCourse.maxExam1}
+              maxExam2={activeCourse.maxExam2}
+              maxFinal={activeCourse.maxFinal}
+              maxParticipation={activeCourse.maxParticipation}
+              maxHomework={activeCourse.maxHomework}
+              maxBonus={activeCourse.maxBonus}
+              bonusEnabled={activeCourse.bonusEnabled !== false}
+              lectureCount={activeCourse.lectureCount}
+              componentLabels={activeCourse.componentLabels}
+              customComponents={activeCourse.customComponents}
+              hiddenComponents={activeCourse.hiddenComponents}
+              onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
+            />
+          </div>
+        )}
+
+        {courseTab === "omr" && (
+          <OmrExamsPage
+            course={activeCourse}
+            bankCourseIds={courses.filter((c) => c.name.trim() === activeCourse.name.trim()).map((c) => c.id)}
+            onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
+            onApplyScore={async (studentId, targetComponent, score) => {
+              const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
+              if (standard.includes(targetComponent)) {
+                await updateStudent(activeCourse.id, studentId, { [targetComponent]: score } as any);
+              } else {
+                const st = activeCourse.students.find((s) => s.id === studentId);
+                await updateStudent(activeCourse.id, studentId, {
+                  customScores: { ...(st?.customScores || {}), [targetComponent]: score },
+                } as any);
+              }
+            }}
           />
         )}
 
@@ -586,6 +633,10 @@ export default function Index() {
             course={activeCourse}
           />
         )}
+
+        {/* explicit spacer — guarantees the last item clears the fixed
+            bottom nav regardless of container padding/dvh edge cases */}
+        <div aria-hidden className="h-24" />
       </main>
 
       <CourseStudentsDialog
@@ -599,10 +650,10 @@ export default function Index() {
       />
 
       <BottomNav
-        active={courseTab as BottomNavKey}
+        active={courseTab === "attendance" ? "home" : courseTab === "status" ? "status" : "assess"}
         hasActiveCourse={true}
-        onHome={goHome}
-        onCourseTab={(tab) => setCourseTab(tab)}
+        onHome={() => (courseTab === "attendance" ? goHome() : setCourseTab("attendance"))}
+        onCourseTab={(tab) => setCourseTab(tab === "assess" ? "omr" : "status")}
         onSettings={goSettings}
       />
     </div>

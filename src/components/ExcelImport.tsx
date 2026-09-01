@@ -1,12 +1,12 @@
 import { useRef } from "react";
 import { Download } from "lucide-react";
-import { parseExcelFile } from "@/lib/excel";
+import { parseExcelFile, ImportedStudent } from "@/lib/excel";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 import { tf } from "@/lib/translations";
 
 interface ExcelImportProps {
-  onImport: (names: string[]) => void;
+  onImport: (students: ImportedStudent[]) => void;
 }
 
 export default function ExcelImport({ onImport }: ExcelImportProps) {

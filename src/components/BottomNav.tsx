@@ -1,15 +1,17 @@
-import { Home, UserCheck, ClipboardList, BarChart3, Settings } from "lucide-react";
+import { Home, BarChart3, Settings, ScanLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 
-export type BottomNavKey = "home" | "attendance" | "exams" | "status" | "settings";
+// "home" covers the course list AND the in-course main page (الحضور);
+// "assess" covers manual grades (الدرجات) + auto grading (التصحيح)
+export type BottomNavKey = "home" | "assess" | "status" | "settings";
 
 interface BottomNavProps {
   active: BottomNavKey;
   hasActiveCourse: boolean;
   onHome: () => void;
-  onCourseTab: (tab: "attendance" | "exams" | "status") => void;
+  onCourseTab: (tab: "assess" | "status") => void;
   onSettings: () => void;
 }
 
@@ -22,7 +24,7 @@ export default function BottomNav({
 }: BottomNavProps) {
   const { t, lang } = useLanguage();
 
-  const requireCourse = (tab: "attendance" | "exams" | "status") => {
+  const requireCourse = (tab: "assess" | "status") => {
     if (!hasActiveCourse) {
       toast.error(lang === "ar" ? "اختر مادة أولاً" : "Open a course first");
       return;
@@ -32,8 +34,7 @@ export default function BottomNav({
 
   const items: { key: BottomNavKey; label: string; icon: typeof Home; onClick: () => void }[] = [
     { key: "home", label: lang === "ar" ? "الرئيسية" : "Home", icon: Home, onClick: onHome },
-    { key: "attendance", label: t("tabAttendance"), icon: UserCheck, onClick: () => requireCourse("attendance") },
-    { key: "exams", label: t("tabExams"), icon: ClipboardList, onClick: () => requireCourse("exams") },
+    { key: "assess", label: lang === "ar" ? "التقييم" : "Assessment", icon: ScanLine, onClick: () => requireCourse("assess") },
     { key: "status", label: t("tabStatus"), icon: BarChart3, onClick: () => requireCourse("status") },
     { key: "settings", label: t("settings"), icon: Settings, onClick: onSettings },
   ];

@@ -30,7 +30,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     applyToDocument(lang);
     try {
       localStorage.setItem(STORAGE_KEY, lang);
-    } catch {}
+    } catch { /* storage unavailable (private mode) */ }
   }, [lang]);
 
   const setLang = useCallback((l: Lang) => setLangState(l), []);

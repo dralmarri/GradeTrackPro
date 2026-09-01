@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Users, X, RefreshCw, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { Course } from "@/types/student";
+import { ImportedStudent } from "@/lib/excel";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
@@ -11,8 +12,8 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   course: Course;
-  onAddStudents: (names: string[]) => void;
-  onSyncStudents: (names: string[]) => void;
+  onAddStudents: (students: ImportedStudent[]) => void;
+  onSyncStudents: (students: ImportedStudent[]) => void;
   onDeleteStudent: (studentId: string) => void;
   onUpdateCourse: (updates: Partial<Omit<Course, "id" | "students">>) => void;
 }
@@ -26,7 +27,7 @@ export default function CourseStudentsDialog({
   onDeleteStudent,
 }: Props) {
   const { t, dir, lang } = useLanguage();
-  const [pendingNames, setPendingNames] = useState<string[] | null>(null);
+  const [pendingNames, setPendingNames] = useState<ImportedStudent[] | null>(null);
 
   return (
     <>
@@ -72,11 +73,11 @@ export default function CourseStudentsDialog({
                   {t("currentStudentsCount")}: {course.students.length}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <ExcelImport onImport={(names) => setPendingNames(names)} />
+                  <ExcelImport onImport={(students) => setPendingNames(students)} />
                   <ManualAddStudents onAdd={(names) => {
                     const existing = new Set(course.students.map((s) => s.name.trim()));
                     const fresh = names.filter((n) => !existing.has(n.trim()));
-                    if (fresh.length) onAddStudents(fresh);
+                    if (fresh.length) onAddStudents(fresh.map((name) => ({ name })));
                   }} />
                   <ManualDeleteStudents
                     students={course.students}
@@ -135,7 +136,7 @@ export default function CourseStudentsDialog({
                 <button
                   onClick={() => {
                     const existing = new Set(course.students.map((s) => s.name.trim()));
-                    const fresh = (pendingNames ?? []).filter((n) => !existing.has(n.trim()));
+                    const fresh = (pendingNames ?? []).filter((n) => !existing.has(n.name.trim()));
                     if (fresh.length) onAddStudents(fresh);
                     setPendingNames(null);
                   }}
