@@ -129,7 +129,7 @@ export default function CourseManager({
       <div className="flex items-center gap-3">
         <img src={appIcon} alt="GradeTrackPro" className="h-11 w-11 rounded-2xl shadow-sm" />
         <div>
-          <h2 className="font-display text-lg font-bold text-foreground">GradeTrackPro</h2>
+          <h2 className="font-display text-lg font-bold text-foreground">GradeTrack<span className="text-primary">Pro</span></h2>
           <p className="text-xs text-muted-foreground">{t("appTagline")}</p>
         </div>
       </div>

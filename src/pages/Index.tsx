@@ -223,7 +223,7 @@ export default function Index() {
               className="h-16 w-16 rounded-2xl shadow-md"
             />
             <div>
-              <h1 className="font-display text-xl font-bold text-foreground">GradeTrackPro</h1>
+              <h1 className="font-display text-xl font-bold text-foreground">GradeTrack<span className="text-primary">Pro</span></h1>
               <p className="text-xs text-muted-foreground">{t("appTagline")}</p>
             </div>
           </div>

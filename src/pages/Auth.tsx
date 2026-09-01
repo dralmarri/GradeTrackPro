@@ -113,7 +113,7 @@ export default function Auth() {
         {/* Logo */}
         <div className="mb-6 flex flex-col items-center">
           <img src={appIcon} alt="GradeTrackPro" className="mb-3 h-16 w-16 rounded-3xl shadow-lg" />
-          <h1 className="font-display text-2xl font-bold text-foreground">GradeTrackPro</h1>
+          <h1 className="font-display text-2xl font-bold text-foreground">GradeTrack<span className="text-primary">Pro</span></h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("appTagline")}</p>
         </div>
 
@@ -257,16 +257,8 @@ export default function Auth() {
           )}
         </form>
 
-        {/* Switch mode */}
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          {isLogin ? t("noAccount") : t("haveAccount")}{" "}
-          <button onClick={switchMode} className="font-semibold text-primary hover:underline">
-            {isLogin ? t("signUp") : t("signIn")}
-          </button>
-        </p>
-
         {/* Guest login */}
-        <div className="mt-3">
+        <div className="mt-4">
           <div className="mb-3 flex items-center gap-2">
             <div className="h-px flex-1 bg-border" />
             <span className="text-xs text-muted-foreground">{lang === "ar" ? "أو" : "or"}</span>
