@@ -13,10 +13,14 @@ import {
   Check,
   X,
   Clock,
+  Sparkles,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/hooks/useAuth";
 import { tf } from "@/lib/translations";
+import appIcon from "@/assets/app-icon.png";
 
 const DAYS_AR: Record<number, string> = {
   0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء",
@@ -40,7 +44,8 @@ export default function CourseManager({
   onDeleteStudent,
   onSelectCourse,
 }: CourseManagerProps) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const { user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editSection, setEditSection] = useState("");
@@ -100,17 +105,84 @@ export default function CourseManager({
     toast.success(t("courseUpdated"));
   };
 
+  const courseInitials = (name: string) =>
+    name.trim().slice(0, 2).toUpperCase() || "؟";
+
+  // Real, derivable status: a course counts as "ended" only when it has an
+  // explicit semesterEnd in the past. No end date -> no pill (never faked).
+  const courseStatus = (course: Course): "active" | "ended" | null => {
+    if (!course.semesterEnd) return null;
+    const end = new Date(course.semesterEnd);
+    if (Number.isNaN(end.getTime())) return null;
+    return end.getTime() < Date.now() ? "ended" : "active";
+  };
+
+  // "Continue with the most recent course" — courses are loaded ordered by
+  // created_at ascending (see useCourses), so the last item is genuinely
+  // the most recently created course, not a fabricated pick.
+  const mostRecentCourse = courses.length > 0 ? courses[courses.length - 1] : null;
+
+  const welcomeName = user?.email ? user.email.split("@")[0] : (lang === "ar" ? "زائر" : "Guest");
+
+  const header = (
+    <div className="mb-5 space-y-4">
+      <div className="flex items-center gap-3">
+        <img src={appIcon} alt="GradeTrackPro" className="h-11 w-11 rounded-2xl shadow-sm" />
+        <div>
+          <h2 className="font-display text-lg font-bold text-foreground">GradeTrackPro</h2>
+          <p className="text-xs text-muted-foreground">{t("appTagline")}</p>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+        <p className="font-display text-base font-bold text-foreground">
+          {lang === "ar" ? `مرحباً، ${welcomeName}` : `Welcome, ${welcomeName}`}
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {lang === "ar"
+            ? `لديك ${courses.length} ${courses.length === 1 ? "مادة دراسية" : "مواد دراسية"}`
+            : `You have ${courses.length} ${courses.length === 1 ? "course" : "courses"}`}
+        </p>
+      </div>
+
+      {mostRecentCourse && (
+        <button
+          type="button"
+          onClick={() => onSelectCourse(mostRecentCourse.id)}
+          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-right shadow-sm transition-colors hover:bg-muted/50 rtl:text-right ltr:text-left"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Sparkles size={18} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">
+              {lang === "ar" ? "متابعة أحدث مادة" : "Continue most recent course"}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{mostRecentCourse.name}</p>
+          </div>
+        </button>
+      )}
+    </div>
+  );
+
   if (courses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <BookOpen size={32} className="mb-3" />
-        <p className="font-display text-lg">{t("noCoursesManage")}</p>
+      <div className="space-y-4">
+        {header}
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <BookOpen size={32} className="mb-3" />
+          <p className="font-display text-lg">{t("noCoursesManage")}</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {header}
+      <h3 className="px-1 font-display text-sm font-bold text-foreground">
+        {lang === "ar" ? "مقرراتي الدراسية" : "My Courses"}
+      </h3>
       {courses.map((course) => (
         <div
           key={course.id}
@@ -252,19 +324,40 @@ export default function CourseManager({
             <>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary md:h-12 md:w-12">
-                    <BookOpen size={20} />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-xs font-bold text-primary md:h-12 md:w-12 md:text-sm">
+                    {courseInitials(course.name)}
                   </div>
                   <div>
                     <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
                     {course.section && (
                       <p className="text-xs text-muted-foreground">{t("sectionLabel")}: {course.section}</p>
                     )}
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Users size={12} />
+                      <span>{course.students.length} {t("student")}</span>
+                      <span aria-hidden>•</span>
+                      <span>{course.lectureCount} {t("lectureWord")}</span>
+                    </div>
                   </div>
                 </div>
-                <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                  {course.students.length} {t("student")}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                    {course.students.length} {t("student")}
+                  </span>
+                  {courseStatus(course) && (
+                    <span
+                      className={
+                        courseStatus(course) === "active"
+                          ? "rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                          : "rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground"
+                      }
+                    >
+                      {courseStatus(course) === "active"
+                        ? (lang === "ar" ? "نشط" : "Active")
+                        : (lang === "ar" ? "منتهي" : "Ended")}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">

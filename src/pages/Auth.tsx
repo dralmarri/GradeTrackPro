@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
 import appIcon from "@/assets/app-icon.png";
@@ -114,13 +114,40 @@ export default function Auth() {
         <div className="mb-6 flex flex-col items-center">
           <img src={appIcon} alt="GradeTrackPro" className="mb-3 h-16 w-16 rounded-3xl shadow-lg" />
           <h1 className="font-display text-2xl font-bold text-foreground">GradeTrackPro</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isLogin ? t("signInTitle") : t("signUpTitle")}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("appTagline")}</p>
+        </div>
+
+        {/* Login / Signup toggle */}
+        <div className="mb-4 grid grid-cols-2 gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => { if (!isLogin) switchMode(); }}
+            className={
+              isLogin
+                ? "rounded-full bg-primary py-2 text-sm font-semibold text-primary-foreground transition-colors"
+                : "rounded-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            }
+          >
+            {t("signIn")}
+          </button>
+          <button
+            type="button"
+            onClick={() => { if (isLogin) switchMode(); }}
+            className={
+              !isLogin
+                ? "rounded-full bg-primary py-2 text-sm font-semibold text-primary-foreground transition-colors"
+                : "rounded-full py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            }
+          >
+            {t("signUp")}
+          </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 rounded-[32px] border border-border bg-card p-6 shadow-sm">
+          <p className="text-center text-sm font-semibold text-foreground">
+            {isLogin ? t("signInTitle") : t("signUpTitle")}
+          </p>
           {/* Email */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-muted-foreground">{t("email")}</label>
@@ -256,6 +283,21 @@ export default function Auth() {
           <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
             {lang === "ar" ? "البيانات محفوظة على الجهاز فقط ولا تُزامن" : "Data stays on device only, no sync"}
           </p>
+        </div>
+
+        {/* Footer links */}
+        <div className="mt-6 flex items-center justify-center gap-3 text-[11px] text-muted-foreground">
+          <Link to="/terms" className="hover:text-foreground hover:underline">
+            {lang === "ar" ? "الشروط" : "Terms"}
+          </Link>
+          <span aria-hidden>•</span>
+          <Link to="/privacy" className="hover:text-foreground hover:underline">
+            {lang === "ar" ? "الخصوصية" : "Privacy"}
+          </Link>
+          <span aria-hidden>•</span>
+          <Link to="/contact" className="hover:text-foreground hover:underline">
+            {lang === "ar" ? "تواصل معنا" : "Help"}
+          </Link>
         </div>
       </div>
     </div>
