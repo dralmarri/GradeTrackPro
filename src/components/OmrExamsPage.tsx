@@ -57,10 +57,12 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [institution, setInstitution] = useState(() => localStorage.getItem("gtp_institution") || "");
   const [college, setCollege] = useState(() => localStorage.getItem("gtp_college") || "");
   const [department, setDepartment] = useState(() => localStorage.getItem("gtp_department") || "");
-  // The exam-management list (print/edit/key/stats/history/delete per exam)
-  // stays tucked away by default — it's reference material a professor
-  // occasionally needs, not something that should always occupy the page.
-  const [examsOpen, setExamsOpen] = useState(false);
+  // The page is organized into 3 collapsible sections — question bank,
+  // exam forms, and grading — each closed by default so only one thing at
+  // a time occupies the page instead of everything stacked at once.
+  const [bankOpen, setBankOpen] = useState(false);
+  const [formsOpen, setFormsOpen] = useState(false);
+  const [gradingOpen, setGradingOpen] = useState(false);
   // When more than one exam has a saved key, "Start scanning" can't just
   // guess which one — this opens a small picker instead.
   const [scanPickerOpen, setScanPickerOpen] = useState(false);
@@ -189,7 +191,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         { duration: 6000 },
       );
       setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4 }]); setMaxScore(20); setFormsCount(1);
-      setExamsOpen(true);
+      setFormsOpen(true);
       setOpenKeyExamId(firstId);
       setDraftKey(new Array(totalQuestions).fill(-1));
       setDraftWeights(new Array(totalQuestions).fill(Math.round((maxScore / totalQuestions) * 100) / 100));
@@ -239,172 +241,81 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
 
   return (
     <div className="space-y-4">
-      {/* header + create */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg font-bold text-foreground">
-          {ar ? "التصحيح الآلي" : "Auto Grading"}
-        </h3>
-        <button
-          onClick={() => setShowCreate((v) => !v)}
-          className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          <Plus size={14} />
-          {ar ? "اختبار جديد" : "New exam"}
-        </button>
-      </div>
+      {/* header */}
+      <h3 className="font-display text-lg font-bold text-foreground">
+        {ar ? "التصحيح الآلي" : "Auto Grading"}
+      </h3>
 
-      {/* feature doorways — bank + generation live further down this page;
-          these cards give them the entry-point treatment from the approved
-          mockup instead of duplicating their functionality */}
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => document.getElementById("question-bank-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 sm:gap-5 sm:p-5"
-        >
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:h-14 sm:w-14">
-            <Database size={22} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-bold text-foreground">{ar ? "بنك الأسئلة" : "Question bank"}</span>
-            <span className="block text-xs text-muted-foreground">{ar ? "إدارة الأسئلة ونماذج الإجابة" : "Manage questions & answer keys"}</span>
-          </span>
-          <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
-        </button>
-        <button
-          type="button"
-          onClick={() => document.getElementById("question-bank-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 sm:gap-5 sm:p-5"
-        >
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-success/10 text-success sm:h-14 sm:w-14">
-            <Wand2 size={22} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-bold text-foreground">{ar ? "توليد أوراق الاختبار" : "Generate exam papers"}</span>
-            <span className="block text-xs text-muted-foreground">{ar ? "تصميم ونماذج تظليل فقاعات" : "Multi-form bubble-sheet generation"}</span>
-          </span>
-          <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
-        </button>
-      </div>
-
-      {/* quick scan — a normal button like the two above it, not tied to
-          any one exam. One scannable exam → scans it directly; more than
-          one → asks which exam this sheet is for. The camera view itself
-          only appears once tapped (inside OmrScanDialog). */}
+      {/* Section 1: Question bank — everything about writing/managing
+          questions and generating exams from them lives inside
+          QuestionBankPage's own UI, under one toggle. */}
       <button
         type="button"
-        onClick={handleStartScan}
-        disabled={scannableExams.length === 0}
-        className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60 sm:gap-5 sm:p-5"
+        onClick={() => setBankOpen((v) => !v)}
+        className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 sm:gap-5 sm:p-5"
       >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground sm:h-14 sm:w-14">
-          <Camera size={22} />
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:h-14 sm:w-14">
+          <Database size={22} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold text-foreground">
-            {ar ? "بدء المسح الآن" : "Start scanning"}
-          </span>
-          <span className="block text-xs text-muted-foreground">
-            {scannableExams.length === 0
-              ? (ar ? "أدخل مفتاح إجابة أولاً" : "Set an answer key first")
-              : scannableExams.length === 1
-              ? (ar ? `جاهز — ${scannableExams[0].title}` : `Ready — ${scannableExams[0].title}`)
-              : (ar ? `اختر أحد ${scannableExams.length} اختبارات جاهزة` : `Choose one of ${scannableExams.length} ready exams`)}
-          </span>
+          <span className="block truncate font-bold text-foreground">{ar ? "بنك الأسئلة" : "Question bank"}</span>
+          <span className="block text-xs text-muted-foreground">{ar ? "إدارة الأسئلة، ونماذج الإجابة، وتوليد أوراق الاختبار منها" : "Manage questions, answer keys, and generate exam papers from them"}</span>
         </span>
-        <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
+        <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", bankOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
+      </button>
+      {bankOpen && (
+        <QuestionBankPage
+          course={course}
+          bankCourseIds={bankCourseIds}
+          sheetHeader={sheetHeader}
+          componentOptions={componentOptions}
+          onCreateExam={addExam}
+          onSetAnswerKey={updateAnswerKey}
+          buildExam={(id, form: GeneratedForm, t, target, max, mode) => ({
+            id,
+            courseId: course.id,
+            title: t,
+            questionCount: form.questions.length,
+            choiceCount: form.sections[0].choiceCount,
+            targetComponent: target,
+            maxScore: max,
+            answerKey: form.answerKey,
+            studentIdDigits: 12,
+            sections: form.sections.length > 1 ? form.sections : undefined,
+            version: form.version,
+            idMode: mode,
+            createdAt: "",
+            updatedAt: "",
+          })}
+        />
+      )}
+
+      {/* Section 2: Exam forms — create/print/edit/key per exam, all under
+          one toggle instead of scattered across the page. */}
+      <button
+        type="button"
+        onClick={() => setFormsOpen((v) => !v)}
+        className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 sm:gap-5 sm:p-5"
+      >
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-success/10 text-success sm:h-14 sm:w-14">
+          <Wand2 size={22} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold text-foreground">{ar ? `نماذج الاختبارات (${exams.length})` : `Exam forms (${exams.length})`}</span>
+          <span className="block text-xs text-muted-foreground">{ar ? "إنشاء، طباعة، تعديل، مفاتيح الإجابة" : "Create, print, edit, answer keys"}</span>
+        </span>
+        <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", formsOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
       </button>
 
-      {/* exam picker — only needed when more than one exam has a key */}
-      {scanPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={() => setScanPickerOpen(false)}>
-          <div
-            className="w-full max-w-md rounded-t-3xl bg-background p-5 sm:rounded-3xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-3 font-display text-base font-bold text-foreground">
-              {ar ? "لأي اختبار هذه الورقة؟" : "Which exam is this sheet for?"}
-            </h3>
-            <div className="space-y-2">
-              {scannableExams.map((exam) => (
-                <button
-                  key={exam.id}
-                  onClick={() => { setScanExam(exam); setScanPickerOpen(false); }}
-                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-border p-3 text-start hover:bg-muted"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-foreground">
-                      {exam.title}
-                      {exam.version ? ` — ${ar ? "نموذج" : "Form"} ${exam.version}` : ""}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {exam.questionCount} {ar ? "سؤال" : "Qs"} · {exam.maxScore} {ar ? "درجة" : "pts"}
-                    </span>
-                  </span>
-                  <ChevronRight size={16} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setScanPickerOpen(false)}
-              className="mt-3 w-full rounded-xl border border-border py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
-            >
-              {ar ? "إلغاء" : "Cancel"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* batch stats — real numbers only, aggregated from archived scans */}
-      {batchStats && batchStats.scanned > 0 && (
-        <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h4 className="font-bold text-foreground">{ar ? "إحصائيات الدفعة الحالية" : "Current batch statistics"}</h4>
-            {historyExam === null && exams.length > 0 && (
-              <button
-                onClick={() => setHistoryExam(quickScanExam ?? exams[0])}
-                className="text-xs font-bold text-primary hover:underline"
-              >
-                {ar ? "التفاصيل" : "Details"}
-              </button>
-            )}
-          </div>
-          <div className={cn(
-            "grid gap-4 text-center",
-            batchStats.accuracy !== null
-              ? (batchStats.needsReview > 0 ? "grid-cols-3" : "grid-cols-2")
-              : (batchStats.needsReview > 0 ? "grid-cols-2" : "grid-cols-1"),
-          )}>
-            <div>
-              <p className="text-2xl font-bold text-primary">{batchStats.scanned}</p>
-              <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "تم مسحها" : "Scanned"}</p>
-            </div>
-            {batchStats.accuracy !== null && (
-              <div className="border-s border-border">
-                <p className="text-2xl font-bold text-success">{batchStats.accuracy}%</p>
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "متوسط الإجابات الصحيحة" : "Avg. correct"}</p>
-              </div>
-            )}
-            {batchStats.needsReview > 0 && (
-              <div className="border-s border-border">
-                <p className="text-2xl font-bold text-amber-600">{batchStats.needsReview}</p>
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "تحتاج مراجعة" : "Needs review"}</p>
-              </div>
-            )}
-          </div>
-          {batchStats.expiringSoon > 0 && (
-            <button
-              onClick={() => setHistoryExam(quickScanExam ?? exams[0])}
-              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-400/60 bg-amber-500/5 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
-            >
-              <AlertTriangle size={13} />
-              {ar
-                ? `${batchStats.expiringSoon} صورة أرشيف ستُحذف قريباً — افتح سجل المسح لتنزيلها قبل الحذف`
-                : `${batchStats.expiringSoon} archived photo(s) will be deleted soon — open scan history to download before then`}
-            </button>
-          )}
-        </div>
-      )}
+      {formsOpen && (
+      <>
+      <button
+        onClick={() => setShowCreate((v) => !v)}
+        className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+      >
+        <Plus size={14} />
+        {ar ? "اختبار جديد" : "New exam"}
+      </button>
 
       {showCreate && (
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -567,24 +478,6 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         </p>
       </details>
 
-      {/* exams list — tucked behind a toggle, not always on the page.
-          Reference/management material (print, edit, key, stats, history,
-          delete per exam) the professor comes back to occasionally, not
-          something that needs to be visible every time this page opens. */}
-      <button
-        type="button"
-        onClick={() => setExamsOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-bold text-foreground transition-colors hover:bg-muted/40"
-      >
-        <span className="flex items-center gap-2">
-          <ScanLine size={16} className="text-primary" />
-          {ar ? `نماذج الاختبارات (${exams.length})` : `Exam forms (${exams.length})`}
-        </span>
-        <ChevronRight size={16} className={cn("shrink-0 text-muted-foreground/50 transition-transform", examsOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
-      </button>
-
-      {examsOpen && (
-      <>
       {exams.length === 0 && !showCreate && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center text-muted-foreground">
           <ScanLine size={32} className="mb-2 opacity-50" />
@@ -804,33 +697,144 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       </>
       )}
 
-      {/* question bank + auto exam generation */}
-      <div id="question-bank-section" className="border-t border-border pt-4 scroll-mt-4">
-        <QuestionBankPage
-          course={course}
-          bankCourseIds={bankCourseIds}
-          sheetHeader={sheetHeader}
-          componentOptions={componentOptions}
-          onCreateExam={addExam}
-          onSetAnswerKey={updateAnswerKey}
-          buildExam={(id, form: GeneratedForm, t, target, max, mode) => ({
-            id,
-            courseId: course.id,
-            title: t,
-            questionCount: form.questions.length,
-            choiceCount: form.sections[0].choiceCount,
-            targetComponent: target,
-            maxScore: max,
-            answerKey: form.answerKey,
-            studentIdDigits: 12,
-            sections: form.sections.length > 1 ? form.sections : undefined,
-            version: form.version,
-            idMode: mode,
-            createdAt: "",
-            updatedAt: "",
-          })}
-        />
-      </div>
+      {/* Section 3: Grading — scanning + batch stats, all under one toggle. */}
+      <button
+        type="button"
+        onClick={() => setGradingOpen((v) => !v)}
+        className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 sm:gap-5 sm:p-5"
+      >
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground sm:h-14 sm:w-14">
+          <Camera size={22} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold text-foreground">{ar ? "التصحيح" : "Grading"}</span>
+          <span className="block text-xs text-muted-foreground">{ar ? "المسح بالكاميرا وإحصائيات الدفعة" : "Camera scanning & batch statistics"}</span>
+        </span>
+        <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", gradingOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
+      </button>
+
+      {gradingOpen && (
+      <>
+      {/* quick scan — not tied to any one exam. One scannable exam → scans
+          it directly; more than one → asks which exam this sheet is for.
+          The camera view itself only appears once tapped (inside
+          OmrScanDialog). */}
+      <button
+        type="button"
+        onClick={handleStartScan}
+        disabled={scannableExams.length === 0}
+        className="flex w-full items-center gap-4 rounded-2xl border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Camera size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold text-foreground">
+            {ar ? "بدء المسح الآن" : "Start scanning"}
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            {scannableExams.length === 0
+              ? (ar ? "أدخل مفتاح إجابة أولاً" : "Set an answer key first")
+              : scannableExams.length === 1
+              ? (ar ? `جاهز — ${scannableExams[0].title}` : `Ready — ${scannableExams[0].title}`)
+              : (ar ? `اختر أحد ${scannableExams.length} اختبارات جاهزة` : `Choose one of ${scannableExams.length} ready exams`)}
+          </span>
+        </span>
+        <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
+      </button>
+
+      {/* batch stats — real numbers only, aggregated from archived scans */}
+      {batchStats && batchStats.scanned > 0 && (
+        <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h4 className="font-bold text-foreground">{ar ? "إحصائيات الدفعة الحالية" : "Current batch statistics"}</h4>
+            {historyExam === null && exams.length > 0 && (
+              <button
+                onClick={() => setHistoryExam(quickScanExam ?? exams[0])}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                {ar ? "التفاصيل" : "Details"}
+              </button>
+            )}
+          </div>
+          <div className={cn(
+            "grid gap-4 text-center",
+            batchStats.accuracy !== null
+              ? (batchStats.needsReview > 0 ? "grid-cols-3" : "grid-cols-2")
+              : (batchStats.needsReview > 0 ? "grid-cols-2" : "grid-cols-1"),
+          )}>
+            <div>
+              <p className="text-2xl font-bold text-primary">{batchStats.scanned}</p>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "تم مسحها" : "Scanned"}</p>
+            </div>
+            {batchStats.accuracy !== null && (
+              <div className="border-s border-border">
+                <p className="text-2xl font-bold text-success">{batchStats.accuracy}%</p>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "متوسط الإجابات الصحيحة" : "Avg. correct"}</p>
+              </div>
+            )}
+            {batchStats.needsReview > 0 && (
+              <div className="border-s border-border">
+                <p className="text-2xl font-bold text-amber-600">{batchStats.needsReview}</p>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">{ar ? "تحتاج مراجعة" : "Needs review"}</p>
+              </div>
+            )}
+          </div>
+          {batchStats.expiringSoon > 0 && (
+            <button
+              onClick={() => setHistoryExam(quickScanExam ?? exams[0])}
+              className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-400/60 bg-amber-500/5 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+            >
+              <AlertTriangle size={13} />
+              {ar
+                ? `${batchStats.expiringSoon} صورة أرشيف ستُحذف قريباً — افتح سجل المسح لتنزيلها قبل الحذف`
+                : `${batchStats.expiringSoon} archived photo(s) will be deleted soon — open scan history to download before then`}
+            </button>
+          )}
+        </div>
+      )}
+      </>
+      )}
+
+      {/* exam picker — only needed when more than one exam has a key */}
+      {scanPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={() => setScanPickerOpen(false)}>
+          <div
+            className="w-full max-w-md rounded-t-3xl bg-background p-5 sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-3 font-display text-base font-bold text-foreground">
+              {ar ? "لأي اختبار هذه الورقة؟" : "Which exam is this sheet for?"}
+            </h3>
+            <div className="space-y-2">
+              {scannableExams.map((exam) => (
+                <button
+                  key={exam.id}
+                  onClick={() => { setScanExam(exam); setScanPickerOpen(false); }}
+                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-border p-3 text-start hover:bg-muted"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-foreground">
+                      {exam.title}
+                      {exam.version ? ` — ${ar ? "نموذج" : "Form"} ${exam.version}` : ""}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {exam.questionCount} {ar ? "سؤال" : "Qs"} · {exam.maxScore} {ar ? "درجة" : "pts"}
+                    </span>
+                  </span>
+                  <ChevronRight size={16} className={cn("shrink-0 text-muted-foreground/50", ar && "rotate-180")} />
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setScanPickerOpen(false)}
+              className="mt-3 w-full rounded-xl border border-border py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              {ar ? "إلغاء" : "Cancel"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {statsExam && (
         <OmrStatsDialog
