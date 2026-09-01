@@ -139,9 +139,9 @@ export default function Index() {
   // Bottom nav handlers shared across views
   const goHome = () => { setActiveCourseId(null); setMainView("courses"); };
   const goSettings = () => { setMainView("settings"); };
-  const goCourseTab = (tab: "assess" | "status") => {
+  const goCourseTab = (tab: "attendance" | "assess" | "status") => {
     setMainView("courses");
-    setCourseTab(tab === "assess" ? "omr" : "status");
+    setCourseTab(tab === "assess" ? "omr" : tab);
   };
 
 
@@ -650,10 +650,10 @@ export default function Index() {
       />
 
       <BottomNav
-        active={courseTab === "attendance" ? "home" : courseTab === "status" ? "status" : "assess"}
+        active={courseTab === "attendance" ? "attendance" : courseTab === "status" ? "status" : "assess"}
         hasActiveCourse={true}
-        onHome={() => (courseTab === "attendance" ? goHome() : setCourseTab("attendance"))}
-        onCourseTab={(tab) => setCourseTab(tab === "assess" ? "omr" : "status")}
+        onHome={goHome}
+        onCourseTab={(tab) => setCourseTab(tab === "assess" ? "omr" : tab)}
         onSettings={goSettings}
       />
     </div>
