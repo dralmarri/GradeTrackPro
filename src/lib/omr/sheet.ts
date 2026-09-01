@@ -43,9 +43,6 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   for (const m of MARKS) {
     parts.push(`<rect x="${m.x - MARK_SIZE / 2}" y="${m.y - MARK_SIZE / 2}" width="${MARK_SIZE}" height="${MARK_SIZE}" fill="#000"/>`);
   }
-  // orientation anchor (small square beside the TL mark — breaks 180° ambiguity)
-  parts.push(`<rect x="${ORIENT_MARK.x - ORIENT_MARK.size / 2}" y="${ORIENT_MARK.y - ORIENT_MARK.size / 2}" width="${ORIENT_MARK.size}" height="${ORIENT_MARK.size}" fill="#000"/>`);
-
   // ---------- header card — a single unified pale panel framing the whole
   // header block (institution, title, meta, version badge). Stays a safe
   // pale tint throughout, and its x-range (20→190) clears the corner-mark
@@ -64,6 +61,14 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   parts.push(`<rect x="20" y="7" width="170" height="18" fill="${NAVY_SOFT}" stroke="${NAVY}" stroke-width="0.4" rx="3"/>`);
   parts.push(`<rect x="20" y="7" width="170" height="1.8" fill="${NAVY}" rx="3"/>`);
   parts.push(`<rect x="20" y="7.4" width="170" height="1.4" fill="${NAVY}"/>`);
+
+  // orientation anchor (small square beside the TL mark — breaks 180°
+  // ambiguity). Drawn AFTER the header card, not before: the card's fill
+  // fully covers this mark's sheet-mm position (x 20–25, y 8.5–13.5 sits
+  // inside the card's x 20–190, y 7–25 footprint), so it must be painted on
+  // top to stay visible — drawing it earlier silently hid it under the
+  // card, making every sheet unscannable (180° orientation always failed).
+  parts.push(`<rect x="${ORIENT_MARK.x - ORIENT_MARK.size / 2}" y="${ORIENT_MARK.y - ORIENT_MARK.size / 2}" width="${ORIENT_MARK.size}" height="${ORIENT_MARK.size}" fill="#000"/>`);
 
   instLines.forEach((line, i) => {
     parts.push(`<text x="${PAGE_W - 25}" y="${13.5 + i * 3.4}" font-size="${i === 0 ? 3 : 2.5}" font-weight="${i === 0 ? "bold" : "normal"}" fill="${i === 0 ? NAVY : "#445"}" text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
