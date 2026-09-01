@@ -18,16 +18,13 @@ import CourseManager from "@/components/CourseManager";
 import CourseStudentsDialog from "@/components/CourseStudentsDialog";
 import BottomNav, { type BottomNavKey } from "@/components/BottomNav";
 
-import ConfirmDialog from "@/components/ConfirmDialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import appIcon from "@/assets/app-icon.png";
 import {
   BookOpen,
   Plus,
   Upload,
-  Trash2,
   ChevronLeft,
   CalendarIcon,
   Users,
@@ -75,7 +72,6 @@ export default function Index() {
   const [pendingStudentNames, setPendingStudentNames] = useState<string[]>([]);
   const [courseTab, setCourseTab] = useState<CourseTab>("attendance");
   const [mainView, setMainView] = useState<MainView>("courses");
-  const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
   const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
   const [coursesManageOpen, setCoursesManageOpen] = useState(false);
 
@@ -215,27 +211,9 @@ export default function Index() {
   if (!activeCourse) {
     return (
       <div className="flex h-dvh flex-col overflow-hidden bg-background">
-        <header className="flex-shrink-0 border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
-          <div className="flex flex-col items-center gap-2 px-4 py-4 text-center">
-            <img
-              src={appIcon}
-              alt="GradeTrackPro"
-              className="h-16 w-16 rounded-2xl shadow-md"
-            />
-            <div>
-              <h1 className="font-display text-xl font-bold text-foreground">GradeTrack<span className="text-primary">Pro</span></h1>
-              <p className="text-xs text-muted-foreground">{t("appTagline")}</p>
-            </div>
-          </div>
-        </header>
-
-
-
-        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-4 py-8 pb-24">
+        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-4 py-6 pb-24">
           <AppStoreBanner />
-          <div className="mb-6 flex items-center justify-between">
-
-            <h2 className="font-display text-lg font-semibold">{t("coursesTitle")}</h2>
+          <div className="mb-4 flex items-center justify-end">
             <button
               onClick={() => setShowNewCourse(true)}
               className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98]"
@@ -416,71 +394,18 @@ export default function Index() {
             )}
           </AnimatePresence>
 
-          {/* Course Cards */}
-          {courses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-                <BookOpen className="text-muted-foreground" size={28} />
-              </div>
-              <p className="font-display text-lg font-semibold text-foreground">{t("noCoursesYet")}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{t("createToStart")}</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {courses.map((course) => (
-                <motion.div
-                  key={course.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="group cursor-pointer rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
-                  onClick={() => setActiveCourseId(course.id)}
-                >
-                  <div className="mb-3 flex items-start justify-between">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                      <BookOpen className="text-primary" size={18} />
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPendingDeleteCourse({ id: course.id, name: course.name });
-                      }}
-                      className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
-                  {course.section && (
-                    <p className="text-xs text-muted-foreground">{t("sectionLabel")}: {course.section}</p>
-                  )}
-                  <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-                    <span>{course.students.length} {t("student")}</span>
-                    <span>{course.lectureCount} {t("lectureWord")}</span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-
+          <CourseManager
+            courses={courses}
+            onDeleteCourse={(id) => {
+              if (id === activeCourseId) setActiveCourseId(null);
+              deleteCourse(id);
+            }}
+            onUpdateCourse={updateCourse}
+            onAddStudents={(courseId, names) => { addStudentsToCourse(courseId, names.map((n) => ({ name: n }))); }}
+            onDeleteStudent={deleteStudent}
+            onSelectCourse={(id) => setActiveCourseId(id)}
+          />
         </main>
-
-
-        <ConfirmDialog
-          open={!!pendingDeleteCourse}
-          onOpenChange={(o) => !o && setPendingDeleteCourse(null)}
-          title={t("deleteCourseTitle")}
-          description={pendingDeleteCourse ? tf(t("deleteCourseDesc"), { name: pendingDeleteCourse.name }) : ""}
-          confirmLabel={t("delete")}
-          destructive
-          onConfirm={() => {
-            if (pendingDeleteCourse) {
-              if (pendingDeleteCourse.id === activeCourseId) setActiveCourseId(null);
-              deleteCourse(pendingDeleteCourse.id);
-              toast.success(t("courseDeleted"));
-              setPendingDeleteCourse(null);
-            }
-          }}
-        />
 
         <BottomNav
           active="home"
