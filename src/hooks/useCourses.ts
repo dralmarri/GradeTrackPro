@@ -167,7 +167,7 @@ export function useCourses() {
 
 
   const addStudentsToCourse = useCallback(async (courseId: string, students: { name: string; civilId?: string }[]) => {
-    if (!user) return;
+    if (!user) return false;
     const course = courses.find((c) => c.id === courseId);
     const lc = course?.lectureCount || 0;
     const rows = students.map((st) => ({
@@ -178,8 +178,9 @@ export function useCourses() {
       exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
     }));
     const { error } = await db.from("students").insert(rows);
-    if (error) console.error("Error adding students:", error);
-    else await fetchCourses();
+    if (error) { console.error("Error adding students:", error); return false; }
+    await fetchCourses();
+    return true;
   }, [user, courses, fetchCourses]);
 
   const updateStudent = useCallback(async (_courseId: string, studentId: string, updates: Partial<Student>) => {
