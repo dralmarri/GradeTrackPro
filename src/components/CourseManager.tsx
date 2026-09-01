@@ -174,7 +174,7 @@ export default function CourseManager({
 
   if (courses.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto w-full max-w-2xl space-y-4">
         {header}
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <BookOpen size={32} className="mb-3" />
@@ -185,7 +185,7 @@ export default function CourseManager({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-2xl space-y-4">
       {header}
       <h3 className="px-1 font-display text-sm font-bold text-foreground">
         {lang === "ar" ? "مقرراتي الدراسية" : "My Courses"}
@@ -347,24 +347,20 @@ export default function CourseManager({
                     </div>
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                    {course.students.length} {t("student")}
+                {courseStatus(course) && (
+                  <span
+                    className={
+                      "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold " +
+                      (courseStatus(course) === "active"
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "bg-muted text-muted-foreground")
+                    }
+                  >
+                    {courseStatus(course) === "active"
+                      ? (lang === "ar" ? "نشط" : "Active")
+                      : (lang === "ar" ? "منتهي" : "Ended")}
                   </span>
-                  {courseStatus(course) && (
-                    <span
-                      className={
-                        courseStatus(course) === "active"
-                          ? "rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
-                          : "rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground"
-                      }
-                    >
-                      {courseStatus(course) === "active"
-                        ? (lang === "ar" ? "نشط" : "Active")
-                        : (lang === "ar" ? "منتهي" : "Ended")}
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
 
               {/* Primary action: this is what a professor does almost every
