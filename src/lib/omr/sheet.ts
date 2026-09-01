@@ -89,33 +89,38 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   ].filter(Boolean).join("   ·   ");
   parts.push(`<text x="${PAGE_W / 2}" y="23.3" font-size="3.1" fill="#556" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
 
-  // ---------- name box (label sits just above the box, right-aligned, matching
-  // the ID-strip label style below for a consistent form language). Box stays
-  // at its original (25,31)-(185,42) footprint — scan.ts crops exactly that
-  // rectangle to show the professor the handwriting, so it must not move.
-  // Header card now ends at y=25 (see above), leaving a clear ~2.5mm gap
-  // before this label's glyph tops start — verified visually, no overlap. ----------
-  parts.push(`<text x="182" y="29.7" direction="rtl" font-size="3" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">اسم الطالب بخط واضح:</text>`);
+  // ---------- name box — the label lives INSIDE the box's own top strip
+  // (a tinted caption band with a divider line above the writing area)
+  // instead of floating above it. This permanently removes any risk of the
+  // label colliding with whatever sits above (the exact glyph metrics of
+  // the real print font can't be verified in this sandbox — no internet
+  // access to fetch it — so a floating label is inherently fragile; putting
+  // it inside its own container's guaranteed space is not). Box footprint
+  // stays at its original (25,31)-(185,42) — scan.ts crops exactly that
+  // rectangle — only its internal content changed. ----------
   parts.push(`<rect x="25" y="31" width="160" height="11" fill="#fff" stroke="${NAVY}" stroke-width="0.5" rx="2.5"/>`);
+  parts.push(`<rect x="25" y="31" width="160" height="4" fill="${NAVY_SOFT}" rx="2.5"/>`);
+  parts.push(`<rect x="25" y="33" width="160" height="2" fill="${NAVY_SOFT}"/>`);
+  parts.push(`<line x1="25" y1="35" x2="185" y2="35" stroke="${NAVY}" stroke-width="0.35"/>`);
+  parts.push(`<text x="180" y="33.6" direction="rtl" font-size="2.6" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">اسم الطالب بخط واضح:</text>`);
 
   // ---------- student number block ----------
   if (exam.idMode === "written") {
     // handwritten name+ID mode: no bubble grid at all — just this clearly
     // labelled, brand-tinted digit strip for the student's ID number, then
     // straight into the question grid (see Q_TOP_WRITTEN in layout.ts).
+    // Same "label lives inside its own box" pattern as the name box above —
+    // no floating text competing for the tight ~4mm gap to the name box.
     const cells = 12, cellW = 8, stripW = cells * cellW;
-    const sx = (PAGE_W - stripW) / 2, sy = 46, cellH = 10;
-    // Only ~4mm of clearance exists between the name box's fixed bottom
-    // edge (42) and this box's fixed top edge (sy=46, tied to scan.ts's
-    // civil-ID crop) — keep this label small and hugging its own box
-    // closely so it reads as "this box's caption", not a squeeze between
-    // two unrelated elements.
-    parts.push(`<text x="${sx + stripW}" y="${sy - 0.9}" direction="rtl" font-size="2.5" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">الرقم الجامعي للطالب:</text>`);
-    parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${cellH}" fill="#f6f9fc" stroke="${NAVY}" stroke-width="0.55" rx="2"/>`);
+    const sx = (PAGE_W - stripW) / 2, sy = 46, cellH = 10, labelH = 3.4;
+    parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${cellH}" fill="#fff" stroke="${NAVY}" stroke-width="0.55" rx="2"/>`);
+    parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${labelH}" fill="${NAVY_SOFT}" rx="2"/>`);
+    parts.push(`<rect x="${sx}" y="${sy + labelH - 2}" width="${stripW}" height="2" fill="${NAVY_SOFT}"/>`);
+    parts.push(`<line x1="${sx}" y1="${sy + labelH}" x2="${sx + stripW}" y2="${sy + labelH}" stroke="${NAVY}" stroke-width="0.35"/>`);
+    parts.push(`<text x="${sx + stripW - 2}" y="${sy + labelH - 0.9}" direction="rtl" font-size="2.4" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">الرقم الجامعي للطالب — يُكتب رقماً بخط واضح:</text>`);
     for (let i = 1; i < cells; i++) {
-      parts.push(`<line x1="${sx + i * cellW}" y1="${sy}" x2="${sx + i * cellW}" y2="${sy + cellH}" stroke="${NAVY}" stroke-width="0.3" opacity="0.55"/>`);
+      parts.push(`<line x1="${sx + i * cellW}" y1="${sy + labelH}" x2="${sx + i * cellW}" y2="${sy + cellH}" stroke="${NAVY}" stroke-width="0.3" opacity="0.55"/>`);
     }
-    parts.push(`<text x="${sx + stripW / 2}" y="${sy + cellH + 2.6}" direction="rtl" font-size="2.5" fill="#777" text-anchor="middle" font-family="${FONT}">يُكتب رقماً بخط واضح — سيُطابَق يدوياً مع قائمة الطلاب</text>`);
   } else {
   const firstTop = idBubble(exam, 0, 0);
   const lastTop = idBubble(exam, exam.studentIdDigits - 1, 0);
