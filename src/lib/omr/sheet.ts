@@ -27,6 +27,14 @@ function circle(x: number, y: number, r: number, letter: string): string {
 }
 
 const NAVY = "#1e3a5f";
+const NAVY_SOFT = "#eef3f9";  // safe pale tint — never dark enough to be read as "filled" by the scanner
+
+// A very light zebra-row background behind each question, purely decorative.
+// Stays well above the scan threshold (near-white) so it never affects bubble reads.
+function rowBand(x: number, y: number, w: number, h: number, tint: boolean): string {
+  if (!tint) return "";
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${NAVY_SOFT}" opacity="0.55" rx="1.4"/>`;
+}
 
 export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string {
   const parts: string[] = [];
@@ -38,39 +46,52 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   // orientation anchor (small square beside the TL mark — breaks 180° ambiguity)
   parts.push(`<rect x="${ORIENT_MARK.x - ORIENT_MARK.size / 2}" y="${ORIENT_MARK.y - ORIENT_MARK.size / 2}" width="${ORIENT_MARK.size}" height="${ORIENT_MARK.size}" fill="#000"/>`);
 
-  // ---------- institutional header (right-aligned, official style) ----------
+  // ---------- header card — a single unified pale panel framing the whole
+  // header block (institution, title, meta, version badge). Stays a safe
+  // pale tint throughout, and its x-range (20→190) clears the corner-mark
+  // search windows (which live within x 0–20 and 190–210) so it never
+  // interferes with mark detection. ----------
+  // Fixed compact height (y 5→28) regardless of how many institution lines
+  // there are — deliberately kept clear of the name box, which scan.ts crops
+  // at a fixed sheet-mm rectangle and must not move.
   const instLines: string[] = [];
   if (header?.institution) instLines.push(header.institution);
   if (header?.college) instLines.push(header.college);
   if (header?.department) instLines.push(header.department);
+  parts.push(`<rect x="20" y="5" width="170" height="24" fill="${NAVY_SOFT}" stroke="${NAVY}" stroke-width="0.4" rx="3"/>`);
+  parts.push(`<rect x="20" y="5" width="170" height="1.8" fill="${NAVY}" rx="3"/>`);
+  parts.push(`<rect x="20" y="5.4" width="170" height="1.4" fill="${NAVY}"/>`);
+
   instLines.forEach((line, i) => {
-    parts.push(`<text x="${PAGE_W - 25}" y="${10.5 + i * 4}" font-size="${i === 0 ? 3.1 : 2.7}" ${i === 0 ? 'font-weight="bold"' : 'fill="#444"'} text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
+    parts.push(`<text x="${PAGE_W - 25}" y="${11.5 + i * 3.4}" font-size="${i === 0 ? 3 : 2.5}" font-weight="${i === 0 ? "bold" : "normal"}" fill="${i === 0 ? NAVY : "#445"}" text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
   });
 
   // institution logo — kept between the corner-mark search windows (x 64–146)
   if (header?.logoDataUrl) {
-    parts.push(`<image href="${header.logoDataUrl}" x="128" y="5" width="18" height="14" preserveAspectRatio="xMidYMid meet"/>`);
+    parts.push(`<image href="${header.logoDataUrl}" x="128" y="7" width="16" height="12" preserveAspectRatio="xMidYMid meet"/>`);
   }
 
   // exam version badge (top-left, prominent) — e.g. "نموذج أ"
   if (exam.version) {
-    parts.push(`<rect x="29" y="7.5" width="24" height="9" fill="none" stroke="#000" stroke-width="0.6" rx="1.5"/>`);
-    parts.push(`<text x="41" y="13.6" font-size="4" font-weight="bold" text-anchor="middle" direction="rtl" font-family="${FONT}">نموذج ${escapeXml(exam.version)}</text>`);
+    parts.push(`<rect x="27" y="8" width="25" height="8.5" fill="${NAVY}" rx="2"/>`);
+    parts.push(`<text x="39.5" y="14" font-size="3.7" font-weight="bold" fill="#fff" text-anchor="middle" direction="rtl" font-family="${FONT}">نموذج ${escapeXml(exam.version)}</text>`);
   }
 
   // ---------- title block ----------
-  parts.push(`<text x="${PAGE_W / 2}" y="${instLines.length ? 25 : 18}" font-size="5.2" font-weight="bold" fill="#1e3a5f" text-anchor="middle" font-family="${FONT}">${escapeXml(exam.title)}</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="18.5" font-size="5" font-weight="bold" fill="${NAVY}" text-anchor="middle" font-family="${FONT}">${escapeXml(exam.title)}</text>`);
   const infoBits = [
     header?.courseName ? `المقرر: ${header.courseName}` : "",
     `عدد الأسئلة: ${exam.questionCount}`,
     `الدرجة: ${exam.maxScore}`,
   ].filter(Boolean).join("   ·   ");
-  parts.push(`<text x="${PAGE_W / 2}" y="${instLines.length ? 30 : 23}" font-size="2.9" fill="#444" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="24.5" font-size="2.7" fill="#556" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
 
-  // ---------- name box (clear labelled rectangle, soft brand-tinted panel) ----------
-  parts.push(`<rect x="25" y="31" width="160" height="11" fill="#f6f9fc" stroke="${NAVY}" stroke-width="0.5" rx="2.5"/>`);
-  parts.push(`<text x="180" y="37.6" direction="rtl" font-size="3.5" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">اسم الطالب:</text>`);
-  parts.push(`<line x1="30" y1="39.4" x2="152" y2="39.4" stroke="#bbb" stroke-width="0.25"/>`);
+  // ---------- name box (label sits just above the box, right-aligned, matching
+  // the ID-strip label style below for a consistent form language). Box stays
+  // at its original (25,31)-(185,42) footprint — scan.ts crops exactly that
+  // rectangle to show the professor the handwriting, so it must not move. ----------
+  parts.push(`<text x="182" y="29.6" direction="rtl" font-size="3" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">اسم الطالب بخط واضح:</text>`);
+  parts.push(`<rect x="25" y="31" width="160" height="11" fill="#fff" stroke="${NAVY}" stroke-width="0.5" rx="2.5"/>`);
 
   // ---------- student number block ----------
   if (exam.idMode === "written") {
@@ -145,7 +166,20 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     const numPos = questionBubble(exam, q, 0);
     const labels = choiceLabelsFor(exam, q);
     const qChoices = choiceCountFor(exam, q);
-    parts.push(`<text x="${questionNumberX(exam, colBlock)}" y="${numPos.y + 1.1}" font-size="3" font-weight="bold" fill="#333" text-anchor="end" font-family="${FONT}">${q + 1}</text>`);
+
+    // very light zebra band behind every other row, purely decorative — a
+    // near-white tint that never risks being read as a "filled" bubble.
+    if (q % 2 === 1) {
+      const bandX = questionNumberX(exam, colBlock) - 7.5;
+      const lastP = questionBubble(exam, q, qChoices - 1);
+      parts.push(rowBand(bandX, numPos.y - 3, lastP.x - bandX + 6, 6, true));
+    }
+
+    // question number in a small navy-outlined circle instead of bare text
+    const nx = questionNumberX(exam, colBlock);
+    parts.push(`<circle cx="${nx}" cy="${numPos.y}" r="2.6" fill="#fff" stroke="${NAVY}" stroke-width="0.4"/>`);
+    parts.push(`<text x="${nx}" y="${numPos.y + 1.05}" font-size="2.9" font-weight="bold" fill="${NAVY}" text-anchor="middle" font-family="${FONT}">${q + 1}</text>`);
+
     for (let c = 0; c < qChoices; c++) {
       const p = questionBubble(exam, q, c);
       parts.push(circle(p.x, p.y, BUBBLE_R, labels[c]));
@@ -153,8 +187,9 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   }
 
   // ---------- footer ----------
-  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 11}" font-size="3" font-weight="bold" fill="#1e3a5f" text-anchor="middle" direction="rtl" font-family="${FONT}">تمنياتنا لكم بالتوفيق والنجاح</text>`);
-  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 6.5}" font-size="2.2" fill="#999" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
+  parts.push(`<rect x="20" y="${PAGE_H - 17}" width="170" height="10" fill="${NAVY_SOFT}" rx="2.5"/>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 11.3}" font-size="3" font-weight="bold" fill="${NAVY}" text-anchor="middle" direction="rtl" font-family="${FONT}">تمنياتنا لكم بالتوفيق والنجاح</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 7.3}" font-size="2.2" fill="#778" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}">${parts.join("")}</svg>`;
 }
