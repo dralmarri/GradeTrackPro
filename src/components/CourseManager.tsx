@@ -522,34 +522,24 @@ export default function CourseManager({
               </div>
 
               {/* On Home the whole card is already clickable (opens the
-                  course), so neither the redundant "open" button nor the
-                  management toggle below belong here — both stay Settings-
-                  only, where showManage is true. */}
+                  course); here on Settings, this card exists only to manage
+                  the course record (edit/delete), not to open it — opening
+                  the course belongs on Home, so no redundant "open" button. */}
               {showManage && (
-                <>
-                  <button
-                    onClick={() => onSelectCourse(course.id)}
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110"
-                  >
-                    <Calendar size={15} />
-                    {t("manageLectures")}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setManageOpenId((v) => (v === course.id ? null : course.id))}
-                    className="mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Settings2 size={13} />
-                      {lang === "ar" ? "إدارة المقرر" : "Manage course"}
-                    </span>
-                    <ChevronDown
-                      size={14}
-                      className={`text-muted-foreground transition-transform ${manageOpenId === course.id ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => setManageOpenId((v) => (v === course.id ? null : course.id))}
+                  className="mt-4 flex w-full items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Settings2 size={13} />
+                    {lang === "ar" ? "إدارة المقرر" : "Manage course"}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className={`text-muted-foreground transition-transform ${manageOpenId === course.id ? "rotate-180" : ""}`}
+                  />
+                </button>
               )}
 
               {showManage && manageOpenId === course.id && (
