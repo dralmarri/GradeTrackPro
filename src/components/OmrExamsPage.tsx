@@ -803,13 +803,16 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       {scanPickerOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={() => setScanPickerOpen(false)}>
           <div
-            className="w-full max-w-md rounded-t-3xl bg-background p-5 sm:rounded-3xl"
+            className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-3xl bg-background p-5 sm:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-3 font-display text-base font-bold text-foreground">
+            <h3 className="mb-3 shrink-0 font-display text-base font-bold text-foreground">
               {ar ? "لأي اختبار هذه الورقة؟" : "Which exam is this sheet for?"}
             </h3>
-            <div className="space-y-2">
+            {/* scrollable — with many exams, the list used to overflow past
+                the top of the fixed overlay with no way to scroll up to the
+                first item(s). */}
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
               {scannableExams.map((exam) => (
                 <button
                   key={exam.id}
@@ -831,7 +834,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
             </div>
             <button
               onClick={() => setScanPickerOpen(false)}
-              className="mt-3 w-full rounded-xl border border-border py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
+              className="mt-3 w-full shrink-0 rounded-xl border border-border py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
             >
               {ar ? "إلغاء" : "Cancel"}
             </button>
