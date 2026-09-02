@@ -4,8 +4,8 @@
 // (brand header, section pills, navy accents) matches the redesigned OMR
 // answer sheet in sheet.ts.
 
-import { GeneratedForm } from "@/types/questionBank";
-import { SheetHeader } from "@/lib/omr/sheet";
+import type { GeneratedForm } from "@/types/questionBank";
+import type { SheetHeader } from "@/lib/omr/sheet";
 import { choiceLabels } from "@/types/exam";
 
 function esc(s: string): string {
@@ -83,8 +83,10 @@ export function buildQuestionPaperHtml(
 <title>${esc(title)} — نموذج ${esc(form.version)}</title>
 <style>
   :root { --navy: #1f2937; --navy2: #2d46b9; --navy-soft: #eef3f9; --line: #e5e7eb; }
-  @page { size: A4; margin: 16mm 16mm; }
-  body { font-family: 'IBM Plex Sans Arabic', 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; margin: 0; }
+  @page { size: A4 portrait; margin: 16mm; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { width: 100%; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans Arabic', 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; }
 
   .head { border-bottom: 3px solid var(--navy2); padding-bottom: 4mm; }
   .head-top { display: flex; justify-content: space-between; align-items: flex-start; }
@@ -127,7 +129,7 @@ export function buildQuestionPaperHtml(
   .tf-text b { color: var(--navy2); margin-inline-end: 1mm; }
   .tf-opts { display: flex; gap: 4mm; font-size: 10.5px; font-weight: 700; color: #6b7280; white-space: nowrap; }
 
-  .foot { display: flex; justify-content: space-between; color: #9ca3af; font-weight: 600; font-size: 9.5px; margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #e5e7eb; }
+  .foot { display: flex; justify-content: space-between; color: #9ca3af; font-weight: 600; font-size: 9.5px; margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #e5e7eb; break-inside: avoid; }
   .foot .mid { color: var(--navy); font-weight: 700; }
 </style>
 </head>
