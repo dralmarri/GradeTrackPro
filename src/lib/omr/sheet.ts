@@ -18,7 +18,7 @@ export interface SheetHeader {
   logoDataUrl?: string;   // شعار المؤسسة (اختياري)
 }
 
-const FONT = "'Dubai', 'Segoe UI', Tahoma, Arial";
+const FONT = "'IBM Plex Sans Arabic', 'Dubai', 'Segoe UI', Tahoma, Arial";
 
 function circle(x: number, y: number, r: number, letter: string): string {
   // letter drawn in light gray so it thresholds out during scanning
@@ -312,7 +312,9 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
 <html lang="ar">
 <head>
 <meta charset="utf-8" />
-<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/dubai" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <title>${escapeXml(exam.title)}</title>
 <style>
   @page { size: A4; margin: 0; }

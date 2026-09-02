@@ -76,12 +76,14 @@ export function buildQuestionPaperHtml(
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8" />
-<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/dubai" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <title>${esc(title)} — نموذج ${esc(form.version)}</title>
 <style>
   :root { --navy: #1e3a5f; --navy2: #2d46b9; --navy-soft: #eef3f9; --line: #d5e2f0; }
   @page { size: A4; margin: 16mm 16mm; }
-  body { font-family: 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; margin: 0; }
+  body { font-family: 'IBM Plex Sans Arabic', 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; margin: 0; }
 
   .head { border-bottom: 3px solid var(--navy2); padding-bottom: 4mm; }
   .head-top { display: flex; justify-content: space-between; align-items: flex-start; }
