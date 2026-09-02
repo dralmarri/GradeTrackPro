@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LogOut, UserCircle2 } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
+import { version as appVersion } from "../../package.json";
 import {
   Info,
   Mail,
@@ -502,7 +503,7 @@ export default function SettingsPage({ courses, onUpdateCourse }: SettingsPagePr
             Developed by <span className="text-base font-bold text-foreground">Prof. Ayedh Almarri</span>
           </p>
           <p className="text-sm text-muted-foreground" dir="ltr">
-            Version <strong className="text-foreground">v2.0.1</strong>
+            Version <strong className="text-foreground">v{appVersion}</strong>
           </p>
         </div>
       </div>
