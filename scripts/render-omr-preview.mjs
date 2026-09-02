@@ -12,7 +12,7 @@ const exam = {
   targetComponent: "exam1",
   maxScore: 60,
   answerKey: Array(count).fill(-1),
-  studentIdDigits: 12,
+  studentIdDigits: 10,
   sections: count >= 10 ? [{ questionCount: Math.ceil(count * .75), choiceCount: 4 }, { questionCount: Math.floor(count * .25), choiceCount: 2 }] : undefined,
   version: "أ",
   idMode: mode,

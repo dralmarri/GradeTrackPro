@@ -10,20 +10,20 @@ export const PAGE_W = 210;
 export const PAGE_H = 297;
 
 // Registration marks: filled black squares at the four corners.
-export const MARK_SIZE = 10; // mm
+export const MARK_SIZE = 12; // mm — matches the UX Pilot registration squares
 // centers of the 4 marks (TL, TR, BL, BR)
 export const MARKS = [
-  { x: 11, y: 11 },
-  { x: PAGE_W - 11, y: 11 },
-  { x: 11, y: PAGE_H - 11 },
-  { x: PAGE_W - 11, y: PAGE_H - 11 },
+  { x: 16, y: 16 },
+  { x: PAGE_W - 16, y: 16 },
+  { x: 16, y: PAGE_H - 16 },
+  { x: PAGE_W - 16, y: PAGE_H - 16 },
 ] as const;
 
 // Orientation anchor: a small filled square next to the TL mark only.
 // Four identical corner squares are rotationally ambiguous — an upside-down
 // photo would otherwise solve a "valid" homography and misread every bubble.
 // The scanner tries all 4 rotations and keeps the one where this dot is dark.
-export const ORIENT_MARK = { x: 22.5, y: 11, size: 5 } as const;
+export const ORIENT_MARK = { x: PAGE_W - 26, y: 16, size: 6 } as const;
 
 // Exam-code marks: a row of small squares (filled = bit 1) machine-encoding
 // which exam a printed sheet belongs to — lets the scanner tell "this photo

@@ -39,17 +39,15 @@ function registrationMarks(): string {
 }
 
 function brand(header?: SheetHeader): string {
-  const lines = [header?.institution, header?.college, header?.department].filter(Boolean) as string[];
-  const institution = lines.length
-    ? lines.slice(0, 3).map((line, i) => svgText(30, 15 + i * 4.3, line, i ? 2.5 : 3.1, `direction="rtl" text-anchor="end" font-weight="${i ? 500 : 700}" fill="${i ? MUTED : INK}"`)).join("")
-    : svgText(30, 17, "ورقة إجابة نموذجية (OMR)", 3.8, `direction="rtl" text-anchor="end" font-weight="700"`);
+  const titleBlock = svgText(30, 16, "ورقة إجابة نموذجية (OMR)", 3.8, `direction="rtl" text-anchor="end" font-weight="700"`) +
+    svgText(30, 21, "يرجى استخدام قلم رصاص داكن أو قلم حبر أسود", 2.35, `direction="rtl" text-anchor="end" fill="${MUTED}"`);
   const logo = header?.logoDataUrl
-    ? `<image href="${header.logoDataUrl}" x="150" y="10" width="13" height="13" preserveAspectRatio="xMidYMid meet"/>`
-    : `<rect x="150" y="10" width="13" height="13" rx="2.2" fill="${INDIGO}"/>${svgText(156.5, 18.1, "GTP", 3.6, `fill="#fff" text-anchor="middle" font-weight="800"`)}`;
-  return institution + logo +
-    svgText(166, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" text-anchor="start" font-weight="800"`) +
-    svgText(166, 20.1, "نظام التصحيح الآلي المعتمد", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="end"`) +
-    `<line x1="25" y1="29" x2="185" y2="29" stroke="${INK}" stroke-width="0.65"/>`;
+    ? `<image href="${header.logoDataUrl}" x="136" y="10" width="13" height="13" preserveAspectRatio="xMidYMid meet"/>`
+    : `<rect x="136" y="10" width="13" height="13" rx="2.2" fill="${INDIGO}"/>${svgText(142.5, 18.1, "GTP", 3.6, `fill="#fff" text-anchor="middle" font-weight="800"`)}`;
+  return titleBlock + logo +
+    svgText(152, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" text-anchor="start" font-weight="800"`) +
+    svgText(152, 20.1, "نظام التصحيح الآلي المعتمد", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="end"`) +
+    `<line x1="30" y1="29" x2="180" y2="29" stroke="${INK}" stroke-width="0.65"/>`;
 }
 
 function identityAndMeta(exam: OmrExam, header?: SheetHeader): string {
@@ -129,10 +127,10 @@ function questionGrid(exam: OmrExam): string {
     const firstBubble = questionBubble(exam, firstIndex, 0);
     const headingY = firstBubble.y - 10;
     const blockCounts = new Set(Array.from({ length: lastIndex - firstIndex }, (_, offset) => choiceCountFor(exam, firstIndex + offset)));
-    const kind = blockCounts.size > 1 ? "اختيار متعدد وصح/خطأ" : choiceCountFor(exam, firstIndex) === 2 ? "صح أو خطأ" : "اختيار من متعدد";
-    out.push(`<rect x="${firstBubble.x - 9}" y="${headingY - 4.2}" width="28" height="6.5" rx="2" fill="${INDIGO}"/>`);
-    out.push(svgText(firstBubble.x + 5, headingY, `الأسئلة ${firstIndex + 1}-${lastIndex}`, 2.35, `fill="#fff" direction="rtl" text-anchor="middle" font-weight="700"`));
-    out.push(svgText(firstBubble.x + 33, headingY, kind, 2.7, `direction="rtl" text-anchor="middle" font-weight="700"`));
+    const kind = blockCounts.size > 1 ? "إجابات الأسئلة" : choiceCountFor(exam, firstIndex) === 2 ? "صح أو خطأ" : "اختيار من متعدد";
+    out.push(`<rect x="${firstBubble.x + 35}" y="${headingY - 4}" width="2.2" height="7" rx="1.1" fill="${block === 0 ? INDIGO : "#9ca3af"}"/>`);
+    out.push(svgText(firstBubble.x + 32, headingY, `الجزء ${block === 0 ? "الأول" : block === 1 ? "الثاني" : "الثالث"}: ${kind}`, 2.75, `direction="rtl" text-anchor="start" font-weight="700"`));
+    out.push(svgText(firstBubble.x - 8, headingY, `${firstIndex + 1}–${lastIndex}`, 2.1, `fill="${MUTED}" text-anchor="end" font-weight="600"`));
   }
   for (let q = 0; q < exam.questionCount; q++) {
     const block = Math.floor(q / rows);
@@ -151,7 +149,7 @@ function questionGrid(exam: OmrExam): string {
 }
 
 function footer(): string {
-  return `<line x1="20" y1="278" x2="190" y2="278" stroke="${LINE}" stroke-width="0.35"/>` +
+  return `<line x1="30" y1="278" x2="180" y2="278" stroke="${LINE}" stroke-width="0.35"/>` +
     `<line x1="32" y1="284" x2="65" y2="284" stroke="#9ca3af" stroke-width="0.4"/>` +
     svgText(48.5, 288, "توقيع المراقب", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="middle"`) +
     `<line x1="145" y1="284" x2="178" y2="284" stroke="#9ca3af" stroke-width="0.4"/>` +

@@ -83,7 +83,7 @@ export function buildQuestionPaperHtml(
 <title>${esc(title)} — نموذج ${esc(form.version)}</title>
 <style>
   :root { --navy: #1f2937; --navy2: #2d46b9; --navy-soft: #eef3f9; --line: #e5e7eb; }
-  @page { size: A4 portrait; margin: 16mm; }
+  @page { size: A4 portrait; margin: 20mm; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body { width: 100%; margin: 0; padding: 0; }
   body { font-family: 'IBM Plex Sans Arabic', 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; }
