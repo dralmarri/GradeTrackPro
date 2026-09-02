@@ -43,9 +43,9 @@ function brand(header?: SheetHeader): string {
     svgText(30, 21, "يرجى استخدام قلم رصاص داكن أو قلم حبر أسود", 2.35, `direction="rtl" text-anchor="end" fill="${MUTED}"`);
   const logo = header?.logoDataUrl
     ? `<image href="${header.logoDataUrl}" x="136" y="10" width="13" height="13" preserveAspectRatio="xMidYMid meet"/>`
-    : `<rect x="136" y="10" width="13" height="13" rx="2.2" fill="${INDIGO}"/>${svgText(142.5, 18.1, "GTP", 3.6, `fill="#fff" text-anchor="middle" font-weight="800"`)}`;
+    : `<rect x="136" y="10" width="13" height="13" rx="2.2" fill="${INDIGO}"/>${svgText(142.5, 18.1, "GTP", 3.6, `fill="#fff" direction="ltr" text-anchor="middle" font-weight="800"`)}`;
   return titleBlock + logo +
-    svgText(152, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" text-anchor="start" font-weight="800"`) +
+    svgText(152, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" direction="ltr" text-anchor="start" font-weight="800"`) +
     svgText(152, 20.1, "نظام التصحيح الآلي المعتمد", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="end"`) +
     `<line x1="30" y1="29" x2="180" y2="29" stroke="${INK}" stroke-width="0.65"/>`;
 }
