@@ -61,15 +61,22 @@ export const BUBBLE_R = 3.8;      // bubble radius (mm)
 // Student-ID grid
 const ID_COL_PITCH = 9.6;         // horizontal distance between digit columns
 const ID_ROW_PITCH = 8.4;         // vertical distance between digits 0-9
-const ID_TOP_Y = 78;
+// Sits below the shading legend (ends y=88) and machine code row (y=91) —
+// was 78, which put the grid's own frame box (top = ID_TOP_Y - 4, drawn in
+// sheet.ts's bubbledStudentId) on top of both the legend and the first
+// question section's heading. Moved down to clear them with margin.
+const ID_TOP_Y = 99;
 export const ID_PITCH = ID_COL_PITCH;
 
 // Question grid
 const Q_ROW_PITCH = 7.8;
 const Q_CHOICE_PITCH = 11;
-const Q_TOP_BUBBLES = 168;
+// First bubble row: must clear the ID grid's frame bottom (idBubble digit-9
+// row + 4mm margin ≈ 178.6 with the new ID_TOP_Y above), plus the ~10mm the
+// section heading sits above the first bubble row.
+const Q_TOP_BUBBLES = 192;
 const Q_TOP_WRITTEN = 108;
-const Q_BOTTOM_Y = 260;
+const Q_BOTTOM_Y = 274;
 const Q_COL_XS = [28, 93, 158];   // x of choice "A" bubble per column block
 
 type IdModeExam = Pick<OmrExam, "idMode">;

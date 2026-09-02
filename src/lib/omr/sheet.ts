@@ -108,10 +108,15 @@ function bubbledStudentId(exam: OmrExam): string {
   const out: string[] = [];
   const first = idBubble(exam, 0, 0);
   const last = idBubble(exam, exam.studentIdDigits - 1, 9);
-  out.push(`<rect x="${first.x - 5}" y="74" width="${last.x - first.x + 10}" height="88" rx="2" fill="#fff" stroke="${INK}" stroke-width="0.45"/>`);
+  // frame box top/height derived from the digit-0 row (first.y) instead of a
+  // hardcoded constant, so it always tracks ID_TOP_Y in layout.ts and can't
+  // silently drift out of sync with it again.
+  const boxTop = first.y - 4;
+  const boxHeight = last.y + 4 - boxTop;
+  out.push(`<rect x="${first.x - 5}" y="${boxTop}" width="${last.x - first.x + 10}" height="${boxHeight}" rx="2" fill="#fff" stroke="${INK}" stroke-width="0.45"/>`);
   for (let col = 0; col < exam.studentIdDigits; col++) {
     const top = idBubble(exam, col, 0);
-    out.push(`<rect x="${top.x - 3}" y="75" width="6" height="5" rx="0.6" fill="#fff" stroke="${INK}" stroke-width="0.4"/>`);
+    out.push(`<rect x="${top.x - 3}" y="${first.y - 3}" width="6" height="5" rx="0.6" fill="#fff" stroke="${INK}" stroke-width="0.4"/>`);
     for (let digit = 0; digit < 10; digit++) { const p = idBubble(exam, col, digit); out.push(answerBubble(p.x, p.y, String(digit))); }
   }
   return out.join("");
