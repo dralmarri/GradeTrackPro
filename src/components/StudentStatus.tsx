@@ -329,6 +329,14 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             }
           };
 
+          // Notes — same per-lecture indexing as attendance, so a note is
+          // paired with its real lecture date and that lecture's attendance
+          // status ("type"), letting the professor see when and under what
+          // circumstance each note was written.
+          const noteEntries = (student.lectureNotes || [])
+            .map((note, i) => ({ note, date: course.lectures?.[i]?.date, present: student.attendance?.[i] }))
+            .filter((n) => n.note && n.note.trim().length > 0);
+
 
           return (
             <motion.div
@@ -366,6 +374,15 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                     <span className="flex shrink-0 items-center gap-1 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
                       <span className="inline-block h-1.5 w-1.5 rounded-full bg-destructive" />
                       {absenceCount}
+                    </span>
+                  )}
+                  {noteEntries.length > 0 && (
+                    <span
+                      className="flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary"
+                      title="يوجد ملاحظات مكتوبة عن هذا الطالب"
+                    >
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+                      {noteEntries.length}
                     </span>
                   )}
                 </div>
@@ -443,6 +460,35 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                           ))}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Notes — collected across every lecture with its date and
+                      attendance status, so a professor deciding a student's
+                      fate can see the full picture in one place instead of
+                      hunting through each lecture's attendance screen. */}
+                  {noteEntries.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-2 text-xs font-medium text-foreground">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+                        الملاحظات: <span className="font-display font-bold">{noteEntries.length}</span>
+                      </p>
+                      <div className="space-y-1.5">
+                        {noteEntries.map((n, i) => (
+                          <div key={i} className="rounded-lg border border-border bg-muted/30 px-2.5 py-1.5 text-[11px]">
+                            <div className="mb-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                              {n.date && <span className="font-display">{fmtDate(n.date)}</span>}
+                              {n.present === false && (
+                                <span className="rounded bg-destructive/10 px-1.5 py-0.5 font-semibold text-destructive">غائب</span>
+                              )}
+                              {n.present === true && (
+                                <span className="rounded bg-success/10 px-1.5 py-0.5 font-semibold text-success">حاضر</span>
+                              )}
+                            </div>
+                            <p className="text-foreground">{n.note}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

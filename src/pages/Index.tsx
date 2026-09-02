@@ -3,7 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { useCourses } from "@/hooks/useCourses";
-import { exportToExcel } from "@/lib/excel";
+import { exportToExcel, ImportedStudent } from "@/lib/excel";
 import { generateLectureDates, WEEKDAYS } from "@/lib/lectures";
 import { LectureInfo } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
@@ -16,7 +16,7 @@ import AttendancePerLecture from "@/components/AttendancePerLecture";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
 import CourseStudentsDialog from "@/components/CourseStudentsDialog";
-import BottomNav, { type BottomNavKey } from "@/components/BottomNav";
+import BottomNav from "@/components/BottomNav";
 
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -68,7 +68,7 @@ export default function Index() {
   const [endOpen, setEndOpen] = useState(false);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [lectureTime, setLectureTime] = useState("");
-  const [pendingStudentNames, setPendingStudentNames] = useState<string[]>([]);
+  const [pendingStudents, setPendingStudents] = useState<ImportedStudent[]>([]);
   const [courseTab, setCourseTab] = useState<CourseTab>("attendance");
   const [mainView, setMainView] = useState<MainView>("courses");
   const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
@@ -105,12 +105,12 @@ export default function Index() {
       semesterStart: semesterStart.toISOString(),
       semesterEnd: semesterEnd.toISOString(),
     });
-    if (id && pendingStudentNames.length > 0) {
-      await addStudentsToCourse(id, pendingStudentNames);
+    if (id && pendingStudents.length > 0) {
+      await addStudentsToCourse(id, pendingStudents);
     }
     if (id) setActiveCourseId(id);
     resetModal();
-    toast.success(tf(t("courseCreated"), { lectures: lectures.length }) + (pendingStudentNames.length > 0 ? tf(t("andStudents"), { n: pendingStudentNames.length }) : ""));
+    toast.success(tf(t("courseCreated"), { lectures: lectures.length }) + (pendingStudents.length > 0 ? tf(t("andStudents"), { n: pendingStudents.length }) : ""));
   };
 
   const resetModal = () => {
@@ -121,7 +121,7 @@ export default function Index() {
     setSemesterEnd(undefined);
     setSelectedDays([]);
     setLectureTime("");
-    setPendingStudentNames([]);
+    setPendingStudents([]);
   };
 
   if (loading) {
@@ -355,27 +355,27 @@ export default function Index() {
                         <div>
                           <h4 className="font-display text-sm font-semibold text-foreground">{t("addStudents")}</h4>
                           <p className="text-[11px] text-muted-foreground">
-                            {pendingStudentNames.length > 0
-                              ? `✓ ${t("studentsLoadedCount")} ${pendingStudentNames.length} ${t("student")}`
+                            {pendingStudents.length > 0
+                              ? `✓ ${t("studentsLoadedCount")} ${pendingStudents.length} ${t("student")}`
                               : t("optionalLater")}
                           </p>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <ExcelImport onImport={(names) => {
-                          setPendingStudentNames((prev) => [...prev, ...names]);
+                          setPendingStudents((prev) => [...prev, ...names]);
                           toast.success(tf(t("studentLoadedSuccess"), { n: names.length }));
                         }} />
                         <ManualAddStudents
                           label={t("addManually")}
                           onAdd={(names) => {
-                            setPendingStudentNames((prev) => [...prev, ...names]);
+                            setPendingStudents((prev) => [...prev, ...names.map((name) => ({ name }))]);
                           }}
                         />
-                        {pendingStudentNames.length > 0 && (
+                        {pendingStudents.length > 0 && (
                           <button
                             type="button"
-                            onClick={() => setPendingStudentNames([])}
+                            onClick={() => setPendingStudents([])}
                             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
                           >
                             {t("clearList")}
@@ -386,7 +386,7 @@ export default function Index() {
 
                     <div className="flex gap-3 pt-1">
                       <button onClick={handleCreateCourse} className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110">
-                        {t("create")} ({previewLectures.length} {t("lectureWord")}{pendingStudentNames.length > 0 ? ` • ${pendingStudentNames.length} ${t("student")}` : ""})
+                        {t("create")} ({previewLectures.length} {t("lectureWord")}{pendingStudents.length > 0 ? ` • ${pendingStudents.length} ${t("student")}` : ""})
                       </button>
                       <button onClick={resetModal} className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted">
                         {t("cancel")}
@@ -405,7 +405,7 @@ export default function Index() {
               deleteCourse(id);
             }}
             onUpdateCourse={updateCourse}
-            onAddStudents={(courseId, names) => { addStudentsToCourse(courseId, names.map((n) => ({ name: n }))); }}
+            onAddStudents={addStudentsToCourse}
             onDeleteStudent={deleteStudent}
             onSelectCourse={(id) => setActiveCourseId(id)}
             onNewCourse={() => setShowNewCourse(true)}

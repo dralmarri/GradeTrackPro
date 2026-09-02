@@ -231,7 +231,7 @@ export function parseQuestionsText(text: string, forcedType: PasteType = "auto")
   let chapter: string | undefined;
   let cur: { text: string; choices: string[]; line: number; num?: number } | null = null;
 
-  const flush = (ansRaw: string | null, lineNo: number) => {
+  const flush = (ansRaw: string | null, _lineNo: number) => {
     if (!cur) return;
     // in mixed mode the choices decide the type: with choices → MCQ, without → صح/خطأ
     const eff = forcedType === "mixed" ? (cur.choices.length >= 2 ? "mcq" : "tf") : forcedType;

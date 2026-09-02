@@ -4,6 +4,7 @@ import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import type { ImportedStudent } from "@/lib/excel";
 import { format } from "date-fns";
 import {
   BookOpen,
@@ -34,7 +35,7 @@ interface CourseManagerProps {
   courses: Course[];
   onDeleteCourse: (courseId: string) => void;
   onUpdateCourse: (courseId: string, updates: Partial<Omit<Course, "id" | "students">>) => void;
-  onAddStudents: (courseId: string, names: string[]) => void;
+  onAddStudents: (courseId: string, students: ImportedStudent[]) => void;
   onDeleteStudent: (courseId: string, studentId: string) => void;
   onSelectCourse: (courseId: string) => void;
   onNewCourse?: () => void;
@@ -452,7 +453,7 @@ export default function CourseManager({
                           onAddStudents(course.id, names);
                         }} />
                         <ManualAddStudents
-                          onAdd={(names) => onAddStudents(course.id, names)}
+                          onAdd={(names) => onAddStudents(course.id, names.map((name) => ({ name })))}
                         />
                         <ManualDeleteStudents
                           students={course.students}

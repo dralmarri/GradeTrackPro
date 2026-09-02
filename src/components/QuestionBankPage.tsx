@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Course } from "@/types/student";
 import { ChoiceCount, choiceLabels } from "@/types/exam";
 import {
-  BankQuestion, Difficulty, DIFFICULTY_LABELS, parseQuestionRows, parseQuestionsText,
+  Difficulty, DIFFICULTY_LABELS, parseQuestionRows, parseQuestionsText,
   PasteType, ParsedQuestion, parseNumRanges,
 } from "@/types/questionBank";
 import * as XLSX from "xlsx";
