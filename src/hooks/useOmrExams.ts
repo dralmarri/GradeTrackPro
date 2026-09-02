@@ -68,7 +68,7 @@ export function useOmrExams(courseId: string | null) {
       student_id_digits: input.studentIdDigits,
       sections: input.sections && input.sections.length > 1 ? input.sections : null,
       version: input.version || null,
-      id_mode: input.idMode || "bubbles",
+      id_mode: input.idMode || "written",
     }).select().single();
     if (error || !data) { console.error("Error adding omr exam:", error); return ""; }
     await fetchExams();
