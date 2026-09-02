@@ -8,7 +8,7 @@
 //   6. decide marked / blank / ambiguous per question and per ID digit
 
 import { OmrExam, choiceCountFor } from "@/types/exam";
-import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, CODE_BITS, codeMarkPos } from "@/lib/omr/layout";
+import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, CODE_BITS, codeMarkPos, HEADER_SHIFT } from "@/lib/omr/layout";
 
 export interface OmrScanRaw {
   studentNumber: string;      // "" digits that were readable, in order
@@ -144,11 +144,12 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
 
   // rectified crops so the professor can READ the handwriting when picking
   // the student (no AI needed) — name box is at sheet-mm (25,31.5)-(185,41.5)
-  const nameImageUrl = rectifyRegion(srcRgba, w, h, H, 25, 31, 185, 42);
+  // in the ORIGINAL layout, shifted down by HEADER_SHIFT for the taller header.
+  const nameImageUrl = rectifyRegion(srcRgba, w, h, H, 25, 31 + HEADER_SHIFT, 185, 42 + HEADER_SHIFT);
   let civilIdImageUrl: string | undefined;
   if (exam.idMode === "written") {
-    // civil strip: 12 cells × 8mm centered → x 57..153, y 43.5..56
-    civilIdImageUrl = rectifyRegion(srcRgba, w, h, H, 55, 43.5, 155, 56.5);
+    // civil strip: 12 cells × 8mm centered → x 57..153, y 43.5..56 (+ HEADER_SHIFT)
+    civilIdImageUrl = rectifyRegion(srcRgba, w, h, H, 55, 43.5 + HEADER_SHIFT, 155, 56.5 + HEADER_SHIFT);
   }
 
   const debugRatios: number[] = [];

@@ -1,5 +1,8 @@
 // Printable question paper (ورقة الأسئلة) for a generated exam form.
-// Plain RTL A4 HTML — this sheet is read by students, not by the scanner.
+// Plain RTL A4 HTML — this sheet is read by students, not by the scanner,
+// so it has no geometry constraints tying it to scan.ts. Visual language
+// (brand header, section pills, navy accents) matches the redesigned OMR
+// answer sheet in sheet.ts.
 
 import { GeneratedForm } from "@/types/questionBank";
 import { SheetHeader } from "@/lib/omr/sheet";
@@ -14,20 +17,60 @@ export function buildQuestionPaperHtml(
   form: GeneratedForm,
   header?: SheetHeader,
 ): string {
-  const rows = form.questions.map((q, qi) => {
+  // Split questions into a "multiple choice" run and a "true/false" run so
+  // each can get its own section pill + matching layout (2-col grid for
+  // 4/5-option MCQ, compact inline row for T/F) — mirrors the mockup, which
+  // shows MCQ as "الجزء الأول" and T/F as "الجزء الثاني".
+  const items = form.questions.map((q, qi) => {
     const labels = choiceLabels(q.choices.length as 2 | 3 | 4 | 5);
-    const displayChoices = form.choiceOrders[qi].map((orig, pos) =>
-      `<span class="choice"><b>${labels[pos]}.</b> ${esc(q.choices[orig])}</span>`
+    const displayChoices = form.choiceOrders[qi].map((orig, pos) => ({
+      label: labels[pos],
+      text: q.choices[orig],
+    }));
+    return { qi, text: q.text, choices: displayChoices, isTF: q.choices.length === 2 };
+  });
+  const mcq = items.filter((it) => !it.isTF);
+  const tf = items.filter((it) => it.isTF);
+
+  const mcqHtml = mcq.map((it) => {
+    const gridClass = it.choices.length >= 4 ? "choices-grid2" : "choices-grid1";
+    const choicesHtml = it.choices.map((c) =>
+      `<div class="choice"><span class="clabel">${esc(c.label)}</span><span>${esc(c.text)}</span></div>`
     ).join("");
     return `
       <div class="q">
-        <div class="qtext"><b>${qi + 1}.</b> ${esc(q.text)}</div>
-        <div class="choices">${displayChoices}</div>
+        <div class="qtext"><b>${it.qi + 1}.</b> ${esc(it.text)}</div>
+        <div class="${gridClass}">${choicesHtml}</div>
       </div>`;
   }).join("");
 
-  const inst = [header?.institution, header?.college, header?.department]
-    .filter(Boolean).map((l) => `<div>${esc(l!)}</div>`).join("");
+  const tfHtml = tf.map((it) => `
+      <div class="tf-row">
+        <div class="tf-text"><b>${it.qi + 1}.</b> ${esc(it.text)}</div>
+        <div class="tf-opts"><span>أ) صح</span><span>ب) خطأ</span></div>
+      </div>`).join("");
+
+  const sections = [
+    mcq.length ? `
+      <section class="sec">
+        <div class="sec-head"><span class="pill">الجزء الأول</span><h3>اختيار من متعدد</h3></div>
+        ${mcqHtml}
+      </section>` : "",
+    tf.length ? `
+      <section class="sec">
+        <div class="sec-head"><span class="pill pill-muted">الجزء الثاني</span><h3>صح أم خطأ</h3></div>
+        ${tfHtml}
+      </section>` : "",
+  ].join("");
+
+  const instStack = [header?.institution, header?.college, header?.department]
+    .filter(Boolean).map((l, i) => `<div class="${i === 0 ? "inst-primary" : ""}">${esc(l!)}</div>`).join("");
+
+  const metaCells = [
+    header?.courseName ? { label: "اسم المقرر", value: header.courseName } : null,
+    { label: "عنوان الاختبار", value: title },
+    form.version ? { label: "رقم النموذج", value: `نموذج (${form.version})` } : null,
+  ].filter(Boolean) as { label: string; value: string }[];
 
   return `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -36,41 +79,90 @@ export function buildQuestionPaperHtml(
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/dubai" />
 <title>${esc(title)} — نموذج ${esc(form.version)}</title>
 <style>
-  :root { --navy: #1e3a5f; --navy-soft: #eef3f9; --line: #d5e2f0; }
-  @page { size: A4; margin: 18mm 16mm; }
+  :root { --navy: #1e3a5f; --navy2: #2d46b9; --navy-soft: #eef3f9; --line: #d5e2f0; }
+  @page { size: A4; margin: 16mm 16mm; }
   body { font-family: 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; margin: 0; }
-  .head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid var(--navy); padding-bottom: 4mm; }
-  .inst { font-size: 11px; color: #333; line-height: 1.65; }
-  .inst div:first-child { font-weight: bold; font-size: 12.5px; color: var(--navy); }
-  .badge { border: 1.5px solid var(--navy); background: var(--navy-soft); color: var(--navy); border-radius: 8px; padding: 4px 14px; font-weight: bold; font-size: 14px; }
-  h1 { text-align: center; font-size: 21pt; color: var(--navy); letter-spacing: 0.2px; margin: 6mm 0 1mm; }
-  .meta { text-align: center; font-size: 11px; color: #555; margin-bottom: 4mm; }
-  .rule { height: 2px; background: linear-gradient(90deg, transparent, var(--navy), transparent); opacity: 0.35; margin-bottom: 5mm; }
-  .note { background: var(--navy-soft); border: 1px solid var(--line); border-radius: 8px; padding: 3.2mm 4mm; font-size: 11px; margin-bottom: 6mm; color: #223; }
+
+  .head { border-bottom: 3px solid var(--navy2); padding-bottom: 4mm; }
+  .head-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .brand { display: flex; align-items: center; gap: 3mm; }
+  .badge { width: 12mm; height: 12mm; background: var(--navy2); color: #fff; border-radius: 2.5mm; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .brand-name { font-weight: 800; font-size: 15px; color: var(--navy2); }
+  .brand-tag { font-size: 10px; color: #667; }
+  .inst { text-align: left; font-size: 11px; color: #445; line-height: 1.6; }
+  .inst-primary { font-weight: 700; font-size: 12.5px; color: var(--navy); }
+
+  .meta-bar { margin-top: 4mm; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3mm; text-align: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 3mm 0; }
+  .meta-bar .cell .lbl { display: block; font-size: 9.5px; color: #778; margin-bottom: 1mm; }
+  .meta-bar .cell .val { font-weight: 800; color: var(--navy); font-size: 12.5px; }
+  .icon-row { margin-top: 2.5mm; display: flex; justify-content: space-around; font-size: 10.5px; color: #556; }
+  .icon-row span::before { margin-inline-end: 1.5mm; }
+
+  .note { background: var(--navy-soft); border-inline-start: 4px solid #99a; border-radius: 2mm; padding: 3.5mm 4mm; font-size: 11px; margin: 6mm 0; color: #223; }
+  .note h2 { font-size: 12px; margin: 0 0 1.5mm; color: var(--navy); }
+  .note ul { margin: 0; padding-inline-start: 5mm; }
+  .note li { margin-bottom: 1mm; }
+
+  .sec { margin-bottom: 6mm; }
+  .sec-head { display: flex; align-items: center; gap: 3mm; margin-bottom: 4mm; border-bottom: 2px solid var(--navy2); padding-bottom: 1.5mm; }
+  .pill { background: var(--navy2); color: #fff; border-radius: 1.6mm; padding: 1.2mm 3.5mm; font-weight: 800; font-size: 11px; }
+  .pill-muted { background: #99a3ad; }
+  .sec-head h3 { margin: 0; font-size: 13.5px; color: #222; }
+
   .q { margin-bottom: 5mm; padding-bottom: 3.5mm; border-bottom: 1px dashed var(--line); page-break-inside: avoid; }
   .q:last-child { border-bottom: none; }
-  .qtext { font-size: 14pt; font-weight: 700; margin-bottom: 2mm; }
-  .qtext b { color: var(--navy); margin-inline-end: 1mm; }
-  .choices { display: flex; flex-wrap: wrap; gap: 2.2mm 8mm; padding-inline-start: 7mm; font-size: 14pt; }
-  .choice { min-width: 38mm; }
-  .choice b { color: var(--navy); }
-  .foot { text-align: center; color: var(--navy); font-weight: bold; font-size: 12px; margin-top: 8mm; padding-top: 4mm; border-top: 1px solid var(--line); }
+  .qtext { font-size: 13pt; font-weight: 700; margin-bottom: 2.5mm; }
+  .qtext b { color: var(--navy2); margin-inline-end: 1mm; }
+  .choices-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 6mm; padding-inline-start: 6mm; font-size: 12pt; }
+  .choices-grid1 { display: flex; flex-direction: column; gap: 2mm; padding-inline-start: 6mm; font-size: 12pt; }
+  .choice { display: flex; align-items: flex-start; gap: 2mm; }
+  .clabel { width: 6mm; height: 6mm; min-width: 6mm; border: 1px solid #ccc; border-radius: 1.5mm; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: #556; }
+
+  .tf-row { display: flex; justify-content: space-between; align-items: center; gap: 4mm; background: #fafbfc; border: 1px solid var(--line); border-radius: 2mm; padding: 2.6mm 3.5mm; margin-bottom: 2.5mm; }
+  .tf-text { font-size: 11.5pt; font-weight: 600; flex: 1; }
+  .tf-text b { color: var(--navy2); margin-inline-end: 1mm; }
+  .tf-opts { display: flex; gap: 4mm; font-size: 10.5px; font-weight: 700; color: #667; white-space: nowrap; }
+
+  .foot { display: flex; justify-content: space-between; color: #99a; font-weight: 600; font-size: 9.5px; margin-top: 8mm; padding-top: 3mm; border-top: 1px solid var(--line); }
+  .foot .mid { color: var(--navy); font-weight: 700; }
 </style>
 </head>
 <body>
   <div class="head">
-    <div class="inst">${inst}</div>
-    <div class="badge">نموذج ${esc(form.version)}</div>
+    <div class="head-top">
+      <div class="brand">
+        <div class="badge">GTP</div>
+        <div>
+          <div class="brand-name">GradeTrackPro</div>
+          <div class="brand-tag">نظام إدارة التقييم الأكاديمي</div>
+        </div>
+      </div>
+      <div class="inst">${instStack || `<div class="inst-primary">${esc(title)}</div>`}</div>
+    </div>
+    <div class="meta-bar">
+      ${metaCells.map((c) => `<div class="cell"><span class="lbl">${esc(c.label)}</span><span class="val">${esc(c.value)}</span></div>`).join("")}
+    </div>
+    <div class="icon-row">
+      <span>عدد الأسئلة: ${form.questions.length}</span>
+    </div>
   </div>
-  <h1>${esc(title)}</h1>
-  <div class="meta">
-    ${header?.courseName ? `المقرر: ${esc(header.courseName)} · ` : ""}
-    عدد الأسئلة: ${form.questions.length}
+
+  <div class="note">
+    <h2>تعليمات هامة:</h2>
+    <ul>
+      <li>اقرأ كل سؤال بعناية قبل البدء بالإجابة.</li>
+      <li>ظلّل إجابتك في ورقة الإجابة المرفقة ولا تكتب على ورقة الأسئلة.</li>
+      <li>تأكد من تظليل رقم النموذج الصحيح المذكور أعلاه، وكتابة اسمك ورقمك الجامعي بوضوح على ورقة الإجابة.</li>
+    </ul>
   </div>
-  <div class="rule"></div>
-  <div class="note">ظلّل إجابتك في <b>ورقة الإجابة المرفقة</b> ولا تكتب على ورقة الأسئلة. تأكد من تظليل رقم النموذج الصحيح المذكور أعلاه.</div>
-  ${rows}
-  <div class="foot">تمنياتنا لكم بالتوفيق والنجاح</div>
+
+  ${sections}
+
+  <div class="foot">
+    <span>© GradeTrackPro</span>
+    <span class="mid">تمنياتنا لكم بالتوفيق والنجاح</span>
+    <span>نموذج ${esc(form.version)}</span>
+  </div>
 </body>
 </html>`;
 }

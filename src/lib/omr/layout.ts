@@ -33,10 +33,18 @@ export const ORIENT_MARK = { x: 22.5, y: 11, size: 5 } as const;
 // idMode — and kept well clear of both corner-mark search windows (which
 // scan the outer 30% of the image from each side, ~ x<63mm / x>147mm here)
 // by centering the row in the page's middle third.
+// The header block was enlarged (brand row + meta-info bar + shading legend)
+// to match the approved GradeTrackPro OMR mockup — every Y below the header
+// shifts down by HEADER_SHIFT so the header has room without touching the
+// corner/orientation marks (unaffected — they anchor off PAGE_W/PAGE_H, not
+// the header). scan.ts's two hardcoded crop rectangles (name box, civil-ID
+// strip) were updated by the same HEADER_SHIFT amount.
+export const HEADER_SHIFT = 10; // mm
+
 export const CODE_BITS = 10; // 0..1023 — plenty for any one course's exams
 const CODE_MARK_SIZE = 2.4;
 const CODE_MARK_PITCH = 4.6;
-const CODE_MARK_Y = 27.8;
+const CODE_MARK_Y = 27.8 + HEADER_SHIFT; // sits in the gap between the taller header card and the name box
 export function codeMarkPos(bitIndex: number): { x: number; y: number; size: number } {
   const totalW = (CODE_BITS - 1) * CODE_MARK_PITCH;
   const startX = PAGE_W / 2 - totalW / 2;
@@ -64,14 +72,14 @@ export const BUBBLE_R = 3.8;      // bubble radius (mm)
 // Student-ID grid
 const ID_COL_PITCH = 9.6;         // horizontal distance between digit columns
 const ID_ROW_PITCH = 8.4;         // vertical distance between digits 0-9
-const ID_TOP_Y = 57.5;            // y of digit-0 row (below the handwritten boxes)
+const ID_TOP_Y = 57.5 + HEADER_SHIFT; // y of digit-0 row (below the handwritten boxes)
 export const ID_PITCH = ID_COL_PITCH;
 
 // Question grid
 const Q_ROW_PITCH = 8.6;
 const Q_CHOICE_PITCH = 11;
-const Q_TOP_BUBBLES = 136;        // first question row (below the taller civil-ID grid)
-const Q_TOP_WRITTEN = 72;         // first question row when the ID is handwritten-only
+const Q_TOP_BUBBLES = 136 + HEADER_SHIFT; // first question row (below the taller civil-ID grid)
+const Q_TOP_WRITTEN = 72 + HEADER_SHIFT;  // first question row when the ID is handwritten-only
 const Q_BOTTOM_Y = 274;
 const Q_COL_XS = [28, 93, 158];   // x of choice "A" bubble per column block
 
