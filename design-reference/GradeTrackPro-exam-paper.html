@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ورقة اختبار - GradeTrackPro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --gtp-blue: #2947d1;
+    }
+    body {
+      background: #f3f4f6;
+      font-family: "IBM Plex Sans Arabic", "Tajawal", system-ui, sans-serif;
+      padding: 24px;
+    }
+    .gtp-sheet {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 14mm 16mm;
+      margin: 0 auto 8mm;
+      background: #ffffff;
+      color: #111827;
+      direction: rtl;
+      position: relative;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    }
+    .gtp-brand-blue { color: #2947d1; }
+    .gtp-badge {
+      border-radius: 0.375rem;
+      background: #2947d1;
+      padding: 0.375rem 0.75rem;
+      font-size: 10pt;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      body { background: #ffffff !important; }
+      .gtp-sheet {
+        box-shadow: none;
+        margin: 0;
+        page-break-after: always;
+        break-after: page;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <section class="gtp-sheet" aria-label="ورقة الاختبار">
+    <!-- Header -->
+    <header class="flex items-start justify-between">
+      <div class="space-y-1 text-[11pt] font-semibold text-gray-700">
+        <p class="text-[12pt] font-bold text-gray-900">جامعة الملك سعود</p>
+        <p class="text-gray-600">كلية العلوم</p>
+        <p class="text-gray-600">قسم الرياضيات</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-[#2947d1] text-lg font-extrabold text-white">GTP</div>
+        <div class="text-left" dir="ltr">
+          <p class="text-xl font-extrabold gtp-brand-blue">GradeTrackPro</p>
+          <p class="text-[10pt] text-gray-500" dir="rtl">نظام إدارة التقييم الأكاديمي</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="mt-5 grid grid-cols-3 gap-3 border-y border-gray-200 py-3">
+      <div class="text-center">
+        <p class="text-[9pt] text-gray-500">اسم المقرر</p>
+        <p class="mt-1 text-[12pt] font-bold text-gray-900">مبادئ الرياضيات</p>
+      </div>
+      <div class="text-center">
+        <p class="text-[9pt] text-gray-500">عنوان الاختبار</p>
+        <p class="mt-1 text-[12pt] font-bold text-gray-900">الاختبار النهائي</p>
+      </div>
+      <div class="text-center">
+        <p class="text-[9pt] text-gray-500">رقم النموذج</p>
+        <p class="mt-1 text-[12pt] font-bold gtp-brand-blue">نموذج (أ)</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 border-b-[3px] border-[#2947d1] pb-3 text-[10pt] text-gray-600">
+      <p class="text-center">مدة الاختبار: ساعتان</p>
+      <p class="text-center">عدد الأسئلة: ٨</p>
+      <p class="text-center">الدرجة الكلية: ٦٠</p>
+    </div>
+
+    <!-- Instructions -->
+    <div class="mt-6 rounded-lg border-r-4 border-[#2947d1] bg-gray-50 p-4">
+      <p class="text-[11pt] font-bold text-gray-900">تعليمات هامة:</p>
+      <ul class="mt-2 list-disc space-y-1 pr-5 text-[10.5pt] text-gray-700">
+        <li>اقرأ كل سؤال بعناية قبل البدء بالإجابة.</li>
+        <li>استخدم ورقة الإجابة المنفصلة لتظليل الخيار الصحيح.</li>
+        <li>تأكد من كتابة اسمك ورقمك الجامعي بوضوح على ورقة الإجابة.</li>
+      </ul>
+    </div>
+
+    <!-- Part 1: MCQ -->
+    <div class="mt-7 flex items-center gap-3">
+      <span class="gtp-badge">الجزء الأول</span>
+      <span class="flex-1 border-b border-gray-300 pb-1 text-[12pt] font-bold text-gray-900">الاختيار من متعدد (١.٥ درجة لكل سؤال)</span>
+    </div>
+    <ol class="mt-4 space-y-5">
+      <li class="flex gap-2">
+        <span class="w-7 shrink-0 text-[11pt] font-bold text-gray-900">١.</span>
+        <div class="flex-1">
+          <p class="text-[11pt] font-semibold text-gray-900">ما هو ناتج ٥ + ٧؟</p>
+          <div class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2">
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">أ</span><span class="text-[10.5pt] text-gray-800">١٠</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ب</span><span class="text-[10.5pt] text-gray-800">١١</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ج</span><span class="text-[10.5pt] text-gray-800">١٢</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">د</span><span class="text-[10.5pt] text-gray-800">١٣</span></div>
+          </div>
+        </div>
+      </li>
+      <li class="flex gap-2">
+        <span class="w-7 shrink-0 text-[11pt] font-bold text-gray-900">٢.</span>
+        <div class="flex-1">
+          <p class="text-[11pt] font-semibold text-gray-900">أي من الأعداد التالية هو عدد أولي؟</p>
+          <div class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2">
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">أ</span><span class="text-[10.5pt] text-gray-800">٩</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ب</span><span class="text-[10.5pt] text-gray-800">١٥</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ج</span><span class="text-[10.5pt] text-gray-800">١٧</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">د</span><span class="text-[10.5pt] text-gray-800">٢١</span></div>
+          </div>
+        </div>
+      </li>
+      <li class="flex gap-2">
+        <span class="w-7 shrink-0 text-[11pt] font-bold text-gray-900">٣.</span>
+        <div class="flex-1">
+          <p class="text-[11pt] font-semibold text-gray-900">ما هو محيط المستطيل طوله ٨ وعرضه ٥؟</p>
+          <div class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2">
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">أ</span><span class="text-[10.5pt] text-gray-800">٢٦</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ب</span><span class="text-[10.5pt] text-gray-800">٤٠</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ج</span><span class="text-[10.5pt] text-gray-800">١٣</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">د</span><span class="text-[10.5pt] text-gray-800">٢٤</span></div>
+          </div>
+        </div>
+      </li>
+      <li class="flex gap-2">
+        <span class="w-7 shrink-0 text-[11pt] font-bold text-gray-900">٤.</span>
+        <div class="flex-1">
+          <p class="text-[11pt] font-semibold text-gray-900">كم عدد أضلاع المثلث؟</p>
+          <div class="mt-2 grid grid-cols-1 gap-x-6 gap-y-2">
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">أ</span><span class="text-[10.5pt] text-gray-800">٣</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ب</span><span class="text-[10.5pt] text-gray-800">٤</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ج</span><span class="text-[10.5pt] text-gray-800">٥</span></div>
+          </div>
+        </div>
+      </li>
+      <li class="flex gap-2">
+        <span class="w-7 shrink-0 text-[11pt] font-bold text-gray-900">٥.</span>
+        <div class="flex-1">
+          <p class="text-[11pt] font-semibold text-gray-900">ما هو المضاعف المشترك الأصغر لـ ٤ و٦؟</p>
+          <div class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2">
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">أ</span><span class="text-[10.5pt] text-gray-800">١٢</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ب</span><span class="text-[10.5pt] text-gray-800">٢٤</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ج</span><span class="text-[10.5pt] text-gray-800">٦</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">د</span><span class="text-[10.5pt] text-gray-800">٢</span></div>
+          </div>
+        </div>
+      </li>
+      <li class="flex gap-2">
+        <span class="w-7 shrink-0 text-[11pt] font-bold text-gray-900">٦.</span>
+        <div class="flex-1">
+          <p class="text-[11pt] font-semibold text-gray-900">أي الكسور التالية أكبر من ١/٢؟</p>
+          <div class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2">
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">أ</span><span class="text-[10.5pt] text-gray-800">٢/٥</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ب</span><span class="text-[10.5pt] text-gray-800">٣/٤</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">ج</span><span class="text-[10.5pt] text-gray-800">١/٣</span></div>
+            <div class="flex items-center gap-2"><span class="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-[9.5pt] font-bold text-gray-700">د</span><span class="text-[10.5pt] text-gray-800">٢/٦</span></div>
+          </div>
+        </div>
+      </li>
+    </ol>
+
+    <!-- Part 2: True / False -->
+    <div class="mt-7 flex items-center gap-3">
+      <span class="gtp-badge">الجزء الثاني</span>
+      <span class="flex-1 border-b border-gray-300 pb-1 text-[12pt] font-bold text-gray-900">صح أم خطأ (١ درجة لكل سؤال)</span>
+    </div>
+    <ol class="mt-4 space-y-2">
+      <li class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2.5">
+        <span class="w-7 shrink-0 text-[11pt] font-bold text-gray-900">٧.</span>
+        <p class="flex-1 text-[10.5pt] text-gray-800">مجموع زوايا المثلث يساوي ١٨٠ درجة.</p>
+        <span class="shrink-0 text-[10pt] text-gray-600">أ) صح</span>
+        <span class="shrink-0 text-[10pt] text-gray-600">ب) خطأ</span>
+      </li>
+      <li class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2.5">
+        <span class="w-7 shrink-0 text-[11pt] font-bold text-gray-900">٨.</span>
+        <p class="flex-1 text-[10.5pt] text-gray-800">العدد ١ هو عدد أولي.</p>
+        <span class="shrink-0 text-[10pt] text-gray-600">أ) صح</span>
+        <span class="shrink-0 text-[10pt] text-gray-600">ب) خطأ</span>
+      </li>
+    </ol>
+
+    <!-- Footer -->
+    <footer class="absolute inset-x-[16mm] bottom-[10mm] flex items-center justify-between border-t border-gray-200 pt-2 text-[8.5pt] text-gray-400">
+      <span>© ٢٠٢٦ - GradeTrackPro جميع الحقوق محفوظة</span>
+      <span>تمنياتنا لكم بالتوفيق والنجاح</span>
+      <span>الصفحة ١ من ١</span>
+    </footer>
+  </section>
+
+</body>
+</html>
