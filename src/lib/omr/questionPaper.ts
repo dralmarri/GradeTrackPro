@@ -16,6 +16,7 @@ export function buildQuestionPaperHtml(
   title: string,
   form: GeneratedForm,
   header?: SheetHeader,
+  maxScore?: number,
 ): string {
   // Split questions into a "multiple choice" run and a "true/false" run so
   // each can get its own section pill + matching layout (2-col grid for
@@ -67,10 +68,10 @@ export function buildQuestionPaperHtml(
     .filter(Boolean).map((l, i) => `<div class="${i === 0 ? "inst-primary" : ""}">${esc(l!)}</div>`).join("");
 
   const metaCells = [
-    header?.courseName ? { label: "اسم المقرر", value: header.courseName } : null,
-    { label: "عنوان الاختبار", value: title },
-    form.version ? { label: "رقم النموذج", value: `نموذج (${form.version})` } : null,
-  ].filter(Boolean) as { label: string; value: string }[];
+    header?.courseName ? { label: "اسم المقرر", value: header.courseName, model: false } : null,
+    { label: "عنوان الاختبار", value: title, model: false },
+    form.version ? { label: "رقم النموذج", value: `نموذج (${form.version})`, model: true } : null,
+  ].filter(Boolean) as { label: string; value: string; model: boolean }[];
 
   return `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -90,26 +91,27 @@ export function buildQuestionPaperHtml(
   .brand { display: flex; align-items: center; gap: 3mm; }
   .badge { width: 12mm; height: 12mm; background: var(--navy2); color: #fff; border-radius: 2.5mm; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
   .brand-name { font-weight: 800; font-size: 15px; color: var(--navy2); }
-  .brand-tag { font-size: 10px; color: #667; }
-  .inst { text-align: left; font-size: 11px; color: #445; line-height: 1.6; }
+  .brand-tag { font-size: 10px; color: #6b7280; }
+  .meta-bar .cell.model .val { font-size: 15px; color: var(--navy2); }
+  .inst { text-align: left; font-size: 11px; color: #374151; line-height: 1.6; }
   .inst-primary { font-weight: 700; font-size: 12.5px; color: var(--navy); }
 
-  .meta-bar { margin-top: 4mm; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3mm; text-align: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 3mm 0; }
-  .meta-bar .cell .lbl { display: block; font-size: 9.5px; color: #778; margin-bottom: 1mm; }
+  .meta-bar { margin-top: 4mm; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3mm; text-align: center; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; padding: 3mm 0; }
+  .meta-bar .cell .lbl { display: block; font-size: 9.5px; color: #6b7280; margin-bottom: 1mm; }
   .meta-bar .cell .val { font-weight: 800; color: var(--navy); font-size: 12.5px; }
-  .icon-row { margin-top: 2.5mm; display: flex; justify-content: space-around; font-size: 10.5px; color: #556; }
+  .icon-row { margin-top: 2.5mm; display: flex; justify-content: space-around; font-size: 10.5px; color: #6b7280; }
   .icon-row span::before { margin-inline-end: 1.5mm; }
 
-  .note { background: var(--navy-soft); border-inline-start: 4px solid #99a; border-radius: 2mm; padding: 3.5mm 4mm; font-size: 11px; margin: 6mm 0; color: #223; }
+  .note { background: #f9fafb; border-inline-start: 4px solid #d1d5db; border-radius: 2mm; padding: 3.5mm 4mm; font-size: 11px; margin: 6mm 0; color: #374151; }
   .note h2 { font-size: 12px; margin: 0 0 1.5mm; color: var(--navy); }
   .note ul { margin: 0; padding-inline-start: 5mm; }
   .note li { margin-bottom: 1mm; }
 
   .sec { margin-bottom: 6mm; }
-  .sec-head { display: flex; align-items: center; gap: 3mm; margin-bottom: 4mm; border-bottom: 2px solid var(--navy2); padding-bottom: 1.5mm; }
+  .sec-head { display: flex; align-items: center; gap: 3mm; margin-bottom: 4mm; }
   .pill { background: var(--navy2); color: #fff; border-radius: 1.6mm; padding: 1.2mm 3.5mm; font-weight: 800; font-size: 11px; }
   .pill-muted { background: #99a3ad; }
-  .sec-head h3 { margin: 0; font-size: 13.5px; color: #222; }
+  .sec-head h3 { margin: 0; font-size: 13.5px; color: #222; border-bottom: 2px solid var(--navy2); padding-bottom: 1.5mm; }
 
   .q { margin-bottom: 5mm; padding-bottom: 3.5mm; border-bottom: 1px dashed var(--line); page-break-inside: avoid; }
   .q:last-child { border-bottom: none; }
@@ -118,14 +120,14 @@ export function buildQuestionPaperHtml(
   .choices-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 6mm; padding-inline-start: 6mm; font-size: 12pt; }
   .choices-grid1 { display: flex; flex-direction: column; gap: 2mm; padding-inline-start: 6mm; font-size: 12pt; }
   .choice { display: flex; align-items: flex-start; gap: 2mm; }
-  .clabel { width: 6mm; height: 6mm; min-width: 6mm; border: 1px solid #ccc; border-radius: 1.5mm; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: #556; }
+  .clabel { width: 6mm; height: 6mm; min-width: 6mm; border: 1px solid #d1d5db; border-radius: 1.5mm; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: #6b7280; }
 
-  .tf-row { display: flex; justify-content: space-between; align-items: center; gap: 4mm; background: #fafbfc; border: 1px solid var(--line); border-radius: 2mm; padding: 2.6mm 3.5mm; margin-bottom: 2.5mm; }
+  .tf-row { display: flex; justify-content: space-between; align-items: center; gap: 4mm; background: #f9fafb; border: 1px solid #f3f4f6; border-radius: 2mm; padding: 2.6mm 3.5mm; margin-bottom: 2.5mm; }
   .tf-text { font-size: 11.5pt; font-weight: 600; flex: 1; }
   .tf-text b { color: var(--navy2); margin-inline-end: 1mm; }
-  .tf-opts { display: flex; gap: 4mm; font-size: 10.5px; font-weight: 700; color: #667; white-space: nowrap; }
+  .tf-opts { display: flex; gap: 4mm; font-size: 10.5px; font-weight: 700; color: #6b7280; white-space: nowrap; }
 
-  .foot { display: flex; justify-content: space-between; color: #99a; font-weight: 600; font-size: 9.5px; margin-top: 8mm; padding-top: 3mm; border-top: 1px solid var(--line); }
+  .foot { display: flex; justify-content: space-between; color: #9ca3af; font-weight: 600; font-size: 9.5px; margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #e5e7eb; }
   .foot .mid { color: var(--navy); font-weight: 700; }
 </style>
 </head>
@@ -142,10 +144,11 @@ export function buildQuestionPaperHtml(
       <div class="inst">${instStack || `<div class="inst-primary">${esc(title)}</div>`}</div>
     </div>
     <div class="meta-bar">
-      ${metaCells.map((c) => `<div class="cell"><span class="lbl">${esc(c.label)}</span><span class="val">${esc(c.value)}</span></div>`).join("")}
+      ${metaCells.map((c) => `<div class="cell${c.model ? " model" : ""}"><span class="lbl">${esc(c.label)}</span><span class="val">${esc(c.value)}</span></div>`).join("")}
     </div>
     <div class="icon-row">
       <span>عدد الأسئلة: ${form.questions.length}</span>
+      ${maxScore != null ? `<span>الدرجة الكلية: ${maxScore}</span>` : ""}
     </div>
   </div>
 
@@ -169,8 +172,8 @@ export function buildQuestionPaperHtml(
 </html>`;
 }
 
-export function printQuestionPaper(title: string, form: GeneratedForm, header?: SheetHeader): boolean {
-  const html = buildQuestionPaperHtml(title, form, header);
+export function printQuestionPaper(title: string, form: GeneratedForm, header?: SheetHeader, maxScore?: number): boolean {
+  const html = buildQuestionPaperHtml(title, form, header, maxScore);
   const w = window.open("", "_blank");
   if (!w) return false;
   w.document.write(html);

@@ -81,7 +81,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   if (header?.department) instLines.push(header.department);
   if (instLines.length === 0) instLines.push(exam.title);
   instLines.slice(0, 3).forEach((line, i) => {
-    parts.push(`<text x="${PAGE_W - 24}" y="${12 + i * 3.2}" font-size="${i === 0 ? 3 : 2.4}" font-weight="${i === 0 ? "bold" : "normal"}" fill="${i === 0 ? NAVY : "#556"}" text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
+    parts.push(`<text x="${PAGE_W - 24}" y="${12 + i * 3.2}" font-size="${i === 0 ? 3 : 2.4}" font-weight="${i === 0 ? "bold" : "normal"}" fill="${i === 0 ? NAVY : "#6b7280"}" text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
   });
 
   // institution logo — kept between the corner-mark search windows (x 64–146)
@@ -98,13 +98,13 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     ["عدد الأسئلة", String(exam.questionCount)],
     ["الدرجة الكلية", String(exam.maxScore)],
   ];
-  parts.push(`<rect x="24" y="${metaY0}" width="162" height="7.4" fill="#fff" stroke="${NAVY}" stroke-width="0.25" opacity="0.7" rx="1.6"/>`);
+  parts.push(`<rect x="24" y="${metaY0}" width="162" height="7.4" fill="#f9fafb" stroke="#e5e7eb" stroke-width="0.3" rx="1.6"/>`);
   const metaW = 162 / metaCells.length;
   metaCells.forEach(([label, value], i) => {
     const cx = 24 + metaW * i + metaW / 2;
-    parts.push(`<text x="${cx}" y="${metaY0 + 3.1}" font-size="1.9" fill="#778" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(label)}</text>`);
+    parts.push(`<text x="${cx}" y="${metaY0 + 3.1}" font-size="1.9" fill="#6b7280" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(label)}</text>`);
     parts.push(`<text x="${cx}" y="${metaY0 + 6.2}" font-size="2.5" font-weight="bold" fill="${NAVY}" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(value)}</text>`);
-    if (i > 0) parts.push(`<line x1="${24 + metaW * i}" y1="${metaY0 + 1}" x2="${24 + metaW * i}" y2="${metaY0 + 6.4}" stroke="${NAVY}" stroke-width="0.2" opacity="0.35"/>`);
+    if (i > 0) parts.push(`<line x1="${24 + metaW * i}" y1="${metaY0 + 1}" x2="${24 + metaW * i}" y2="${metaY0 + 6.4}" stroke="#e5e7eb" stroke-width="0.25"/>`);
   });
 
   // ---------- shading-legend bar: "طريقة التظليل الصحيحة" with 3 example
@@ -114,21 +114,21 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   // forms so nothing is fabricated for unusual version labels). ----------
   const ly = metaY0 + 8, lh = HEAD_BOTTOM - ly - 1;
   const midY = ly + lh / 2;
-  parts.push(`<rect x="24" y="${ly}" width="162" height="${lh}" fill="none" stroke="#99a" stroke-width="0.3" stroke-dasharray="1.2,1" rx="1.6"/>`);
+  parts.push(`<rect x="24" y="${ly}" width="162" height="${lh}" fill="none" stroke="#e5e7eb" stroke-width="0.3" stroke-dasharray="1.2,1" rx="1.6"/>`);
 
   const VERSIONS = ["أ", "ب", "ج"];
   if (exam.version && VERSIONS.includes(exam.version)) {
-    parts.push(`<text x="76" y="${midY + 1}" font-size="2.2" font-weight="bold" fill="#556" text-anchor="start" direction="rtl" font-family="${FONT}">النموذج:</text>`);
+    parts.push(`<text x="76" y="${midY + 1}" font-size="2.2" font-weight="bold" fill="#374151" text-anchor="start" direction="rtl" font-family="${FONT}">النموذج:</text>`);
     VERSIONS.forEach((v, i) => {
       const vx = 60 - i * 9;
       const active = v === exam.version;
-      parts.push(`<circle cx="${vx}" cy="${midY}" r="2.1" fill="${active ? NAVY : "#fff"}" stroke="${active ? NAVY : "#99a"}" stroke-width="0.4"/>`);
-      parts.push(`<text x="${vx}" y="${midY + 0.9}" font-size="2.1" font-weight="bold" fill="${active ? "#fff" : "#556"}" text-anchor="middle" font-family="${FONT}">${v}</text>`);
+      parts.push(`<circle cx="${vx}" cy="${midY}" r="2.1" fill="${active ? NAVY : "#fff"}" stroke="${active ? NAVY : "#9ca3af"}" stroke-width="0.4"/>`);
+      parts.push(`<text x="${vx}" y="${midY + 0.9}" font-size="2.1" font-weight="bold" fill="${active ? "#fff" : "#374151"}" text-anchor="middle" font-family="${FONT}">${v}</text>`);
     });
-    parts.push(`<line x1="78" y1="${ly + 0.8}" x2="78" y2="${ly + lh - 0.8}" stroke="#99a" stroke-width="0.25" opacity="0.5"/>`);
+    parts.push(`<line x1="78" y1="${ly + 0.8}" x2="78" y2="${ly + lh - 0.8}" stroke="#9ca3af" stroke-width="0.25" opacity="0.5"/>`);
   }
 
-  parts.push(`<text x="${PAGE_W - 24}" y="${midY + 1}" font-size="2.3" font-weight="bold" fill="#556" text-anchor="start" direction="rtl" font-family="${FONT}">طريقة التظليل الصحيحة:</text>`);
+  parts.push(`<text x="${PAGE_W - 24}" y="${midY + 1}" font-size="2.3" font-weight="bold" fill="#374151" text-anchor="start" direction="rtl" font-family="${FONT}">طريقة التظليل الصحيحة:</text>`);
   const exR = 2.1;
   const legendItems: { x: number; kind: "fill" | "x" | "dot"; label: string }[] = [
     { x: 148, kind: "fill", label: "صح" },
@@ -146,7 +146,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
       parts.push(`<circle cx="${it.x}" cy="${midY}" r="${exR}" fill="none" stroke="#333" stroke-width="0.4"/>`);
       parts.push(`<circle cx="${it.x}" cy="${midY}" r="0.7" fill="#333"/>`);
     }
-    parts.push(`<text x="${it.x - exR - 1}" y="${midY + 0.9}" font-size="2.1" fill="#556" text-anchor="start" direction="rtl" font-family="${FONT}">${it.label}</text>`);
+    parts.push(`<text x="${it.x - exR - 1}" y="${midY + 0.9}" font-size="2.1" fill="#374151" text-anchor="start" direction="rtl" font-family="${FONT}">${it.label}</text>`);
   }
 
   // ---------- exam-code marks: machine-readable "which exam is this sheet"
@@ -298,7 +298,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   parts.push(`<line x1="32" y1="${sigY}" x2="62" y2="${sigY}" stroke="#889" stroke-width="0.35"/>`);
   parts.push(`<text x="47" y="${sigY + 3.4}" font-size="2.3" fill="#667" text-anchor="middle" direction="rtl" font-family="${FONT}">توقيع المراقب</text>`);
   parts.push(`<text x="${PAGE_W / 2}" y="${sigY + 1}" font-size="3.2" font-weight="bold" fill="${NAVY}" text-anchor="middle" direction="rtl" font-family="${FONT}">تمنياتنا لكم بالتوفيق والنجاح</text>`);
-  parts.push(`<text x="${PAGE_W / 2}" y="${FB_TOP + 11}" font-size="2.3" fill="#778" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
+  parts.push(`<text x="${PAGE_W / 2}" y="${FB_TOP + 11}" font-size="2.3" fill="#9ca3af" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}">${parts.join("")}</svg>`;
 }

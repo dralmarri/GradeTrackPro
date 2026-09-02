@@ -414,7 +414,7 @@ export default function GenerateExamPanel({ course, bankCourseIds, sheetHeader, 
                   </span>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { if (!printQuestionPaper(exam?.title ?? genTitle.trim(), form, sheetHeader())) toast.error(ar ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups"); }}
+                      onClick={() => { if (!printQuestionPaper(exam?.title ?? genTitle.trim(), form, sheetHeader(), exam?.maxScore)) toast.error(ar ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups"); }}
                       className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-muted"
                     >
                       <FileText size={13} />
