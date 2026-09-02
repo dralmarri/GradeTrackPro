@@ -142,3 +142,36 @@ export function useOmrScans(examId: string | null) {
 
   return { scans, loading, addScan, getImageUrl, deleteScan, refetch: fetchScans };
 }
+
+// All archived scans for one student across every exam in the course — used
+// on the results/status page so a professor can find a student's scanned
+// papers by student name in one place, instead of hunting through each
+// exam's own scan history one at a time.
+export function useStudentScans(studentId: string | null) {
+  const { user } = useAuth();
+  const [scans, setScans] = useState<OmrScanRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchScans = useCallback(async () => {
+    if (!user || !studentId) { setScans([]); setLoading(false); return; }
+    const { data, error } = await db
+      .from("omr_scans").select("*")
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false });
+    if (error) { console.error("Error fetching student scans:", error); setLoading(false); return; }
+    setScans((data || []).map(rowToScan));
+    setLoading(false);
+  }, [user, studentId]);
+
+  useEffect(() => { fetchScans(); }, [fetchScans]);
+
+  const getImageUrl = useCallback(async (imagePath: string): Promise<string | null> => {
+    const { data, error } = await supabase.storage
+      .from("scans")
+      .createSignedUrl(imagePath, 60 * 10); // 10-minute link
+    if (error) { console.error("Signed URL failed:", error); return null; }
+    return data.signedUrl;
+  }, []);
+
+  return { scans, loading, getImageUrl };
+}

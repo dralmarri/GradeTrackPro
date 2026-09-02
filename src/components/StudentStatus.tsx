@@ -2,10 +2,13 @@ import { useState, useEffect } from "react";
 import { Student, Course, getLabel } from "@/types/student";
 import { getBonusTotal, getMaxTotal, getPercentage, getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
-import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy, ChevronDown } from "lucide-react";
+import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy, ChevronDown, ImageIcon, Loader2 } from "lucide-react";
 import { GradeTier, LetterTier, loadGradeTiers, loadLetterTiers, getTierFor, getLetterFor } from "@/lib/gradeTiers";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts";
+import { useOmrExams } from "@/hooks/useOmrExams";
+import { useStudentScans } from "@/hooks/useOmrScans";
+import { toast } from "sonner";
 
 interface StudentStatusProps {
   students: Student[];
@@ -22,6 +25,11 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
   // time to dig in.
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // exam titles for the scanned-papers section below — looked up once per
+  // course instead of per student card
+  const { exams } = useOmrExams(course.id);
+  const examTitles: Record<string, string> = {};
+  for (const e of exams) examTitles[e.id] = e.version ? `${e.title} — ${e.version}` : e.title;
 
   useEffect(() => {
     const handler = () => {
@@ -491,11 +499,76 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                       </div>
                     </div>
                   )}
+
+                  {/* Scanned OMR papers — every exam form for this student in
+                      one place, instead of opening each exam's own scan
+                      history separately to find which one has his sheet. */}
+                  <StudentScansSection studentId={student.id} examTitles={examTitles} />
                 </div>
               )}
             </motion.div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// One student's archived OMR papers across every exam form in the course.
+// Fetched only while its card is expanded (studentId is only non-null
+// then in the parent), matching the lazy pattern used for the rest of the
+// expanded-card content.
+function StudentScansSection({ studentId, examTitles }: { studentId: string; examTitles: Record<string, string> }) {
+  const { scans, loading, getImageUrl } = useStudentScans(studentId);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+
+  const fmtDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+    } catch {
+      return iso;
+    }
+  };
+
+  const openImage = async (scan: { id: string; imagePath: string | null }) => {
+    if (!scan.imagePath) { toast.error("لا توجد صورة محفوظة لهذه الورقة"); return; }
+    setOpeningId(scan.id);
+    const url = await getImageUrl(scan.imagePath);
+    setOpeningId(null);
+    if (url) window.open(url, "_blank");
+    else toast.error("تعذّر فتح الصورة");
+  };
+
+  if (loading || scans.length === 0) return null;
+
+  return (
+    <div>
+      <p className="mb-1.5 flex items-center gap-2 text-xs font-medium text-foreground">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+        الأوراق الممسوحة: <span className="font-display font-bold">{scans.length}</span>
+      </p>
+      <div className="space-y-1.5">
+        {scans.map((s) => (
+          <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5 text-[11px]">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-foreground">{examTitles[s.examId] || "—"}</p>
+              <p className="text-[10px] text-muted-foreground">
+                <span className="font-display">{fmtDate(s.createdAt)}</span>
+                {" · "}{s.rawCorrect} صحيحة
+                {s.needsReview && <span className="ms-1 rounded bg-amber-500/10 px-1.5 py-0.5 font-semibold text-amber-600">تحتاج مراجعة</span>}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => openImage(s)}
+              disabled={!s.imagePath || openingId === s.id}
+              className="flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-40"
+            >
+              {openingId === s.id ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
+              عرض
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );
