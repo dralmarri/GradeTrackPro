@@ -23,7 +23,6 @@ import {
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "@/hooks/useTheme";
 import ShareApp from "./ShareApp";
-import CourseSettingsSection from "./CourseSettingsSection";
 import { Course } from "@/types/student";
 
 
@@ -56,7 +55,7 @@ interface SettingsPageProps {
   onUpdateCourse?: (courseId: string, updates: Partial<Omit<Course, "id" | "students">>) => void;
 }
 
-export default function SettingsPage({ courses, onUpdateCourse }: SettingsPageProps = {}) {
+export default function SettingsPage(_props: SettingsPageProps = {}) {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -153,15 +152,10 @@ export default function SettingsPage({ courses, onUpdateCourse }: SettingsPagePr
         </div>
       </div>
 
-      {/* Course & grading settings group */}
-      <h2 className="mb-[-8px] px-1 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
-        {lang === "ar" ? "إعدادات المقررات والدرجات" : "Courses & grading"}
-      </h2>
-
-      {/* 0. Course settings (per-course: max grades, bonus toggle, custom components) */}
-      {courses && onUpdateCourse && (
-        <CourseSettingsSection courses={courses} onUpdateCourse={onUpdateCourse} />
-      )}
+      {/* Course editing (name, schedule, max grades, bonus toggle, custom
+          components, delete) now lives entirely under "إدارة المقررات"
+          above — merged there so there's one place per course instead of
+          two separate buttons/sections. */}
 
       {/* Scan-archive photo storage is now cleaned up automatically on a
           schedule (see supabase/migrations/20260901020000_auto_purge_scan_archive.sql)

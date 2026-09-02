@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Course, ComponentLabels, DEFAULT_COMPONENT_LABELS, getLabel } from "@/types/student";
+import { Course, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS, StandardComponentKey, getLabel } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import NumberInput from "@/components/NumberInput";
 import type { ImportedStudent } from "@/lib/excel";
 import { format } from "date-fns";
 import {
@@ -19,6 +20,9 @@ import {
   ChevronDown,
   Settings2,
   Plus,
+  Award,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -71,6 +75,9 @@ export default function CourseManager({
   const [editSemesterStart, setEditSemesterStart] = useState("");
   const [editSemesterEnd, setEditSemesterEnd] = useState("");
   const [editLabels, setEditLabels] = useState<Required<ComponentLabels>>({ ...DEFAULT_COMPONENT_LABELS });
+  const [editBonusEnabled, setEditBonusEnabled] = useState(true);
+  const [editCustomComponents, setEditCustomComponents] = useState<CustomComponent[]>([]);
+  const [editHiddenComponents, setEditHiddenComponents] = useState<StandardComponentKey[]>([]);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   // Course cards on Home stay compact by default (name + counts + the one
   // "open course" action). All the management details — grade weights,
@@ -93,6 +100,36 @@ export default function CourseManager({
     setEditSemesterStart(course.semesterStart ? course.semesterStart.slice(0, 10) : "");
     setEditSemesterEnd(course.semesterEnd ? course.semesterEnd.slice(0, 10) : "");
     setEditLabels({ ...DEFAULT_COMPONENT_LABELS, ...(course.componentLabels || {}) });
+    setEditBonusEnabled(course.bonusEnabled !== false);
+    setEditCustomComponents(course.customComponents || []);
+    setEditHiddenComponents(course.hiddenComponents || []);
+  };
+
+  const MAX_CUSTOM = 5;
+
+  const addCustom = () => {
+    if (editCustomComponents.length >= MAX_CUSTOM) return;
+    const usedKeys = new Set(editCustomComponents.map((c) => c.key));
+    let i = 1;
+    while (usedKeys.has(`custom_${i}`)) i++;
+    setEditCustomComponents((prev) => [
+      ...prev,
+      { key: `custom_${i}`, label: lang === "ar" ? "مكوّن جديد" : "New component", max: 10 },
+    ]);
+  };
+
+  const updateCustom = (key: string, patch: Partial<CustomComponent>) => {
+    setEditCustomComponents((prev) => prev.map((c) => (c.key === key ? { ...c, ...patch } : c)));
+  };
+
+  const removeCustom = (key: string) => {
+    setEditCustomComponents((prev) => prev.filter((c) => c.key !== key));
+  };
+
+  const toggleHidden = (key: StandardComponentKey) => {
+    setEditHiddenComponents((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   };
 
   const toggleEditDay = (d: number) => {
@@ -116,6 +153,9 @@ export default function CourseManager({
       semesterStart: editSemesterStart,
       semesterEnd: editSemesterEnd,
       componentLabels: editLabels,
+      bonusEnabled: editBonusEnabled,
+      customComponents: editCustomComponents,
+      hiddenComponents: editHiddenComponents,
     } as any);
     setEditingId(null);
     toast.success(t("courseUpdated"));
@@ -225,6 +265,45 @@ export default function CourseManager({
                   />
                 </div>
               </div>
+              {/* Bonus toggle */}
+              <div className="rounded-lg border border-border bg-background/50 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Award className="text-primary" size={14} />
+                  <h5 className="font-display text-xs font-bold">
+                    {lang === "ar" ? "البونص (نقاط إضافية)" : "Bonus (extra points)"}
+                  </h5>
+                </div>
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  {lang === "ar"
+                    ? "عند التعطيل: يختفي جدول البونص من صفحة الحضور ولا يُحتسب في صفحة النتائج."
+                    : "When disabled: bonus table is hidden in Attendance and excluded from totals in Results."}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditBonusEnabled(true)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                      editBonusEnabled
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {lang === "ar" ? "مُفعّل" : "Enabled"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditBonusEnabled(false)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                      !editBonusEnabled
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {lang === "ar" ? "مُعطّل" : "Disabled"}
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
                   {t("componentsHint")}
@@ -237,29 +316,100 @@ export default function CourseManager({
                     { key: "participation", value: editMaxParticipation, set: setEditMaxParticipation },
                     { key: "homework", value: editMaxHomework, set: setEditMaxHomework },
                     { key: "bonus", value: editMaxBonus, set: setEditMaxBonus },
-                  ] as const).map((field) => (
-                    <div key={field.key} className="rounded-lg border border-border bg-background/50 p-2">
-                      <input
-                        type="text"
-                        value={editLabels[field.key]}
-                        onChange={(e) =>
-                          setEditLabels((prev) => ({ ...prev, [field.key]: e.target.value }))
-                        }
-                        placeholder={DEFAULT_COMPONENT_LABELS[field.key]}
-                        className="mb-1 w-full rounded-md border border-input bg-background px-2 py-1 text-center text-xs outline-none focus:border-primary"
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        value={field.value}
-                        onChange={(e) => field.set(Number(e.target.value))}
-                        className="w-full rounded-md border border-input bg-background px-2 py-1 text-center text-sm outline-none focus:border-primary"
-                      />
-                    </div>
-                  ))}
+                  ] as const).map((field) => {
+                    const canHide = field.key !== "bonus";
+                    const isHidden = canHide && editHiddenComponents.includes(field.key as StandardComponentKey);
+                    return (
+                      <div
+                        key={field.key}
+                        className={`relative rounded-lg border border-border bg-background/50 p-2 ${isHidden ? "opacity-50" : ""}`}
+                      >
+                        {canHide && (
+                          <button
+                            type="button"
+                            onClick={() => toggleHidden(field.key as StandardComponentKey)}
+                            title={isHidden ? (lang === "ar" ? "إظهار" : "Show") : (lang === "ar" ? "إخفاء" : "Hide")}
+                            className="absolute top-1 left-1 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                          </button>
+                        )}
+                        <input
+                          type="text"
+                          value={editLabels[field.key]}
+                          onChange={(e) =>
+                            setEditLabels((prev) => ({ ...prev, [field.key]: e.target.value }))
+                          }
+                          placeholder={DEFAULT_COMPONENT_LABELS[field.key]}
+                          disabled={isHidden}
+                          className="mb-1 w-full rounded-md border border-input bg-background px-2 py-1 text-center text-xs outline-none focus:border-primary"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          value={field.value}
+                          onChange={(e) => field.set(Number(e.target.value))}
+                          disabled={isHidden}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-center text-sm outline-none focus:border-primary"
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
+              {/* Custom components */}
+              <div className="rounded-lg border border-border bg-background/50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <h5 className="font-display text-xs font-bold">
+                    {lang === "ar" ? "مكوّنات درجات مخصصة" : "Custom components"}
+                  </h5>
+                  <span className="text-[10px] text-muted-foreground">
+                    {editCustomComponents.length}/{MAX_CUSTOM}
+                  </span>
+                </div>
+                <p className="mb-3 text-[11px] text-muted-foreground">
+                  {lang === "ar"
+                    ? "أضف نوع درجة جديد (مثل: تقرير، ميداني، مشروع)."
+                    : "Add a new grade type (e.g. report, field work, project)."}
+                </p>
+                <div className="space-y-2">
+                  {editCustomComponents.map((c) => (
+                    <div key={c.key} className="flex items-center gap-2 rounded-lg border border-border bg-background p-2">
+                      <input
+                        type="text"
+                        value={c.label}
+                        onChange={(e) => updateCustom(c.key, { label: e.target.value })}
+                        placeholder={lang === "ar" ? "اسم المكوّن" : "Component name"}
+                        className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                      />
+                      <NumberInput
+                        value={c.max}
+                        onChange={(v) => updateCustom(c.key, { max: v })}
+                        min={0}
+                        showZero
+                        className="w-20 px-2 py-1.5 text-sm font-bold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeCustom(c.key)}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addCustom}
+                  disabled={editCustomComponents.length >= MAX_CUSTOM}
+                  className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+                >
+                  <Plus size={14} />
+                  {lang === "ar" ? "إضافة مكوّن" : "Add component"}
+                </button>
+              </div>
 
               {/* Schedule edit */}
               <div className="space-y-3 rounded-lg border border-dashed border-border p-3">
