@@ -13,7 +13,7 @@ interface Props {
   lectures: LectureInfo[];
   course: Course;
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
-  onUpdateNote: (studentId: string, lectureIndex: number, note: string) => void;
+  onUpdateNote: (studentId: string, lectureIndex: number, note: string) => Promise<boolean> | void;
   onImportPaaet: (
     matched: { studentId: string; attendance: boolean[] }[],
     newStudents: { name: string; attendance: boolean[] }[],
@@ -27,11 +27,29 @@ function NoteButton({
 }: {
   note: string;
   lang: string;
-  onSave: (text: string) => void;
+  onSave: (text: string) => Promise<boolean> | void;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(note);
+  const [saving, setSaving] = useState(false);
   const hasNote = !!note?.trim();
+
+  // a failed save silently closing the popover (no toast, note just gone)
+  // is exactly what made a real failure look like nothing happened —
+  // await the result and tell the professor when it didn't actually save.
+  const save = async (text: string) => {
+    setSaving(true);
+    try {
+      const ok = await onSave(text);
+      if (ok === false) {
+        toast.error(lang === "ar" ? "تعذّر حفظ الملاحظة — حاول مجدداً" : "Could not save the note — try again");
+        return;
+      }
+      setOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Popover
@@ -70,16 +88,18 @@ function NoteButton({
         <div className="mt-2 flex gap-2">
           <button
             type="button"
-            onClick={() => { onSave(draft); setOpen(false); }}
-            className="flex-1 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-colors hover:opacity-90"
+            disabled={saving}
+            onClick={() => save(draft)}
+            className="flex-1 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-60"
           >
-            {lang === "ar" ? "حفظ" : "Save"}
+            {saving ? (lang === "ar" ? "جارٍ الحفظ…" : "Saving…") : lang === "ar" ? "حفظ" : "Save"}
           </button>
           {hasNote && (
             <button
               type="button"
-              onClick={() => { onSave(""); setDraft(""); setOpen(false); }}
-              className="rounded-xl border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:text-destructive"
+              disabled={saving}
+              onClick={async () => { await save(""); setDraft(""); }}
+              className="rounded-xl border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:text-destructive disabled:opacity-60"
             >
               {lang === "ar" ? "مسح" : "Clear"}
             </button>

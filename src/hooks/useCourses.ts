@@ -222,15 +222,16 @@ export function useCourses() {
     else await fetchCourses();
   }, [courses, fetchCourses]);
 
-  const updateLectureNote = useCallback(async (courseId: string, studentId: string, lectureIndex: number, note: string) => {
+  const updateLectureNote = useCallback(async (courseId: string, studentId: string, lectureIndex: number, note: string): Promise<boolean> => {
     const course = courses.find((c) => c.id === courseId);
     const student = course?.students.find((s) => s.id === studentId);
-    if (!student || !course) return;
+    if (!student || !course) return false;
     const newNotes = [...(student.lectureNotes || new Array(course.lectureCount).fill(""))];
     newNotes[lectureIndex] = note;
     const { error } = await db.from("students").update({ lecture_notes: newNotes }).eq("id", studentId);
-    if (error) console.error("Error updating note:", error);
-    else await fetchCourses();
+    if (error) { console.error("Error updating note:", error); return false; }
+    await fetchCourses();
+    return true;
   }, [courses, fetchCourses]);
 
   const importPaaetAttendance = useCallback(async (
