@@ -78,7 +78,10 @@ export const ID_PITCH = ID_COL_PITCH;
 // Question grid
 const Q_ROW_PITCH = 8.6;
 const Q_CHOICE_PITCH = 11;
-const Q_TOP_BUBBLES = 136 + HEADER_SHIFT; // first question row (below the taller civil-ID grid)
+const Q_TOP_BUBBLES = 143 + HEADER_SHIFT; // first question row (below the taller civil-ID grid) —
+// clears the ID grid's own frame border (bottom ≈ 147.1mm with the current
+// HEADER_SHIFT) plus room for the enlarged bubble radius, so question row 1
+// never overlaps the ID grid's last digit row.
 const Q_TOP_WRITTEN = 72 + HEADER_SHIFT;  // first question row when the ID is handwritten-only
 const Q_BOTTOM_Y = 274;
 const Q_COL_XS = [28, 93, 158];   // x of choice "A" bubble per column block
