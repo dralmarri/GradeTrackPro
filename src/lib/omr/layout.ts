@@ -76,7 +76,10 @@ const Q_CHOICE_PITCH = 11;
 // section heading sits above the first bubble row.
 const Q_TOP_BUBBLES = 192;
 const Q_TOP_WRITTEN = 108;
-const Q_BOTTOM_Y = 274;
+// Kept at the original 270 (not stretched to make up the room Q_TOP_BUBBLES
+// lost) — the footer starts at y=278, and a bubble row that close to it
+// leaves almost no clearance once its radius is added.
+const Q_BOTTOM_Y = 270;
 const Q_COL_XS = [28, 93, 158];   // x of choice "A" bubble per column block
 
 type IdModeExam = Pick<OmrExam, "idMode">;

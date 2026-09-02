@@ -28,7 +28,7 @@ describe("UX Pilot OMR print layout", () => {
     const value = exam(40);
     expect(gridSpec(value).cols).toBe(2);
     expect(gridSpec(value).rows).toBe(20);
-    expect(buildAnswerSheetSvg(value)).toContain("الأسئلة 21-40");
+    expect(buildAnswerSheetSvg(value)).toContain("21–40");
   });
 
   it("keeps every supported bubble inside the safe printable area", () => {
