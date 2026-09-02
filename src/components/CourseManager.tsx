@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Course, ComponentLabels, DEFAULT_COMPONENT_LABELS, getLabel } from "@/types/student";
+import { Course, ComponentLabels, CustomComponent, DEFAULT_COMPONENT_LABELS, StandardComponentKey, getLabel } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import NumberInput from "@/components/NumberInput";
+import type { ImportedStudent } from "@/lib/excel";
 import { format } from "date-fns";
 import {
   BookOpen,
@@ -13,10 +15,20 @@ import {
   Check,
   X,
   Clock,
+  Sparkles,
+  Users,
+  ChevronDown,
+  Settings2,
+  Plus,
+  Award,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/hooks/useAuth";
 import { tf } from "@/lib/translations";
+import appIcon from "@/assets/app-icon.png";
 
 const DAYS_AR: Record<number, string> = {
   0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء",
@@ -27,9 +39,14 @@ interface CourseManagerProps {
   courses: Course[];
   onDeleteCourse: (courseId: string) => void;
   onUpdateCourse: (courseId: string, updates: Partial<Omit<Course, "id" | "students">>) => void;
-  onAddStudents: (courseId: string, names: string[]) => void;
+  onAddStudents: (courseId: string, students: ImportedStudent[]) => void;
   onDeleteStudent: (courseId: string, studentId: string) => void;
   onSelectCourse: (courseId: string) => void;
+  onNewCourse?: () => void;
+  // false on Home: cards there are just a clickable list that opens the
+  // course — grade weights/schedule/edit/delete now live only on the
+  // Settings page's course manager (true there, the default).
+  showManage?: boolean;
 }
 
 export default function CourseManager({
@@ -39,8 +56,11 @@ export default function CourseManager({
   onAddStudents,
   onDeleteStudent,
   onSelectCourse,
+  onNewCourse,
+  showManage = true,
 }: CourseManagerProps) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const { user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editSection, setEditSection] = useState("");
@@ -55,7 +75,15 @@ export default function CourseManager({
   const [editSemesterStart, setEditSemesterStart] = useState("");
   const [editSemesterEnd, setEditSemesterEnd] = useState("");
   const [editLabels, setEditLabels] = useState<Required<ComponentLabels>>({ ...DEFAULT_COMPONENT_LABELS });
+  const [editBonusEnabled, setEditBonusEnabled] = useState(true);
+  const [editCustomComponents, setEditCustomComponents] = useState<CustomComponent[]>([]);
+  const [editHiddenComponents, setEditHiddenComponents] = useState<StandardComponentKey[]>([]);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  // Course cards on Home stay compact by default (name + counts + the one
+  // "open course" action). All the management details — grade weights,
+  // schedule, excel import, edit, delete — only appear once "إدارة المقرر"
+  // is pressed, instead of always being shown inline for every course.
+  const [manageOpenId, setManageOpenId] = useState<string | null>(null);
 
   const startEdit = (course: Course) => {
     setEditingId(course.id);
@@ -72,6 +100,36 @@ export default function CourseManager({
     setEditSemesterStart(course.semesterStart ? course.semesterStart.slice(0, 10) : "");
     setEditSemesterEnd(course.semesterEnd ? course.semesterEnd.slice(0, 10) : "");
     setEditLabels({ ...DEFAULT_COMPONENT_LABELS, ...(course.componentLabels || {}) });
+    setEditBonusEnabled(course.bonusEnabled !== false);
+    setEditCustomComponents(course.customComponents || []);
+    setEditHiddenComponents(course.hiddenComponents || []);
+  };
+
+  const MAX_CUSTOM = 5;
+
+  const addCustom = () => {
+    if (editCustomComponents.length >= MAX_CUSTOM) return;
+    const usedKeys = new Set(editCustomComponents.map((c) => c.key));
+    let i = 1;
+    while (usedKeys.has(`custom_${i}`)) i++;
+    setEditCustomComponents((prev) => [
+      ...prev,
+      { key: `custom_${i}`, label: lang === "ar" ? "مكوّن جديد" : "New component", max: 10 },
+    ]);
+  };
+
+  const updateCustom = (key: string, patch: Partial<CustomComponent>) => {
+    setEditCustomComponents((prev) => prev.map((c) => (c.key === key ? { ...c, ...patch } : c)));
+  };
+
+  const removeCustom = (key: string) => {
+    setEditCustomComponents((prev) => prev.filter((c) => c.key !== key));
+  };
+
+  const toggleHidden = (key: StandardComponentKey) => {
+    setEditHiddenComponents((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   };
 
   const toggleEditDay = (d: number) => {
@@ -95,26 +153,95 @@ export default function CourseManager({
       semesterStart: editSemesterStart,
       semesterEnd: editSemesterEnd,
       componentLabels: editLabels,
+      bonusEnabled: editBonusEnabled,
+      customComponents: editCustomComponents,
+      hiddenComponents: editHiddenComponents,
     } as any);
     setEditingId(null);
     toast.success(t("courseUpdated"));
   };
 
+  const courseInitials = (name: string) =>
+    name.trim().slice(0, 2).toUpperCase() || "؟";
+
+  // Real, derivable status: a course counts as "ended" only when it has an
+  // explicit semesterEnd in the past. No end date -> no pill (never faked).
+  const courseStatus = (course: Course): "active" | "ended" | null => {
+    if (!course.semesterEnd) return null;
+    const end = new Date(course.semesterEnd);
+    if (Number.isNaN(end.getTime())) return null;
+    return end.getTime() < Date.now() ? "ended" : "active";
+  };
+
+  const welcomeName = user?.email ? user.email.split("@")[0] : (lang === "ar" ? "زائر" : "Guest");
+
+  const header = (
+    <div className="mb-5 space-y-4">
+      <div className="flex items-center gap-3">
+        <img src={appIcon} alt="GradeTrackPro" className="h-11 w-11 rounded-2xl shadow-sm" />
+        <div>
+          <h2 className="font-display text-lg font-bold text-foreground">GradeTrack<span className="text-primary">Pro</span></h2>
+          <p className="text-xs text-muted-foreground">{t("appTagline")}</p>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+        <p className="font-display text-base font-bold text-foreground">
+          {lang === "ar" ? `مرحباً، ${welcomeName}` : `Welcome, ${welcomeName}`}
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {lang === "ar"
+            ? `لديك ${courses.length} ${courses.length === 1 ? "مادة دراسية" : "مواد دراسية"}`
+            : `You have ${courses.length} ${courses.length === 1 ? "course" : "courses"}`}
+        </p>
+      </div>
+
+    </div>
+  );
+
   if (courses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <BookOpen size={32} className="mb-3" />
-        <p className="font-display text-lg">{t("noCoursesManage")}</p>
+      <div className="mx-auto w-full max-w-2xl space-y-4">
+        {header}
+        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border py-16 text-center text-muted-foreground">
+          <BookOpen size={32} className="mb-3" />
+          <p className="font-display text-lg">{t("noCoursesManage")}</p>
+          {onNewCourse && (
+            <button
+              onClick={onNewCourse}
+              className="mt-4 flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110"
+            >
+              <Sparkles size={15} />
+              {t("newCourse")}
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-2xl space-y-4">
+      {header}
+      <div className="flex items-center justify-between gap-2 px-1">
+        <h3 className="font-display text-sm font-bold text-foreground">
+          {lang === "ar" ? "مقرراتي الدراسية" : "My Courses"}
+        </h3>
+        {onNewCourse && (
+          <button
+            onClick={onNewCourse}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 font-display text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110"
+          >
+            <Plus size={14} />
+            {t("newCourse")}
+          </button>
+        )}
+      </div>
       {courses.map((course) => (
         <div
           key={course.id}
-          className="rounded-xl border border-border bg-card p-5 shadow-sm"
+          onClick={!showManage ? () => onSelectCourse(course.id) : undefined}
+          className={`rounded-3xl border border-border bg-card p-5 shadow-sm md:p-6 ${!showManage ? "cursor-pointer transition-colors hover:bg-muted/40" : ""}`}
         >
           {editingId === course.id ? (
             // Edit mode
@@ -138,6 +265,45 @@ export default function CourseManager({
                   />
                 </div>
               </div>
+              {/* Bonus toggle */}
+              <div className="rounded-lg border border-border bg-background/50 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Award className="text-primary" size={14} />
+                  <h5 className="font-display text-xs font-bold">
+                    {lang === "ar" ? "البونص (نقاط إضافية)" : "Bonus (extra points)"}
+                  </h5>
+                </div>
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  {lang === "ar"
+                    ? "عند التعطيل: يختفي جدول البونص من صفحة الحضور ولا يُحتسب في صفحة النتائج."
+                    : "When disabled: bonus table is hidden in Attendance and excluded from totals in Results."}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditBonusEnabled(true)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                      editBonusEnabled
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {lang === "ar" ? "مُفعّل" : "Enabled"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditBonusEnabled(false)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                      !editBonusEnabled
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {lang === "ar" ? "مُعطّل" : "Disabled"}
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <p className="mb-2 text-[11px] font-semibold text-muted-foreground">
                   {t("componentsHint")}
@@ -150,29 +316,100 @@ export default function CourseManager({
                     { key: "participation", value: editMaxParticipation, set: setEditMaxParticipation },
                     { key: "homework", value: editMaxHomework, set: setEditMaxHomework },
                     { key: "bonus", value: editMaxBonus, set: setEditMaxBonus },
-                  ] as const).map((field) => (
-                    <div key={field.key} className="rounded-lg border border-border bg-background/50 p-2">
-                      <input
-                        type="text"
-                        value={editLabels[field.key]}
-                        onChange={(e) =>
-                          setEditLabels((prev) => ({ ...prev, [field.key]: e.target.value }))
-                        }
-                        placeholder={DEFAULT_COMPONENT_LABELS[field.key]}
-                        className="mb-1 w-full rounded-md border border-input bg-background px-2 py-1 text-center text-xs outline-none focus:border-primary"
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        value={field.value}
-                        onChange={(e) => field.set(Number(e.target.value))}
-                        className="w-full rounded-md border border-input bg-background px-2 py-1 text-center text-sm outline-none focus:border-primary"
-                      />
-                    </div>
-                  ))}
+                  ] as const).map((field) => {
+                    const canHide = field.key !== "bonus";
+                    const isHidden = canHide && editHiddenComponents.includes(field.key as StandardComponentKey);
+                    return (
+                      <div
+                        key={field.key}
+                        className={`relative rounded-lg border border-border bg-background/50 p-2 ${isHidden ? "opacity-50" : ""}`}
+                      >
+                        {canHide && (
+                          <button
+                            type="button"
+                            onClick={() => toggleHidden(field.key as StandardComponentKey)}
+                            title={isHidden ? (lang === "ar" ? "إظهار" : "Show") : (lang === "ar" ? "إخفاء" : "Hide")}
+                            className="absolute top-1 left-1 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                          </button>
+                        )}
+                        <input
+                          type="text"
+                          value={editLabels[field.key]}
+                          onChange={(e) =>
+                            setEditLabels((prev) => ({ ...prev, [field.key]: e.target.value }))
+                          }
+                          placeholder={DEFAULT_COMPONENT_LABELS[field.key]}
+                          disabled={isHidden}
+                          className="mb-1 w-full rounded-md border border-input bg-background px-2 py-1 text-center text-xs outline-none focus:border-primary"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          value={field.value}
+                          onChange={(e) => field.set(Number(e.target.value))}
+                          disabled={isHidden}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-center text-sm outline-none focus:border-primary"
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
+              {/* Custom components */}
+              <div className="rounded-lg border border-border bg-background/50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <h5 className="font-display text-xs font-bold">
+                    {lang === "ar" ? "مكوّنات درجات مخصصة" : "Custom components"}
+                  </h5>
+                  <span className="text-[10px] text-muted-foreground">
+                    {editCustomComponents.length}/{MAX_CUSTOM}
+                  </span>
+                </div>
+                <p className="mb-3 text-[11px] text-muted-foreground">
+                  {lang === "ar"
+                    ? "أضف نوع درجة جديد (مثل: تقرير، ميداني، مشروع)."
+                    : "Add a new grade type (e.g. report, field work, project)."}
+                </p>
+                <div className="space-y-2">
+                  {editCustomComponents.map((c) => (
+                    <div key={c.key} className="flex items-center gap-2 rounded-lg border border-border bg-background p-2">
+                      <input
+                        type="text"
+                        value={c.label}
+                        onChange={(e) => updateCustom(c.key, { label: e.target.value })}
+                        placeholder={lang === "ar" ? "اسم المكوّن" : "Component name"}
+                        className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                      />
+                      <NumberInput
+                        value={c.max}
+                        onChange={(v) => updateCustom(c.key, { max: v })}
+                        min={0}
+                        showZero
+                        className="w-20 px-2 py-1.5 text-sm font-bold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeCustom(c.key)}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addCustom}
+                  disabled={editCustomComponents.length >= MAX_CUSTOM}
+                  className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+                >
+                  <Plus size={14} />
+                  {lang === "ar" ? "إضافة مكوّن" : "Add component"}
+                </button>
+              </div>
 
               {/* Schedule edit */}
               <div className="space-y-3 rounded-lg border border-dashed border-border p-3">
@@ -250,82 +487,155 @@ export default function CourseManager({
           ) : (
             // View mode
             <>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
-                  {course.section && (
-                    <p className="text-xs text-muted-foreground">{t("sectionLabel")}: {course.section}</p>
-                  )}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-xs font-bold text-primary md:h-12 md:w-12 md:text-sm">
+                    {courseInitials(course.name)}
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
+                    {course.section && (
+                      <p className="text-xs text-muted-foreground">{t("sectionLabel")}: {course.section}</p>
+                    )}
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Users size={12} />
+                      <span>{course.students.length} {t("student")}</span>
+                      <span aria-hidden>•</span>
+                      <span>{course.lectureCount} {t("lectureWord")}</span>
+                    </div>
+                  </div>
                 </div>
+                {courseStatus(course) && (
+                  <span
+                    className={
+                      "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold " +
+                      (courseStatus(course) === "active"
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "bg-muted text-muted-foreground")
+                    }
+                  >
+                    {courseStatus(course) === "active"
+                      ? (lang === "ar" ? "نشط" : "Active")
+                      : (lang === "ar" ? "منتهي" : "Ended")}
+                  </span>
+                )}
               </div>
 
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "exam1")}: {course.maxExam1}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "exam2")}: {course.maxExam2}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "finalExam")}: {course.maxFinal}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "participation")}: {course.maxParticipation}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "homework")}: {course.maxHomework ?? 10}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{getLabel(course, "bonus")}: {course.maxBonus}</span>
-                <span className="rounded-md bg-muted px-2 py-0.5">{t("lectures")}: {course.lectureCount}</span>
-              </div>
+              {/* On Home the whole card is already clickable (opens the
+                  course), so neither the redundant "open" button nor the
+                  management toggle below belong here — both stay Settings-
+                  only, where showManage is true. */}
+              {showManage && (
+                <>
+                  <button
+                    onClick={() => onSelectCourse(course.id)}
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110"
+                  >
+                    <Calendar size={15} />
+                    {t("manageLectures")}
+                  </button>
 
-              {/* Schedule info */}
-              <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
-                {course.lectureDays && course.lectureDays.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Calendar size={12} />
-                    <span>{t("daysLabel")}: {course.lectureDays.map(d => DAYS_AR[d]).join("، ")}</span>
-                  </div>
-                )}
-                {course.lectureTime && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={12} />
-                    <span>{t("timeLabel")}: {course.lectureTime}</span>
-                  </div>
-                )}
-                {course.semesterStart && course.semesterEnd && (
-                  <div className="flex items-center gap-1.5">
-                    <Calendar size={12} />
-                    <span>
-                      {tf(t("fromTo"), { start: format(new Date(course.semesterStart), "yyyy/MM/dd"), end: format(new Date(course.semesterEnd), "yyyy/MM/dd") })}
+                  <button
+                    type="button"
+                    onClick={() => setManageOpenId((v) => (v === course.id ? null : course.id))}
+                    className="mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Settings2 size={13} />
+                      {lang === "ar" ? "إدارة المقرر" : "Manage course"}
                     </span>
-                  </div>
-                )}
-              </div>
+                    <ChevronDown
+                      size={14}
+                      className={`text-muted-foreground transition-transform ${manageOpenId === course.id ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </>
+              )}
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <ExcelImport onImport={(names) => {
-                  onAddStudents(course.id, names);
-                }} />
-                <ManualAddStudents
-                  onAdd={(names) => onAddStudents(course.id, names)}
-                />
-                <ManualDeleteStudents
-                  students={course.students}
-                  onDelete={(studentId) => onDeleteStudent(course.id, studentId)}
-                />
-                <button
-                  onClick={() => startEdit(course)}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                >
-                  <Edit3 size={13} />
-                  {t("editData")}
-                </button>
-                <button
-                  onClick={() => onSelectCourse(course.id)}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                >
-                  <Calendar size={13} />
-                  {t("manageLectures")}
-                </button>
-                <button
-                  onClick={() => setPendingDelete({ id: course.id, name: course.name })}
-                  className="flex items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
-                >
-                  <Trash2 size={13} />
-                  {t("deleteCourse")}
-                </button>
-              </div>
+              {showManage && manageOpenId === course.id && (
+                <div className="mt-3 space-y-3 border-t border-border pt-3">
+                  <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "exam1")}: {course.maxExam1}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "exam2")}: {course.maxExam2}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "finalExam")}: {course.maxFinal}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "participation")}: {course.maxParticipation}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "homework")}: {course.maxHomework ?? 10}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "bonus")}: {course.maxBonus}</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">{t("lectures")}: {course.lectureCount}</span>
+                  </div>
+
+                  {/* Schedule info */}
+                  <div className="space-y-1.5 text-xs text-muted-foreground">
+                    {course.lectureDays && course.lectureDays.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={12} />
+                        <span>{t("daysLabel")}: {course.lectureDays.map(d => DAYS_AR[d]).join("، ")}</span>
+                      </div>
+                    )}
+                    {course.lectureTime && (
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={12} />
+                        <span>{t("timeLabel")}: {course.lectureTime}</span>
+                      </div>
+                    )}
+                    {course.semesterStart && course.semesterEnd && (
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={12} />
+                        <span>
+                          {tf(t("fromTo"), { start: format(new Date(course.semesterStart), "yyyy/MM/dd"), end: format(new Date(course.semesterEnd), "yyyy/MM/dd") })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Secondary actions, grouped by what they actually do —
+                      each group has its own small caption so the row reads
+                      as "these buttons manage students" / "these manage the
+                      course record" instead of unlabeled buttons in a row. */}
+                  <div className="space-y-2.5">
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
+                        <Users size={13} />
+                        {lang === "ar" ? "الطلاب" : "Students"}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ExcelImport onImport={(names) => {
+                          onAddStudents(course.id, names);
+                        }} />
+                        <ManualAddStudents
+                          onAdd={(names) => onAddStudents(course.id, names.map((name) => ({ name })))}
+                        />
+                        <ManualDeleteStudents
+                          students={course.students}
+                          onDelete={(studentId) => onDeleteStudent(course.id, studentId)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
+                        <BookOpen size={13} />
+                        {lang === "ar" ? "المقرر" : "Course"}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => startEdit(course)}
+                          className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                        >
+                          <Edit3 size={13} />
+                          {t("editData")}
+                        </button>
+                        <button
+                          onClick={() => setPendingDelete({ id: course.id, name: course.name })}
+                          className="flex items-center gap-1.5 rounded-xl border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                        >
+                          <Trash2 size={13} />
+                          {t("deleteCourse")}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

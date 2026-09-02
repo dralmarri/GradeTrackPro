@@ -1,38 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { Course } from "@/types/student";
-import { OmrExam, ChoiceCount, choiceLabels } from "@/types/exam";
+import { ChoiceCount, choiceLabels } from "@/types/exam";
 import {
-  BankQuestion, Difficulty, DIFFICULTY_LABELS, GeneratedForm, generateForms, seededShuffle, parseQuestionRows, parseQuestionsText,
+  Difficulty, DIFFICULTY_LABELS, parseQuestionRows, parseQuestionsText,
   PasteType, ParsedQuestion, parseNumRanges,
 } from "@/types/questionBank";
 import * as XLSX from "xlsx";
 import { useQuestionBank } from "@/hooks/useQuestionBank";
-import { printQuestionPaper } from "@/lib/omr/questionPaper";
-import { printAnswerSheet, SheetHeader } from "@/lib/omr/sheet";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
 import {
-  Plus, Trash2, Loader2, Library, Wand2, Printer, FileText, ChevronDown, Upload, Download, ClipboardPaste,
+  Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste,
 } from "lucide-react";
 
+// Generating an exam FROM the bank lives in GenerateExamPanel (rendered
+// under "نماذج الاختبارات") — this component is purely about managing the
+// bank's own content (add/import/paste/browse/delete questions).
 interface Props {
   course: Course;
   bankCourseIds: string[];
-  sheetHeader: () => SheetHeader;
-  componentOptions: { key: string; label: string }[];
-  onCreateExam: (input: {
-    title: string; questionCount: number; choiceCount: ChoiceCount;
-    targetComponent: string; maxScore: number; studentIdDigits: number;
-    sections?: { questionCount: number; choiceCount: ChoiceCount }[];
-    version?: string; idMode?: "bubbles" | "written";
-  }) => Promise<string>;
-  onSetAnswerKey: (examId: string, key: number[], weights?: number[]) => Promise<void>;
-  buildExam: (id: string, form: GeneratedForm, title: string, targetComponent: string, maxScore: number, idMode: "bubbles" | "written") => OmrExam;
 }
 
-export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, componentOptions, onCreateExam, onSetAnswerKey, buildExam }: Props) {
+export default function QuestionBankPage({ course, bankCourseIds }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const { questions, loading, addQuestion, addQuestions, deleteQuestion, deleteQuestions } = useQuestionBank(course.id, bankCourseIds);
@@ -70,19 +61,6 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   const [qDifficulty, setQDifficulty] = useState<Difficulty | "">("");
   const [qPoints, setQPoints] = useState(1);
   const [saving, setSaving] = useState(false);
-
-  // --- generation form ---
-  const [showGen, setShowGen] = useState(false);
-  const [genTitle, setGenTitle] = useState("");
-  const [genCount, setGenCount] = useState(10);
-  const [genMode, setGenMode] = useState<"full" | "paper">("full");
-  const [genChapters, setGenChapters] = useState<Set<string>>(new Set());
-  const [genTopics, setGenTopics] = useState<Set<string>>(new Set());
-  const [genForms, setGenForms] = useState(2);
-  const [genTarget, setGenTarget] = useState("exam1");
-  const [genMax, setGenMax] = useState(20);
-  const [generating, setGenerating] = useState(false);
-  const [generated, setGenerated] = useState<{ exam: OmrExam | null; form: GeneratedForm }[]>([]);
 
   const topics = useMemo(
     () => Array.from(new Set(questions.map((q) => q.topic).filter(Boolean))) as string[],
@@ -249,72 +227,6 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pasteText, pasteType, tfRange, mcqRange]);
 
-  const handleGenerate = async () => {
-    const pool = questions.filter((q) =>
-      (genChapters.size === 0 || genChapters.has(q.chapter || "")) &&
-      (genTopics.size === 0 || genTopics.has(q.topic || "")));
-    if (!genTitle.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
-    if (pool.length < genCount) {
-      toast.error(ar ? `البنك يحتوي ${pool.length} سؤالاً فقط بهذا التصفية` : `Only ${pool.length} questions match`); return;
-    }
-    setGenerating(true);
-    try {
-      // pick genCount questions fairly across all types (no MCQ/TF bias)
-      const seedBase = (genTitle.trim().length * 2654435761) ^ pool.length;
-      const picked = seededShuffle(pool, seedBase).slice(0, genCount);
-      const forms = generateForms(picked, genForms, seedBase + 17);
-
-      // ورقة أسئلة فقط — طباعة بدون إنشاء اختبار تصحيح في قاعدة البيانات
-      if (genMode === "paper") {
-        setGenerated(forms.map((form) => ({ exam: null, form })));
-        toast.success(
-          ar
-            ? `جُهّز ${forms.length} نموذج ورقة أسئلة — اطبعها من الأزرار أدناه`
-            : `${forms.length} question paper(s) ready — print below`,
-          { duration: 6000 },
-        );
-        return;
-      }
-
-      const out: { exam: OmrExam | null; form: GeneratedForm }[] = [];
-      for (const form of forms) {
-        // per-question weights from the bank; if any differ from 1 the exam's
-        // max score is their sum, otherwise genMax is split equally
-        const weights = form.questions.map((q) => q.points ?? 1);
-        const customWeights = weights.some((w) => w !== 1);
-        const maxScore = customWeights ? weights.reduce((a, b) => a + b, 0) : genMax;
-        const id = await onCreateExam({
-          title: genTitle.trim(),
-          questionCount: form.questions.length,
-          choiceCount: form.sections[0].choiceCount,
-          targetComponent: genTarget,
-          maxScore,
-          studentIdDigits: 12,
-          sections: form.sections.length > 1 ? form.sections : undefined,
-          version: genForms > 1 ? form.version : undefined,
-          idMode: "bubbles",
-        });
-        if (!id) throw new Error(ar ? "فشل إنشاء الاختبار" : "Failed to create exam");
-        await onSetAnswerKey(id, form.answerKey, customWeights ? weights : undefined);
-        out.push({
-          exam: buildExam(id, form, genTitle.trim(), genTarget, maxScore, "bubbles"),
-          form,
-        });
-      }
-      setGenerated(out);
-      toast.success(
-        ar
-          ? `وُلّد ${out.length} نموذج${out.length > 1 ? "ين" : ""} والمفاتيح جاهزة تلقائياً ✓`
-          : `Generated ${out.length} form(s) with auto keys ✓`,
-        { duration: 6000 },
-      );
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "فشل التوليد");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -326,23 +238,31 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
   return (
     <div className="space-y-4">
       {/* header */}
-      <div className="flex items-center gap-2">
-        <Library size={18} className="text-primary" />
-        <h3 className="font-display text-lg font-bold text-foreground">
-          {ar ? "بنك الأسئلة" : "Question Bank"}
-        </h3>
-        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
-          {questions.length} {ar ? "سؤالاً" : "questions"}
+      <div className="flex items-center gap-3 rounded-[28px] border border-border bg-card p-4 shadow-sm sm:p-5">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Library size={20} />
         </span>
-        {bankCourseIds.length > 1 && (
-          <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-            {ar ? "مشترك بين الشعب" : "Shared across sections"}
-          </span>
-        )}
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-display text-lg font-bold text-foreground">
+            {ar ? "بنك الأسئلة" : "Question Bank"}
+          </h3>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
+              {questions.length} {ar ? "سؤالاً" : "questions"}
+            </span>
+            {bankCourseIds.length > 1 && (
+              <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                {ar ? "مشترك بين الشعب" : "Shared across sections"}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* actions — grouped: add questions | generate from bank */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {/* actions — adding questions to the bank. Generating an exam FROM the
+          bank lives under "نماذج الاختبارات" (GenerateExamPanel) instead —
+          it produces an exam, so it belongs with exam tools, not here. */}
+      <div className="grid grid-cols-3 gap-2">
         {([
           {
             key: "add",
@@ -350,7 +270,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             icon: <Plus size={18} />,
             title: ar ? "إضافة سؤال" : "Add question",
             desc: ar ? "إدخال يدوي واحداً واحداً" : "Type one by one",
-            onClick: () => { setShowAdd((v) => !v); setShowGen(false); setShowPaste(false); setShowExcel(false); },
+            onClick: () => { setShowAdd((v) => !v); setShowPaste(false); setShowExcel(false); },
             disabled: false,
           },
           {
@@ -359,7 +279,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             icon: <ClipboardPaste size={18} />,
             title: ar ? "لصق أسئلة" : "Paste questions",
             desc: ar ? "نسخ من Word أو PDF" : "Copy from Word/PDF",
-            onClick: () => { setShowPaste((v) => !v); setShowExcel(false); setShowAdd(false); setShowGen(false); },
+            onClick: () => { setShowPaste((v) => !v); setShowExcel(false); setShowAdd(false); },
             disabled: false,
           },
           {
@@ -368,17 +288,8 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             icon: importing ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />,
             title: ar ? "استيراد Excel" : "Import Excel",
             desc: ar ? "ملف جاهز بالقالب" : "From template file",
-            onClick: () => { setShowExcel((v) => !v); setShowPaste(false); setShowAdd(false); setShowGen(false); },
+            onClick: () => { setShowExcel((v) => !v); setShowPaste(false); setShowAdd(false); },
             disabled: importing,
-          },
-          {
-            key: "gen",
-            active: showGen,
-            icon: <Wand2 size={18} />,
-            title: ar ? "توليد اختبار" : "Generate exam",
-            desc: ar ? "نماذج أ/ب من البنك" : "Forms from the bank",
-            onClick: () => { setShowGen((v) => !v); setShowAdd(false); setShowPaste(false); setShowExcel(false); },
-            disabled: questions.length === 0,
           },
         ]).map((b) => (
           <button
@@ -386,15 +297,20 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
             onClick={b.onClick}
             disabled={b.disabled}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-2xl border p-3 text-center transition-colors disabled:opacity-40",
+              "flex flex-col items-center gap-1.5 rounded-[22px] border p-3.5 text-center transition-colors disabled:opacity-40",
               b.active
                 ? "border-primary bg-primary/10 text-primary"
-                : b.key === "gen"
-                  ? "border-success/40 bg-success/5 text-success hover:bg-success/15"
-                  : "border-border bg-card text-foreground hover:bg-muted",
+                : "border-border bg-card text-foreground hover:bg-muted",
             )}
           >
-            {b.icon}
+            <span
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-xl",
+                b.active ? "bg-primary/15" : "bg-muted",
+              )}
+            >
+              {b.icon}
+            </span>
             <span className="text-xs font-bold">{b.title}</span>
             <span className={cn("text-[10px]", b.active ? "text-primary/80" : "text-muted-foreground")}>{b.desc}</span>
           </button>
@@ -723,179 +639,6 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
         </div>
       )}
 
-      {/* generate exam */}
-      {showGen && (
-        <div className="space-y-3 rounded-2xl border border-success/40 bg-success/5 p-4 shadow-sm">
-          <input
-            value={genTitle}
-            onChange={(e) => setGenTitle(e.target.value)}
-            placeholder={ar ? "عنوان الاختبار المولّد" : "Generated exam title"}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-          />
-          {/* output mode: full graded exam vs question paper only */}
-          <div className="flex gap-2">
-            {([
-              { key: "full", label: ar ? "اختبار كامل (تصحيح آلي)" : "Full exam (auto grading)" },
-              { key: "paper", label: ar ? "ورقة أسئلة فقط (طباعة)" : "Question paper only" },
-            ] as const).map((m) => (
-              <button
-                key={m.key}
-                onClick={() => setGenMode(m.key)}
-                className={cn(
-                  "flex-1 rounded-xl border px-3 py-2 text-xs font-bold transition-colors",
-                  genMode === m.key
-                    ? "border-success bg-success/15 text-success"
-                    : "border-border text-muted-foreground hover:bg-muted",
-                )}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
-          {/* chapters / topics multi-select — none selected = all */}
-          {chapters.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-muted-foreground">
-                {ar ? "الفصول الداخلة في الاختبار (اتركها بلا تحديد = الكل):" : "Chapters included (none = all):"}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {chapters.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setGenChapters((s) => { const n = new Set(s); if (n.has(c)) n.delete(c); else n.add(c); return n; })}
-                    className={cn(
-                      "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors",
-                      genChapters.has(c)
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border text-muted-foreground hover:bg-muted",
-                    )}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {topics.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-muted-foreground">
-                {ar ? "المواضيع الداخلة في الاختبار (اتركها بلا تحديد = الكل):" : "Topics included (none = all):"}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {topics.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setGenTopics((s) => { const n = new Set(s); if (n.has(t)) n.delete(t); else n.add(t); return n; })}
-                    className={cn(
-                      "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors",
-                      genTopics.has(t)
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border text-muted-foreground hover:bg-muted",
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <p className="text-[11px] text-muted-foreground">
-            {ar
-              ? `الأسئلة المتاحة بهذا الاختيار: ${questions.filter((q) => (genChapters.size === 0 || genChapters.has(q.chapter || "")) && (genTopics.size === 0 || genTopics.has(q.topic || ""))).length}`
-              : `Questions matching: ${questions.filter((q) => (genChapters.size === 0 || genChapters.has(q.chapter || "")) && (genTopics.size === 0 || genTopics.has(q.topic || ""))).length}`}
-          </p>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "عدد الأسئلة" : "Questions"}
-              <input
-                type="number" min={1} max={questions.length} value={genCount}
-                onChange={(e) => setGenCount(Number(e.target.value) || 1)}
-                className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
-              />
-            </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "عدد النماذج" : "Forms"}
-              <select
-                value={genForms}
-                onChange={(e) => setGenForms(Number(e.target.value))}
-                className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
-              >
-                <option value={1}>{ar ? "نموذج واحد" : "1 form"}</option>
-                <option value={2}>{ar ? "نموذجان (أ، ب)" : "2 forms"}</option>
-                <option value={3}>{ar ? "3 نماذج" : "3 forms"}</option>
-                <option value={4}>{ar ? "4 نماذج" : "4 forms"}</option>
-              </select>
-            </label>
-            {genMode === "full" && <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "الدرجة القصوى" : "Max score"}
-              <input
-                type="number" min={1} value={genMax}
-                onChange={(e) => setGenMax(Number(e.target.value) || 1)}
-                className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
-              />
-            </label>}
-            {genMode === "full" && <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "تُرصد في" : "Maps to"}
-              <select
-                value={genTarget}
-                onChange={(e) => setGenTarget(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
-              >
-                {componentOptions.map((o) => (
-                  <option key={o.key} value={o.key}>{o.label}</option>
-                ))}
-              </select>
-            </label>}
-          </div>
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-success py-2.5 text-sm font-bold text-success-foreground disabled:opacity-50"
-          >
-            {generating ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-            {genMode === "paper"
-              ? (ar ? "ولّد أوراق الأسئلة للطباعة" : "Generate question papers")
-              : (ar ? "ولّد النماذج والمفاتيح تلقائياً" : "Generate forms + keys")}
-          </button>
-
-          {/* generated results */}
-          {generated.length > 0 && (
-            <div className="space-y-2 border-t border-success/30 pt-3">
-              <p className="text-xs font-bold text-success">
-                {generated[0]?.exam
-                  ? (ar ? "جاهزة — اطبع لكل نموذج ورقة الأسئلة وورقة الإجابة:" : "Ready — print each form's papers:")
-                  : (ar ? "جاهزة — اطبع ورقة الأسئلة لكل نموذج:" : "Ready — print each form's question paper:")}
-              </p>
-              {generated.map(({ exam, form }) => (
-                <div key={exam?.id ?? form.version} className="flex items-center justify-between gap-2 rounded-xl bg-card px-3 py-2">
-                  <span className="text-sm font-bold text-foreground">
-                    {ar ? `نموذج ${form.version}` : `Form ${form.version}`}
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => { if (!printQuestionPaper(exam?.title ?? genTitle.trim(), form, sheetHeader())) toast.error(ar ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups"); }}
-                      className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-muted"
-                    >
-                      <FileText size={13} />
-                      {ar ? "ورقة الأسئلة" : "Questions"}
-                    </button>
-                    {exam && <button
-                      onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups"); }}
-                      className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-muted"
-                    >
-                      <Printer size={13} />
-                      {ar ? "ورقة الإجابة" : "Answer sheet"}
-                    </button>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* bank list */}
       {questions.length === 0 && !showAdd ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-10 text-center text-muted-foreground">
@@ -954,7 +697,7 @@ export default function QuestionBankPage({ course, bankCourseIds, sheetHeader, c
                       <button
                         onClick={() => {
                           setImportChapter(ch); setImportTopic("");
-                          setShowPaste(true); setShowExcel(false); setShowAdd(false); setShowGen(false);
+                          setShowPaste(true); setShowExcel(false); setShowAdd(false);
                           window.scrollTo({ top: 0, behavior: "smooth" });
                         }}
                         className="flex items-center gap-1 rounded-lg border border-primary/40 px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/10"

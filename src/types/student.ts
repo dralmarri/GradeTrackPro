@@ -10,6 +10,7 @@ export interface Student {
   studentNumber?: string;  // bubbled sheet number — learned automatically on first scan
   lectureBonus: number[];
   attendance: boolean[]; // true = present (default), false = absent
+  lectureNotes?: string[]; // free-text per-lecture note, one slot per lecture index
   exam1: number;
   exam2: number;
   finalExam: number;

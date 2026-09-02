@@ -4,41 +4,82 @@
 // scanner maps detected registration marks back to this space — so both
 // sides always agree on where every bubble is.
 
-import { OmrExam } from "@/types/exam";
+import type { OmrExam } from "@/types/exam";
 
 export const PAGE_W = 210;
 export const PAGE_H = 297;
 
 // Registration marks: filled black squares at the four corners.
-export const MARK_SIZE = 10; // mm
+export const MARK_SIZE = 12; // mm — matches the UX Pilot registration squares
 // centers of the 4 marks (TL, TR, BL, BR)
 export const MARKS = [
-  { x: 11, y: 11 },
-  { x: PAGE_W - 11, y: 11 },
-  { x: 11, y: PAGE_H - 11 },
-  { x: PAGE_W - 11, y: PAGE_H - 11 },
+  { x: 16, y: 16 },
+  { x: PAGE_W - 16, y: 16 },
+  { x: 16, y: PAGE_H - 16 },
+  { x: PAGE_W - 16, y: PAGE_H - 16 },
 ] as const;
 
 // Orientation anchor: a small filled square next to the TL mark only.
 // Four identical corner squares are rotationally ambiguous — an upside-down
 // photo would otherwise solve a "valid" homography and misread every bubble.
 // The scanner tries all 4 rotations and keeps the one where this dot is dark.
-export const ORIENT_MARK = { x: 22.5, y: 11, size: 5 } as const;
+export const ORIENT_MARK = { x: PAGE_W - 26, y: 16, size: 6 } as const;
 
-export const BUBBLE_R = 3.4;      // bubble radius (mm) — enlarged for easier shading
+// Exam-code marks: a row of small squares (filled = bit 1) machine-encoding
+// which exam a printed sheet belongs to — lets the scanner tell "this photo
+// is exam X" WITHOUT the professor telling it, instead of only the printed
+// (human-only) title/version text. It sits in a narrow machine-only row below
+// the UX Pilot shading legend and remains clear of the corner search windows.
+export const CODE_BITS = 10; // 0..1023 — plenty for any one course's exams
+const CODE_MARK_SIZE = 2.4;
+const CODE_MARK_PITCH = 4.6;
+const CODE_MARK_Y = 91; // narrow machine-only row below the shading legend
+export function codeMarkPos(bitIndex: number): { x: number; y: number; size: number } {
+  const totalW = (CODE_BITS - 1) * CODE_MARK_PITCH;
+  const startX = PAGE_W / 2 - totalW / 2;
+  return { x: startX + bitIndex * CODE_MARK_PITCH, y: CODE_MARK_Y, size: CODE_MARK_SIZE };
+}
+
+// Deterministic short code for an exam id (stable across print → scan,
+// computed fresh each time from the id — nothing new stored in the DB).
+// Plain FNV-1a-style string hash, mod 2^CODE_BITS.
+export function examCode(examId: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < examId.length; i++) {
+    h ^= examId.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0) % (1 << CODE_BITS);
+}
+
+// Bubble radius and every pitch below were enlarged together (from the
+// original 3.4mm bubble) for readability — bigger targets and more
+// whitespace between rows/columns for students with lower vision, while
+// keeping every bubble edge clear of its neighbours (no touching circles).
+export const BUBBLE_R = 3.8;      // bubble radius (mm)
 
 // Student-ID grid
-const ID_COL_PITCH = 9;           // horizontal distance between digit columns
-const ID_ROW_PITCH = 7.4;         // vertical distance between digits 0-9
-const ID_TOP_Y = 57.5;            // y of digit-0 row (below the handwritten boxes)
+const ID_COL_PITCH = 9.6;         // horizontal distance between digit columns
+const ID_ROW_PITCH = 8.4;         // vertical distance between digits 0-9
+// Sits below the shading legend (ends y=88) and machine code row (y=91) —
+// was 78, which put the grid's own frame box (top = ID_TOP_Y - 4, drawn in
+// sheet.ts's bubbledStudentId) on top of both the legend and the first
+// question section's heading. Moved down to clear them with margin.
+const ID_TOP_Y = 99;
 export const ID_PITCH = ID_COL_PITCH;
 
 // Question grid
 const Q_ROW_PITCH = 7.8;
-const Q_CHOICE_PITCH = 10;
-const Q_TOP_BUBBLES = 136;        // first question row (below the taller civil-ID grid)
-const Q_TOP_WRITTEN = 72;         // first question row when the ID is handwritten-only
-const Q_BOTTOM_Y = 274;
+const Q_CHOICE_PITCH = 11;
+// First bubble row: must clear the ID grid's frame bottom (idBubble digit-9
+// row + 4mm margin ≈ 178.6 with the new ID_TOP_Y above), plus the ~10mm the
+// section heading sits above the first bubble row.
+const Q_TOP_BUBBLES = 192;
+const Q_TOP_WRITTEN = 108;
+// Kept at the original 270 (not stretched to make up the room Q_TOP_BUBBLES
+// lost) — the footer starts at y=278, and a bubble row that close to it
+// leaves almost no clearance once its radius is added.
+const Q_BOTTOM_Y = 270;
 const Q_COL_XS = [28, 93, 158];   // x of choice "A" bubble per column block
 
 type IdModeExam = Pick<OmrExam, "idMode">;
@@ -81,14 +122,21 @@ const COL_X_SETS: Record<number, number[]> = {
   3: [28, 93, 158],
 };
 
+// Above this many questions, prefer two side-by-side columns even if a
+// single tall column would technically still fit — reads as a proper
+// answer sheet rather than one long list. The hard capacity limits
+// (maxR, 2*maxR) still apply on top of this for very large exams.
+const COMFORTABLE_SINGLE_COL = 12;
+
 export function gridSpec(exam: GridExam): GridSpec {
   const maxR = maxRowsPerCol(exam);
   const n = Math.max(1, exam.questionCount);
-  const cols = n <= maxR ? 1 : n <= 2 * maxR ? 2 : 3;
+  const singleColCap = Math.min(maxR, COMFORTABLE_SINGLE_COL);
+  const cols = n <= singleColCap ? 1 : n <= 2 * maxR ? 2 : 3;
   const rows = Math.ceil(n / cols);
   const avail = Q_BOTTOM_Y - qTopY(exam);
   const pitch = rows > 1
-    ? Math.max(Q_ROW_PITCH, Math.min(12, avail / (rows - 1)))
+    ? Math.max(Q_ROW_PITCH, Math.min(13, avail / (rows - 1)))
     : Q_ROW_PITCH;
   return { cols, rows, pitch, colXs: COL_X_SETS[cols] };
 }

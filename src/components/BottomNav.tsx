@@ -1,17 +1,17 @@
-import { Home, BarChart3, Settings, ScanLine } from "lucide-react";
+import { Home, BarChart3, Settings, ScanLine, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 
-// "home" covers the course list AND the in-course main page (الحضور);
-// "assess" covers manual grades (الدرجات) + auto grading (التصحيح)
-export type BottomNavKey = "home" | "assess" | "status" | "settings";
+// "home" always means the course list; "attendance" is its own tab now
+// (previously overloaded onto "home" while inside a course).
+export type BottomNavKey = "home" | "attendance" | "assess" | "status" | "settings";
 
 interface BottomNavProps {
   active: BottomNavKey;
   hasActiveCourse: boolean;
   onHome: () => void;
-  onCourseTab: (tab: "assess" | "status") => void;
+  onCourseTab: (tab: "attendance" | "assess" | "status") => void;
   onSettings: () => void;
 }
 
@@ -24,7 +24,7 @@ export default function BottomNav({
 }: BottomNavProps) {
   const { t, lang } = useLanguage();
 
-  const requireCourse = (tab: "assess" | "status") => {
+  const requireCourse = (tab: "attendance" | "assess" | "status") => {
     if (!hasActiveCourse) {
       toast.error(lang === "ar" ? "اختر مادة أولاً" : "Open a course first");
       return;
@@ -34,6 +34,7 @@ export default function BottomNav({
 
   const items: { key: BottomNavKey; label: string; icon: typeof Home; onClick: () => void }[] = [
     { key: "home", label: lang === "ar" ? "الرئيسية" : "Home", icon: Home, onClick: onHome },
+    { key: "attendance", label: lang === "ar" ? "الحضور" : "Attendance", icon: UserCheck, onClick: () => requireCourse("attendance") },
     { key: "assess", label: lang === "ar" ? "التقييم" : "Assessment", icon: ScanLine, onClick: () => requireCourse("assess") },
     { key: "status", label: t("tabStatus"), icon: BarChart3, onClick: () => requireCourse("status") },
     { key: "settings", label: t("settings"), icon: Settings, onClick: onSettings },

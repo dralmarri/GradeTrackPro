@@ -3,7 +3,9 @@ import { OmrExam } from "@/types/exam";
 import { useOmrScans, OmrScanRecord } from "@/hooks/useOmrScans";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
-import { X, Loader2, ImageIcon, Trash2, History } from "lucide-react";
+import { X, Loader2, ImageIcon, Trash2, History, AlertTriangle, Download, CloudDownload } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { daysUntilPurge, PURGE_WARNING_DAYS, RETENTION_MONTHS } from "@/lib/omr/archiveRetention";
 
 interface Props {
   exam: OmrExam;
@@ -17,6 +19,8 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
   const { scans, loading, getImageUrl, deleteScan } = useOmrScans(open ? exam.id : null);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [loadingImg, setLoadingImg] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
 
   if (!open) return null;
 
@@ -27,6 +31,48 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
     setLoadingImg(null);
     if (url) setViewUrl(url);
     else toast.error(ar ? "تعذّر فتح الصورة" : "Could not open image");
+  };
+
+  // Saves the photo to the device's normal Downloads location — from there
+  // the professor can move it anywhere they like, including a folder
+  // synced to their own cloud storage (Google Drive, OneDrive, iCloud…).
+  // This app never uploads it anywhere on their behalf.
+  const downloadImage = async (scan: OmrScanRecord) => {
+    if (!scan.imagePath) { toast.error(ar ? "لا توجد صورة محفوظة لهذا المسح" : "No image saved"); return; }
+    setDownloadingId(scan.id);
+    try {
+      const url = await getImageUrl(scan.imagePath);
+      if (!url) throw new Error("no url");
+      const blob = await (await fetch(url)).blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `${exam.title}-${scan.studentName || scan.id}.jpg`.replace(/[/\\]/g, "-");
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      toast.error(ar ? "تعذّر تنزيل الصورة" : "Could not download the image");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const expiringScans = scans.filter((s) => s.imagePath && daysUntilPurge(s.createdAt) <= PURGE_WARNING_DAYS);
+
+  const downloadAllExpiring = async () => {
+    setBulkDownloading(true);
+    try {
+      for (const s of expiringScans) {
+        await downloadImage(s);
+        // small gap so the browser doesn't block a burst of programmatic downloads
+        await new Promise((r) => setTimeout(r, 350));
+      }
+      toast.success(ar ? "تم تنزيل الصور" : "Photos downloaded");
+    } finally {
+      setBulkDownloading(false);
+    }
   };
 
   const fmtDate = (iso: string) => {
@@ -53,6 +99,30 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
           </button>
         </div>
 
+        <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+          {ar
+            ? `تُحذف صور الأوراق المؤرشفة تلقائياً بعد ${RETENTION_MONTHS} أشهر لتوفير مساحة التخزين (الدرجات المرصودة لا تتأثر). يمكنك تنزيل أي صورة الآن وحفظها على جهازك أو في أي تخزين سحابي تملكه.`
+            : `Archived sheet photos are automatically deleted after ${RETENTION_MONTHS} months to save storage (recorded grades are never affected). You can download any photo now and keep it on your device or your own cloud storage.`}
+        </p>
+
+        {expiringScans.length > 0 && (
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-500/5 p-3">
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+              {ar
+                ? `${expiringScans.length} صورة ستُحذف خلال ${PURGE_WARNING_DAYS} يوماً`
+                : `${expiringScans.length} photo(s) will be deleted within ${PURGE_WARNING_DAYS} days`}
+            </p>
+            <button
+              onClick={downloadAllExpiring}
+              disabled={bulkDownloading}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-500/25 disabled:opacity-50 dark:text-amber-400"
+            >
+              {bulkDownloading ? <Loader2 size={13} className="animate-spin" /> : <CloudDownload size={13} />}
+              {ar ? "تنزيل الكل قبل الحذف" : "Download all before deletion"}
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -66,7 +136,13 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
         ) : (
           <div className="space-y-2">
             {scans.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
+              <div
+                key={s.id}
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm",
+                  s.needsReview ? "border-amber-400/60 bg-amber-500/5" : "border-border",
+                )}
+              >
                 <button
                   onClick={() => openImage(s)}
                   disabled={loadingImg === s.id}
@@ -76,12 +152,37 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
                   {loadingImg === s.id ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={17} />}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-foreground">{s.studentName || (ar ? "غير معروف" : "Unknown")}</p>
+                  <p className="flex items-center gap-1.5 truncate text-sm font-bold text-foreground">
+                    {s.studentName || (ar ? "غير معروف" : "Unknown")}
+                    {s.needsReview && (
+                      <span className="flex shrink-0 items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                        <AlertTriangle size={10} />
+                        {ar ? `يحتاج مراجعة (${s.reviewCount})` : `Needs review (${s.reviewCount})`}
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {s.score}/{exam.maxScore} · {s.rawCorrect} {ar ? "صحيحة" : "correct"}
                     {s.studentNumber ? ` · #${s.studentNumber}` : ""} · {fmtDate(s.createdAt)}
                   </p>
+                  {s.imagePath && daysUntilPurge(s.createdAt) <= PURGE_WARNING_DAYS && (
+                    <p className="mt-0.5 text-[10px] font-semibold text-amber-600">
+                      {ar
+                        ? `ستُحذف الصورة خلال ${Math.max(0, daysUntilPurge(s.createdAt))} يوماً`
+                        : `Photo deletes in ${Math.max(0, daysUntilPurge(s.createdAt))} day(s)`}
+                    </p>
+                  )}
                 </div>
+                {s.imagePath && (
+                  <button
+                    onClick={() => downloadImage(s)}
+                    disabled={downloadingId === s.id}
+                    title={ar ? "تنزيل الصورة" : "Download photo"}
+                    className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-muted disabled:opacity-50"
+                  >
+                    {downloadingId === s.id ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     if (!window.confirm(ar ? "حذف هذه الورقة من الأرشيف؟" : "Delete this sheet from the archive?")) return;

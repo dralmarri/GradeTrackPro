@@ -2,12 +2,13 @@
 // This is a native, integrated grading system — not a ZipGrade clone.
 // Scores flow straight into the student's course record.
 
-export type ChoiceCount = 2 | 3 | 4 | 5; // 2 = صح/خطأ, 3 = A–C, 4 = A–D, 5 = A–E
+export type ChoiceCount = 2 | 3 | 4 | 5; // 2 = صح/خطأ, 3 = أ–ج, 4 = أ–د, 5 = أ–هـ
 
-// display letters per choice count — true/false bubbles are labelled ص / خ
+// display letters per choice count — Arabic alphabet letters (أ ب ج د هـ),
+// matching the approved OMR sheet mockup, which labels every bubble
+// (MCQ and true/false alike) with أ/ب/ج/د rather than Latin A/B/C/D.
 export function choiceLabels(choiceCount: ChoiceCount): string[] {
-  if (choiceCount === 2) return ["ص", "خ"];
-  return ["A", "B", "C", "D", "E"].slice(0, choiceCount);
+  return ["أ", "ب", "ج", "د", "هـ"].slice(0, choiceCount);
 }
 
 // A mixed exam is made of consecutive sections, each with its own choice

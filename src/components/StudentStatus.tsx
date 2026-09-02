@@ -2,9 +2,13 @@ import { useState, useEffect } from "react";
 import { Student, Course, getLabel } from "@/types/student";
 import { getBonusTotal, getMaxTotal, getPercentage, getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
-import { User, TrendingUp, TrendingDown, Award, Search } from "lucide-react";
+import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy, ChevronDown, ImageIcon, Loader2 } from "lucide-react";
 import { GradeTier, LetterTier, loadGradeTiers, loadLetterTiers, getTierFor, getLetterFor } from "@/lib/gradeTiers";
 import { useLanguage } from "@/hooks/useLanguage";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts";
+import { useOmrExams } from "@/hooks/useOmrExams";
+import { useStudentScans } from "@/hooks/useOmrScans";
+import { toast } from "sonner";
 
 interface StudentStatusProps {
   students: Student[];
@@ -16,7 +20,16 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
   const [searchQuery, setSearchQuery] = useState("");
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
   const [letterTiers, setLetterTiers] = useState<LetterTier[]>(loadLetterTiers());
+  // Card details (per-component breakdown + absences) stay collapsed by
+  // default so the list is scannable at a glance; expand one student at a
+  // time to dig in.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // exam titles for the scanned-papers section below — looked up once per
+  // course instead of per student card
+  const { exams } = useOmrExams(course.id);
+  const examTitles: Record<string, string> = {};
+  for (const e of exams) examTitles[e.id] = e.version ? `${e.title} — ${e.version}` : e.title;
 
   useEffect(() => {
     const handler = () => {
@@ -36,7 +49,38 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
     return { tier: getTierFor(pct, tiers), letter: getLetterFor(pct, letterTiers) };
   };
 
-
+  // Single source of truth for "has this student actually been fully
+  // graded yet" — used both by the summary stats/chart above and by each
+  // student's row below, so the two can never disagree (which is exactly
+  // what happened before: the chart used the raw total against the FULL
+  // course max, so a student with only exam1 entered still landed in the
+  // "F" bucket even though their row correctly showed "جزئي").
+  const getCompleteness = (student: Student) => {
+    const hidden = new Set(course.hiddenComponents || []);
+    const bonusOn = course.bonusEnabled !== false;
+    const bonusTotal = getBonusTotal(student, course.maxBonus);
+    const required: { value: number; max: number }[] = [];
+    if (!hidden.has("exam1")) required.push({ value: student.exam1, max: course.maxExam1 });
+    if (!hidden.has("exam2")) required.push({ value: student.exam2, max: course.maxExam2 });
+    if (!hidden.has("finalExam")) required.push({ value: student.finalExam, max: course.maxFinal });
+    if (!hidden.has("participation")) required.push({ value: student.participation, max: course.maxParticipation });
+    if (!hidden.has("homework")) required.push({ value: student.homework || 0, max: course.maxHomework ?? 10 });
+    for (const c of (course.customComponents || [])) {
+      required.push({ value: Number(student.customScores?.[c.key] || 0), max: c.max });
+    }
+    // A component counts as "entered" once its score is > 0 — same
+    // heuristic already used for the "graded" count on the Grades tab.
+    const graded = required.filter((c) => c.value > 0);
+    const isFullyGraded = required.length > 0 && graded.length === required.length;
+    const hasAnyGrade = graded.length > 0 || bonusTotal !== 0;
+    const gradedMax = graded.reduce((s, c) => s + c.max, 0);
+    const gradedSum = graded.reduce((s, c) => s + c.value, 0) + (bonusOn ? bonusTotal : 0);
+    // Provisional percentage from ONLY what's been entered so far — this is
+    // what makes a partially-graded student comparable to a fully-graded
+    // one (their raw scores aren't, since they're out of different maxes).
+    const percentage = gradedMax > 0 ? getPercentage(gradedSum, gradedMax) : 0;
+    return { isFullyGraded, hasAnyGrade, gradedMax, gradedSum, percentage };
+  };
 
   if (students.length === 0) {
     return (
@@ -47,31 +91,165 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
   }
 
   const maxTotal = getMaxTotal(course);
-  const totals = students.map((s) => getTotal(s, course));
-  const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
-  const highest = Math.max(...totals);
-  const lowest = Math.min(...totals);
-  const passCount = totals.filter((t) => getPercentage(t, maxTotal) >= 60).length;
+  // Every student who has ANY real grade entered contributes to the stats
+  // below — using their PROVISIONAL PERCENTAGE of what's actually been
+  // recorded so far (e.g. someone at 90% on just exam1 counts as 90%, not
+  // as failing the whole course), not their raw total against the full
+  // course max. Fully-graded students' percentage is naturally the same
+  // number either way, so this is a strict generalisation, not a
+  // different rule for two groups of students.
+  const gradedStudents = students
+    .map((s) => ({ student: s, completeness: getCompleteness(s) }))
+    .filter((x) => x.completeness.hasAnyGrade);
+  const pcts = gradedStudents.map((x) => x.completeness.percentage);
+  const avg = pcts.length > 0 ? pcts.reduce((a, b) => a + b, 0) / pcts.length : 0;
+  const highest = pcts.length > 0 ? Math.max(...pcts) : 0;
+  const lowest = pcts.length > 0 ? Math.min(...pcts) : 0;
+  const passCount = pcts.filter((p) => p >= 60).length;
+  const fullyGradedCount = gradedStudents.filter((x) => x.completeness.isFullyGraded).length;
+
+  // Grade-letter distribution — built from this course's real, user-configured
+  // letter scale (letterTiers), applied to each graded student's current
+  // provisional percentage.
+  const colorVarByClass: Record<string, string> = {
+    "text-success": "hsl(var(--success))",
+    "text-primary": "hsl(var(--primary))",
+    "text-accent": "hsl(var(--accent))",
+    "text-warning": "hsl(var(--warning))",
+    "text-destructive": "hsl(var(--destructive))",
+  };
+  const letterDistribution = [...letterTiers]
+    .sort((a, b) => b.minPercent - a.minPercent)
+    .map((lt) => ({
+      letter: lt.letter,
+      fill: colorVarByClass[lt.color] || "hsl(var(--primary))",
+      count: pcts.filter((p) => getLetterFor(p, letterTiers).letter === lt.letter).length,
+    }));
+
+  // Top students by current provisional percentage — includes
+  // partially-graded students so an early leaderboard is actually useful,
+  // each tagged "جزئي" below if their grade isn't final yet.
+  const topStudents = gradedStudents
+    .sort((a, b) => b.completeness.percentage - a.completeness.percentage)
+    .slice(0, Math.min(3, gradedStudents.length));
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: t("average"), value: avg.toFixed(1), icon: TrendingUp, color: "bg-primary/10 text-primary" },
-          { label: t("highestGrade"), value: highest.toString(), icon: Award, color: "bg-success/10 text-success" },
-          { label: t("lowestGrade"), value: lowest.toString(), icon: TrendingDown, color: "bg-destructive/10 text-destructive" },
-          { label: t("passRate"), value: `${((passCount / students.length) * 100).toFixed(0)}%`, icon: User, color: "bg-accent/10 text-accent" },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${stat.color}`}>
-              <stat.icon size={16} />
-            </div>
-            <p className="font-display text-xl font-bold text-foreground">{stat.value}</p>
-            <p className="text-xs text-muted-foreground">{stat.label}</p>
+      {gradedStudents.length === 0 ? (
+        // Nobody has any grade entered at all yet — there's genuinely
+        // nothing to summarize.
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-10 text-center text-muted-foreground">
+          <BarChart3 size={28} className="mb-2 opacity-50" />
+          <p className="font-display text-sm font-semibold">
+            الإحصائيات تظهر هنا بمجرد رصد أول درجة لأي طالب
+          </p>
+          <p className="mt-1 text-xs">
+            لم تُرصد أي درجات بعد — ابدأ من تبويب الدرجات
+          </p>
+        </div>
+      ) : (
+        <>
+          {fullyGradedCount < gradedStudents.length && (
+            <p className="rounded-xl bg-primary/5 px-3 py-2 text-xs font-medium text-primary">
+              الإحصائيات أدناه مبنية على النسبة الحالية من الدرجات المُدخلة لكل طالب — {fullyGradedCount} من {gradedStudents.length} طالباً فقط اكتملت درجاتهم النهائية
+            </p>
+          )}
+          {/* Stats — average/highest/lowest are PERCENTAGES of what's been
+              graded so far for each student, not raw scores, since
+              students may have very different amounts graded */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: t("average"), value: `${avg.toFixed(0)}%`, icon: TrendingUp, color: "bg-primary/10 text-primary" },
+              { label: t("highestGrade"), value: `${highest.toFixed(0)}%`, icon: Award, color: "bg-success/10 text-success" },
+              { label: t("lowestGrade"), value: `${lowest.toFixed(0)}%`, icon: TrendingDown, color: "bg-destructive/10 text-destructive" },
+              { label: t("passRate"), value: `${((passCount / gradedStudents.length) * 100).toFixed(0)}%`, icon: User, color: "bg-accent/10 text-accent" },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-xl ${stat.color}`}>
+                  <stat.icon size={16} />
+                </div>
+                <p className="font-display text-xl font-bold text-foreground">{stat.value}</p>
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+
+          {/* Grade distribution */}
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-2">
+              <BarChart3 size={18} className="text-primary" />
+              <h3 className="font-display text-sm font-bold text-foreground">توزيع التقديرات</h3>
+            </div>
+            <div className="h-40 w-full" dir="ltr">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={letterDistribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <XAxis
+                    dataKey="letter"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "hsl(var(--muted))" }}
+                    contentStyle={{
+                      background: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                    formatter={(value: number) => [`${value}`, "عدد الطلبة"]}
+                  />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                    {letterDistribution.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Top students */}
+      {topStudents.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <Trophy size={18} className="text-primary" />
+            <h3 className="font-display text-sm font-bold text-foreground">أعلى الطلبة تحصيلاً</h3>
+          </div>
+          <div className="space-y-2">
+            {topStudents.map(({ student, completeness }, i) => (
+              <div key={student.id} className="flex items-center gap-3 rounded-xl bg-muted/40 p-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-display text-xs font-bold text-primary">
+                  {i + 1}
+                </span>
+                <span className="flex-1 truncate font-display text-sm font-semibold text-foreground">
+                  {student.name}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="font-display text-sm font-bold text-primary" dir="ltr">
+                    {completeness.isFullyGraded ? getTotal(student, course) : completeness.gradedSum}
+                    {" / "}
+                    {completeness.isFullyGraded ? maxTotal : completeness.gradedMax}
+                  </span>
+                  {!completeness.isFullyGraded && (
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
+                      جزئي
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -93,6 +271,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
           const grade = getGrade(total, maxTotal);
           const letter = grade.letter.letter;
           const bonusOn = course.bonusEnabled !== false;
+          const isExpanded = expandedId === student.id;
           const isPositiveBonus = bonusTotal > 0;
           const isNegativeBonus = bonusTotal < 0;
 
@@ -136,6 +315,11 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             });
           }
 
+          // Same completeness check the summary stats above use, so a
+          // student can never read "جزئي" here while being counted as
+          // fully-graded (or vice versa) up there.
+          const { isFullyGraded, hasAnyGrade, gradedMax, gradedSum } = getCompleteness(student);
+
           // Absences
           const absenceIndices: number[] = [];
           (student.attendance || []).forEach((present, i) => {
@@ -153,6 +337,14 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
             }
           };
 
+          // Notes — same per-lecture indexing as attendance, so a note is
+          // paired with its real lecture date and that lecture's attendance
+          // status ("type"), letting the professor see when and under what
+          // circumstance each note was written.
+          const noteEntries = (student.lectureNotes || [])
+            .map((note, i) => ({ note, date: course.lectures?.[i]?.date, present: student.attendance?.[i] }))
+            .filter((n) => n.note && n.note.trim().length > 0);
+
 
           return (
             <motion.div
@@ -160,82 +352,223 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.02 }}
-              className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md"
+              className="rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md"
             >
-              {/* Header row: name + letter badge on right, total on left */}
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  {grade.tier?.emoji && (
+              {/* Compact row, always visible: name + total (or "not graded
+                  yet") + an expand toggle for the breakdown/absences. No
+                  letter grade or emoji shown until something is actually
+                  entered — avoids marking every new student as failing. */}
+              <button
+                type="button"
+                onClick={() => setExpandedId((v) => (v === student.id ? null : student.id))}
+                className="flex w-full items-center justify-between gap-3 p-4 text-start"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  {isFullyGraded && grade.tier?.emoji && (
                     <span className="shrink-0 text-xl leading-none" aria-hidden>
                       {grade.tier.emoji}
                     </span>
                   )}
-                  <span
-                    className={`shrink-0 rounded-md px-2 py-0.5 font-display text-xs font-bold ${letterBadgeClass}`}
-                    dir="ltr"
-                  >
-                    {letter}
-                  </span>
-                  <h3 className="font-display text-base font-bold text-foreground truncate">{student.name}</h3>
+                  {isFullyGraded && (
+                    <span
+                      className={`shrink-0 rounded-md px-2 py-0.5 font-display text-xs font-bold ${letterBadgeClass}`}
+                      dir="ltr"
+                    >
+                      {letter}
+                    </span>
+                  )}
+                  <h3 className="truncate font-display text-base font-bold text-foreground">{student.name}</h3>
+                  {absenceCount > 0 && (
+                    <span className="flex shrink-0 items-center gap-1 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-destructive" />
+                      {absenceCount}
+                    </span>
+                  )}
+                  {noteEntries.length > 0 && (
+                    <span
+                      className="flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary"
+                      title="يوجد ملاحظات مكتوبة عن هذا الطالب"
+                    >
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+                      {noteEntries.length}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-baseline gap-2 font-display">
-                  <span className="text-2xl font-bold text-primary">{total}</span>
-                  <span className="text-xs text-muted-foreground">/ {maxTotal}</span>
-                </div>
-              </div>
-
-              {/* Mini metric cards — matches Exams tabs order */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {miniCells.map((cell) => (
-                  <div
-                    key={cell.key}
-                    className={`rounded-xl px-2 py-2 text-center ${cell.highlight}`}
-                  >
-                    <p className="mb-1 text-[10px] opacity-70 truncate">{cell.label}</p>
-                    <p className="font-display text-xl font-extrabold leading-none">{cell.value}</p>
-                    <p className="mt-1 text-[9px] opacity-50">من {cell.max}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Absences */}
-              <div className="mt-3 border-t border-border pt-3">
-                {absenceCount === 0 ? (
-                  <div className="flex items-center gap-2 text-xs text-success">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
-                    <span>لا توجد غيابات</span>
-                  </div>
-                ) : (
-                  <details className="group">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs">
-                      <span className="flex items-center gap-2 text-destructive">
-                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-destructive" />
-                        <span className="font-medium">
-                          الغيابات: <span className="font-display font-bold">{absenceCount}</span>
-                        </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  {isFullyGraded ? (
+                    // All required components entered — the final score,
+                    // out of the course's real full total.
+                    <span className="flex items-baseline gap-1 font-display" dir="ltr">
+                      <span className="text-xl font-bold text-primary">{total}</span>
+                      <span className="text-xs text-muted-foreground">/ {maxTotal}</span>
+                    </span>
+                  ) : hasAnyGrade ? (
+                    // Some, but not all, components entered — show the score
+                    // out of only what's been recorded so far (never against
+                    // the full 100), plus a "partial" label so it's clear
+                    // this isn't the final grade.
+                    <span className="flex items-center gap-1.5">
+                      <span className="flex items-baseline gap-1 font-display" dir="ltr">
+                        <span className="text-xl font-bold text-foreground">{gradedSum}</span>
+                        <span className="text-xs text-muted-foreground">/ {gradedMax}</span>
                       </span>
-                      <span className="text-muted-foreground group-open:hidden">عرض التواريخ</span>
-                      <span className="hidden text-muted-foreground group-open:inline">إخفاء</span>
-                    </summary>
-                    {absenceDates.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {absenceDates.map((d, i) => (
-                          <span
-                            key={i}
-                            className="rounded-md bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"
-                          >
-                            {fmtDate(d)}
-                          </span>
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        جزئي
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                      لم تُرصد الدرجات بعد
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={16}
+                    className={`text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                  />
+                </div>
+              </button>
+
+              {isExpanded && (
+                <div className="space-y-3 border-t border-border p-4 pt-3">
+                  {/* Mini metric cards — matches Exams tabs order */}
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                    {miniCells.map((cell) => (
+                      <div
+                        key={cell.key}
+                        className={`rounded-xl px-2 py-2 text-center ${cell.highlight}`}
+                      >
+                        <p className="mb-1 truncate text-[10px] opacity-70">{cell.label}</p>
+                        <p className="font-display text-xl font-extrabold leading-none">{cell.value}</p>
+                        <p className="mt-1 text-[9px] opacity-50">من {cell.max}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Absences */}
+                  {absenceCount === 0 ? (
+                    <div className="flex items-center gap-2 text-xs text-success">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
+                      <span>لا توجد غيابات</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-2 text-xs font-medium text-destructive">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-destructive" />
+                        الغيابات: <span className="font-display font-bold">{absenceCount}</span>
+                      </p>
+                      {absenceDates.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {absenceDates.map((d, i) => (
+                            <span
+                              key={i}
+                              className="rounded-md bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"
+                            >
+                              {fmtDate(d)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Notes — collected across every lecture with its date and
+                      attendance status, so a professor deciding a student's
+                      fate can see the full picture in one place instead of
+                      hunting through each lecture's attendance screen. */}
+                  {noteEntries.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-2 text-xs font-medium text-foreground">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+                        الملاحظات: <span className="font-display font-bold">{noteEntries.length}</span>
+                      </p>
+                      <div className="space-y-1.5">
+                        {noteEntries.map((n, i) => (
+                          <div key={i} className="rounded-lg border border-border bg-muted/30 px-2.5 py-1.5 text-[11px]">
+                            <div className="mb-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                              {n.date && <span className="font-display">{fmtDate(n.date)}</span>}
+                              {n.present === false && (
+                                <span className="rounded bg-destructive/10 px-1.5 py-0.5 font-semibold text-destructive">غائب</span>
+                              )}
+                              {n.present === true && (
+                                <span className="rounded bg-success/10 px-1.5 py-0.5 font-semibold text-success">حاضر</span>
+                              )}
+                            </div>
+                            <p className="text-foreground">{n.note}</p>
+                          </div>
                         ))}
                       </div>
-                    )}
-                  </details>
-                )}
-              </div>
+                    </div>
+                  )}
 
+                  {/* Scanned OMR papers — every exam form for this student in
+                      one place, instead of opening each exam's own scan
+                      history separately to find which one has his sheet. */}
+                  <StudentScansSection studentId={student.id} examTitles={examTitles} />
+                </div>
+              )}
             </motion.div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// One student's archived OMR papers across every exam form in the course.
+// Fetched only while its card is expanded (studentId is only non-null
+// then in the parent), matching the lazy pattern used for the rest of the
+// expanded-card content.
+function StudentScansSection({ studentId, examTitles }: { studentId: string; examTitles: Record<string, string> }) {
+  const { scans, loading, getImageUrl } = useStudentScans(studentId);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+
+  const fmtDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+    } catch {
+      return iso;
+    }
+  };
+
+  const openImage = async (scan: { id: string; imagePath: string | null }) => {
+    if (!scan.imagePath) { toast.error("لا توجد صورة محفوظة لهذه الورقة"); return; }
+    setOpeningId(scan.id);
+    const url = await getImageUrl(scan.imagePath);
+    setOpeningId(null);
+    if (url) window.open(url, "_blank");
+    else toast.error("تعذّر فتح الصورة");
+  };
+
+  if (loading || scans.length === 0) return null;
+
+  return (
+    <div>
+      <p className="mb-1.5 flex items-center gap-2 text-xs font-medium text-foreground">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+        الأوراق الممسوحة: <span className="font-display font-bold">{scans.length}</span>
+      </p>
+      <div className="space-y-1.5">
+        {scans.map((s) => (
+          <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5 text-[11px]">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-foreground">{examTitles[s.examId] || "—"}</p>
+              <p className="text-[10px] text-muted-foreground">
+                <span className="font-display">{fmtDate(s.createdAt)}</span>
+                {" · "}{s.rawCorrect} صحيحة
+                {s.needsReview && <span className="ms-1 rounded bg-amber-500/10 px-1.5 py-0.5 font-semibold text-amber-600">تحتاج مراجعة</span>}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => openImage(s)}
+              disabled={!s.imagePath || openingId === s.id}
+              className="flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-40"
+            >
+              {openingId === s.id ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
+              عرض
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

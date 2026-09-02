@@ -15,6 +15,8 @@ export interface OmrScanRecord {
   answers: number[];
   imagePath: string | null;
   createdAt: string;
+  needsReview: boolean;
+  reviewCount: number;
 }
 
 function rowToScan(row: any): OmrScanRecord {
@@ -29,6 +31,8 @@ function rowToScan(row: any): OmrScanRecord {
     answers: (row.answers || []) as number[],
     imagePath: row.image_path,
     createdAt: row.created_at,
+    needsReview: Boolean(row.needs_review),
+    reviewCount: Number(row.review_count) || 0,
   };
 }
 
@@ -80,9 +84,12 @@ export function useOmrScans(examId: string | null) {
     rawCorrect: number;
     answers: number[];
     photo: Blob | null;
-  }): Promise<boolean> => {
-    if (!user) return false;
+    needsReview?: boolean;
+    reviewCount?: number;
+  }): Promise<{ ok: boolean; imageFailed?: boolean; error?: string }> => {
+    if (!user) return { ok: false, error: "not signed in" };
     let imagePath: string | null = null;
+    let imageFailed = false;
     if (input.photo) {
       try {
         const compressed = await compressImage(input.photo);
@@ -90,9 +97,10 @@ export function useOmrScans(examId: string | null) {
         const { error: upErr } = await supabase.storage
           .from("scans")
           .upload(imagePath, compressed, { contentType: "image/jpeg" });
-        if (upErr) { console.error("Scan image upload failed:", upErr); imagePath = null; }
+        if (upErr) { console.error("Scan image upload failed:", upErr); imagePath = null; imageFailed = true; }
       } catch (e) {
         console.error("Scan image compress failed:", e);
+        imageFailed = true;
       }
     }
     const { error } = await db.from("omr_scans").insert({
@@ -105,10 +113,12 @@ export function useOmrScans(examId: string | null) {
       raw_correct: input.rawCorrect,
       answers: input.answers,
       image_path: imagePath,
+      needs_review: input.needsReview ?? false,
+      review_count: input.reviewCount ?? 0,
     });
-    if (error) { console.error("Error recording scan:", error); return false; }
+    if (error) { console.error("Error recording scan:", error); return { ok: false, error: error.message }; }
     await fetchScans();
-    return true;
+    return { ok: true, imageFailed };
   }, [user, fetchScans]);
 
   const getImageUrl = useCallback(async (imagePath: string): Promise<string | null> => {
@@ -131,4 +141,37 @@ export function useOmrScans(examId: string | null) {
   }, [fetchScans]);
 
   return { scans, loading, addScan, getImageUrl, deleteScan, refetch: fetchScans };
+}
+
+// All archived scans for one student across every exam in the course — used
+// on the results/status page so a professor can find a student's scanned
+// papers by student name in one place, instead of hunting through each
+// exam's own scan history one at a time.
+export function useStudentScans(studentId: string | null) {
+  const { user } = useAuth();
+  const [scans, setScans] = useState<OmrScanRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchScans = useCallback(async () => {
+    if (!user || !studentId) { setScans([]); setLoading(false); return; }
+    const { data, error } = await db
+      .from("omr_scans").select("*")
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false });
+    if (error) { console.error("Error fetching student scans:", error); setLoading(false); return; }
+    setScans((data || []).map(rowToScan));
+    setLoading(false);
+  }, [user, studentId]);
+
+  useEffect(() => { fetchScans(); }, [fetchScans]);
+
+  const getImageUrl = useCallback(async (imagePath: string): Promise<string | null> => {
+    const { data, error } = await supabase.storage
+      .from("scans")
+      .createSignedUrl(imagePath, 60 * 10); // 10-minute link
+    if (error) { console.error("Signed URL failed:", error); return null; }
+    return data.signedUrl;
+  }, []);
+
+  return { scans, loading, getImageUrl };
 }

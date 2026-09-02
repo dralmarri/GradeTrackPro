@@ -1,191 +1,192 @@
-// Generates the printable OMR answer sheet as exact-geometry SVG.
-// Bubble positions come from layout.ts — the SAME source the scanner
-// uses — so print and scan always agree.
+// Printable OMR answer sheet. Machine-read geometry comes from layout.ts;
+// the surrounding SVG reproduces the approved UX Pilot visual hierarchy.
+import type { OmrExam } from "@/types/exam";
+import { choiceCountFor, choiceLabelsFor } from "@/types/exam";
+import { PAGE_W, PAGE_H, MARK_SIZE, MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, questionRows, questionNumberX, CODE_BITS, codeMarkPos, examCode } from "@/lib/omr/layout";
 
-import { OmrExam, choiceCountFor, choiceLabelsFor } from "@/types/exam";
-import {
-  PAGE_W, PAGE_H, MARK_SIZE, MARKS, ORIENT_MARK, BUBBLE_R,
-  idBubble, questionBubble, questionRows, questionNumberX,
-} from "@/lib/omr/layout";
-
-// Optional institutional header printed at the top of the sheet.
 export interface SheetHeader {
-  institution?: string;   // اسم المؤسسة التعليمية
-  college?: string;       // الكلية
-  department?: string;    // القسم العلمي
-  courseName?: string;    // اسم المقرر (+ الشعبة)
-  logoDataUrl?: string;   // شعار المؤسسة (اختياري)
+  institution?: string;
+  college?: string;
+  department?: string;
+  courseName?: string;
+  logoDataUrl?: string;
 }
 
-const FONT = "'Dubai', 'Segoe UI', Tahoma, Arial";
+const FONT = "'IBM Plex Sans Arabic', 'Dubai', 'Segoe UI', Tahoma, Arial";
+const INK = "#1f2937";
+const MUTED = "#6b7280";
+const LINE = "#d1d5db";
+const PALE = "#f9fafb";
+const INDIGO = "#2d46b9";
 
-function circle(x: number, y: number, r: number, letter: string): string {
-  // letter drawn in light gray so it thresholds out during scanning
-  return `
-    <circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#000" stroke-width="0.35"/>
-    <text x="${x}" y="${y + 1.15}" font-size="3.2" fill="#a8a8a8" text-anchor="middle" font-family="${FONT}">${letter}</text>`;
+function escapeXml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function svgText(x: number, y: number, value: string, size = 3, options = ""): string {
+  const defaultFill = options.includes("fill=") ? "" : `fill="${INK}"`;
+  return `<text x="${x}" y="${y}" font-family="${FONT}" font-size="${size}" ${defaultFill} ${options}>${escapeXml(value)}</text>`;
+}
+
+function answerBubble(x: number, y: number, letter: string): string {
+  return `<circle cx="${x}" cy="${y}" r="${BUBBLE_R}" fill="#fff" stroke="${INK}" stroke-width="0.55"/>` +
+    svgText(x, y + 1.15, letter, 3.1, `fill="#555" text-anchor="middle" font-weight="600"`);
+}
+
+function registrationMarks(): string {
+  return MARKS.map((m) => `<rect x="${m.x - MARK_SIZE / 2}" y="${m.y - MARK_SIZE / 2}" width="${MARK_SIZE}" height="${MARK_SIZE}" fill="#000"/>`).join("") +
+    `<rect x="${ORIENT_MARK.x - ORIENT_MARK.size / 2}" y="${ORIENT_MARK.y - ORIENT_MARK.size / 2}" width="${ORIENT_MARK.size}" height="${ORIENT_MARK.size}" fill="#000"/>`;
+}
+
+function brand(header?: SheetHeader): string {
+  const titleBlock = svgText(30, 16, "ورقة إجابة نموذجية (OMR)", 3.8, `direction="rtl" text-anchor="end" font-weight="700"`) +
+    svgText(30, 21, "يرجى استخدام قلم رصاص داكن أو قلم حبر أسود", 2.35, `direction="rtl" text-anchor="end" fill="${MUTED}"`);
+  const logo = header?.logoDataUrl
+    ? `<image href="${header.logoDataUrl}" x="136" y="10" width="13" height="13" preserveAspectRatio="xMidYMid meet"/>`
+    : `<rect x="136" y="10" width="13" height="13" rx="2.2" fill="${INDIGO}"/>${svgText(142.5, 18.1, "GTP", 3.6, `fill="#fff" direction="ltr" unicode-bidi="bidi-override" text-anchor="middle" font-weight="800"`)}`;
+  // text-anchor="start"/"end" resolution for a pure-Latin run inside an
+  // RTL-ancestor document proved to vary across real browsers even with
+  // direction="ltr" + unicode-bidi="bidi-override" set explicitly (worked
+  // in this sandbox's Chromium, still broke in the reporter's browser) —
+  // text-anchor="middle" sidesteps the ambiguity entirely, since a
+  // symmetric anchor point can't flip with direction in any implementation.
+  // cx picked generously past the badge's right edge (149) for the widest
+  // fallback-font measurement of "GradeTrackPro" at this size (~26.5mm).
+  return titleBlock + logo +
+    svgText(167, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" direction="ltr" unicode-bidi="bidi-override" text-anchor="middle" font-weight="800"`) +
+    svgText(152, 20.1, "نظام التصحيح الآلي المعتمد", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="end"`) +
+    `<line x1="30" y1="29" x2="180" y2="29" stroke="${INK}" stroke-width="0.65"/>`;
+}
+
+function identityAndMeta(exam: OmrExam, header?: SheetHeader): string {
+  const out: string[] = [];
+  out.push(svgText(180, 36.5, "اسم الطالب (بخط اليد):", 2.6, `direction="rtl" text-anchor="start" font-weight="700"`));
+  out.push(`<rect x="106" y="39" width="74" height="15" rx="2" fill="#fff" stroke="${MUTED}" stroke-width="0.55"/>`);
+  out.push(svgText(180, 58.2, "الرقم الجامعي:", 2.6, `direction="rtl" text-anchor="start" font-weight="700"`));
+  if (exam.idMode === "written") {
+    const count = Math.max(1, exam.studentIdDigits || 12);
+    const cellW = 74 / count;
+    for (let i = 0; i < count; i++) out.push(`<rect x="${106 + i * cellW}" y="60" width="${cellW}" height="11" fill="#fff" stroke="${INK}" stroke-width="0.4"/>`);
+  }
+
+  out.push(`<rect x="30" y="34" width="68" height="38" rx="2" fill="${PALE}" stroke="#e5e7eb" stroke-width="0.4"/>`);
+  const cells: [string, string, number, number][] = [
+    ["المقرر:", header?.courseName || "—", 94, 41], ["الاختبار:", exam.title, 61, 41],
+    ["عدد الأسئلة:", String(exam.questionCount), 94, 53], ["الدرجة الكلية:", String(exam.maxScore), 61, 53],
+  ];
+  for (const [label, value, x, y] of cells) {
+    out.push(svgText(x, y, label, 2.1, `fill="${MUTED}" direction="rtl" text-anchor="start"`));
+    out.push(svgText(x, y + 4, value, 2.7, `direction="rtl" text-anchor="start" font-weight="700"`));
+  }
+  out.push(`<line x1="34" y1="59" x2="94" y2="59" stroke="#e5e7eb" stroke-width="0.35"/>`);
+  out.push(svgText(94, 65, "النموذج:", 2.4, `direction="rtl" text-anchor="start" font-weight="700"`));
+  ["أ", "ب", "ج"].forEach((version, i) => {
+    const x = 72 - i * 11;
+    const active = exam.version === version || (!exam.version && i === 0);
+    out.push(`<circle cx="${x}" cy="64" r="2.7" fill="${active ? INDIGO : "#fff"}" stroke="${active ? INDIGO : "#9ca3af"}" stroke-width="0.45"/>`);
+    out.push(svgText(x, 65, version, 2.4, `fill="${active ? "#fff" : INK}" text-anchor="middle" font-weight="700"`));
+  });
+  return out.join("");
+}
+
+function legend(): string {
+  const out = [`<rect x="30" y="77" width="150" height="11" rx="2" fill="#fff" stroke="${LINE}" stroke-width="0.45" stroke-dasharray="1.4 1.4"/>`];
+  out.push(svgText(176, 83.7, "طريقة التظليل الصحيحة:", 2.4, `direction="rtl" text-anchor="start" font-weight="700" fill="${MUTED}"`));
+  const examples: [number, "fill" | "x" | "dot", string][] = [[132, "fill", "صح"], [105, "x", "خطأ"], [78, "dot", "خطأ"]];
+  for (const [x, kind, label] of examples) {
+    out.push(`<circle cx="${x}" cy="82.5" r="2.5" fill="${kind === "fill" ? INK : "#fff"}" stroke="${INK}" stroke-width="0.45"/>`);
+    if (kind === "x") out.push(`<path d="M${x - 1.2} 81.3 L${x + 1.2} 83.7 M${x + 1.2} 81.3 L${x - 1.2} 83.7" stroke="${INK}" stroke-width="0.45"/>`);
+    if (kind === "dot") out.push(`<circle cx="${x}" cy="82.5" r="0.65" fill="${INK}"/>`);
+    out.push(svgText(x - 4, 83.5, label, 2.2, `direction="rtl" text-anchor="start" fill="${MUTED}"`));
+  }
+  return out.join("");
+}
+
+function machineCode(exam: OmrExam): string {
+  const code = examCode(exam.id);
+  return Array.from({ length: CODE_BITS }, (_, bit) => {
+    const p = codeMarkPos(bit);
+    const on = (code >> bit) & 1;
+    return `<rect x="${p.x - p.size / 2}" y="${p.y - p.size / 2}" width="${p.size}" height="${p.size}" fill="${on ? "#000" : "#fff"}" stroke="${on ? "#000" : "#d1d5db"}" stroke-width="0.25"/>`;
+  }).join("");
+}
+
+function bubbledStudentId(exam: OmrExam): string {
+  if (exam.idMode === "written") return "";
+  const out: string[] = [];
+  const first = idBubble(exam, 0, 0);
+  const last = idBubble(exam, exam.studentIdDigits - 1, 9);
+  // frame box top/height derived from the digit-0 row (first.y) instead of a
+  // hardcoded constant, so it always tracks ID_TOP_Y in layout.ts and can't
+  // silently drift out of sync with it again.
+  const boxTop = first.y - 4;
+  const boxHeight = last.y + 4 - boxTop;
+  out.push(`<rect x="${first.x - 5}" y="${boxTop}" width="${last.x - first.x + 10}" height="${boxHeight}" rx="2" fill="#fff" stroke="${INK}" stroke-width="0.45"/>`);
+  for (let col = 0; col < exam.studentIdDigits; col++) {
+    const top = idBubble(exam, col, 0);
+    out.push(`<rect x="${top.x - 3}" y="${first.y - 3}" width="6" height="5" rx="0.6" fill="#fff" stroke="${INK}" stroke-width="0.4"/>`);
+    for (let digit = 0; digit < 10; digit++) { const p = idBubble(exam, col, digit); out.push(answerBubble(p.x, p.y, String(digit))); }
+  }
+  return out.join("");
+}
+
+function questionGrid(exam: OmrExam): string {
+  const out: string[] = [];
+  const rows = questionRows(exam);
+  const blocks = Math.ceil(exam.questionCount / rows);
+  for (let block = 0; block < blocks; block++) {
+    const firstIndex = block * rows;
+    const lastIndex = Math.min(exam.questionCount, firstIndex + rows);
+    const firstBubble = questionBubble(exam, firstIndex, 0);
+    const headingY = firstBubble.y - 10;
+    const blockCounts = new Set(Array.from({ length: lastIndex - firstIndex }, (_, offset) => choiceCountFor(exam, firstIndex + offset)));
+    const kind = blockCounts.size > 1 ? "إجابات الأسئلة" : choiceCountFor(exam, firstIndex) === 2 ? "صح أو خطأ" : "اختيار من متعدد";
+    out.push(`<rect x="${firstBubble.x + 35}" y="${headingY - 4}" width="2.2" height="7" rx="1.1" fill="${block === 0 ? INDIGO : "#9ca3af"}"/>`);
+    out.push(svgText(firstBubble.x + 32, headingY, `الجزء ${block === 0 ? "الأول" : block === 1 ? "الثاني" : "الثالث"}: ${kind}`, 2.75, `direction="rtl" text-anchor="start" font-weight="700"`));
+    out.push(svgText(firstBubble.x - 8, headingY, `${firstIndex + 1}–${lastIndex}`, 2.1, `fill="${MUTED}" text-anchor="end" font-weight="600"`));
+  }
+  for (let q = 0; q < exam.questionCount; q++) {
+    const block = Math.floor(q / rows);
+    const p0 = questionBubble(exam, q, 0);
+    const labels = choiceLabelsFor(exam, q);
+    const nx = questionNumberX(exam, block);
+    if (q % 2) {
+      const last = questionBubble(exam, q, labels.length - 1);
+      out.push(`<rect x="${nx - 4}" y="${p0.y - 3.6}" width="${last.x - nx + 8}" height="7.2" rx="1.4" fill="#f7f9fc"/>`);
+    }
+    out.push(`<circle cx="${nx}" cy="${p0.y}" r="3" fill="#fff" stroke="${INK}" stroke-width="0.5"/>`);
+    out.push(svgText(nx, p0.y + 1.1, String(q + 1), 3.1, `text-anchor="middle" font-weight="700"`));
+    labels.forEach((label, choice) => { const p = questionBubble(exam, q, choice); out.push(answerBubble(p.x, p.y, label)); });
+  }
+  return out.join("");
+}
+
+function footer(): string {
+  return `<line x1="30" y1="278" x2="180" y2="278" stroke="${LINE}" stroke-width="0.35"/>` +
+    `<line x1="32" y1="284" x2="65" y2="284" stroke="#9ca3af" stroke-width="0.4"/>` +
+    svgText(48.5, 288, "توقيع المراقب", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="middle"`) +
+    `<line x1="145" y1="284" x2="178" y2="284" stroke="#9ca3af" stroke-width="0.4"/>` +
+    svgText(161.5, 288, "توقيع الطالب", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="middle"`) +
+    svgText(105, 284.8, "تمنياتنا لكم بالتوفيق والنجاح", 3, `direction="rtl" text-anchor="middle" font-weight="700"`) +
+    svgText(105, 292, "GradeTrackPro — نظام التصحيح الآلي", 2.1, `fill="#9ca3af" direction="rtl" text-anchor="middle"`);
 }
 
 export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string {
-  const parts: string[] = [];
-
-  // ---------- registration marks ----------
-  for (const m of MARKS) {
-    parts.push(`<rect x="${m.x - MARK_SIZE / 2}" y="${m.y - MARK_SIZE / 2}" width="${MARK_SIZE}" height="${MARK_SIZE}" fill="#000"/>`);
-  }
-  // orientation anchor (small square beside the TL mark — breaks 180° ambiguity)
-  parts.push(`<rect x="${ORIENT_MARK.x - ORIENT_MARK.size / 2}" y="${ORIENT_MARK.y - ORIENT_MARK.size / 2}" width="${ORIENT_MARK.size}" height="${ORIENT_MARK.size}" fill="#000"/>`);
-
-  // ---------- institutional header (right-aligned, official style) ----------
-  const instLines: string[] = [];
-  if (header?.institution) instLines.push(header.institution);
-  if (header?.college) instLines.push(header.college);
-  if (header?.department) instLines.push(header.department);
-  instLines.forEach((line, i) => {
-    parts.push(`<text x="${PAGE_W - 25}" y="${10.5 + i * 4}" font-size="${i === 0 ? 3.1 : 2.7}" ${i === 0 ? 'font-weight="bold"' : 'fill="#444"'} text-anchor="start" direction="rtl" font-family="${FONT}">${escapeXml(line)}</text>`);
-  });
-
-  // institution logo — kept between the corner-mark search windows (x 64–146)
-  if (header?.logoDataUrl) {
-    parts.push(`<image href="${header.logoDataUrl}" x="128" y="5" width="18" height="14" preserveAspectRatio="xMidYMid meet"/>`);
-  }
-
-  // exam version badge (top-left, prominent) — e.g. "نموذج أ"
-  if (exam.version) {
-    parts.push(`<rect x="29" y="7.5" width="24" height="9" fill="none" stroke="#000" stroke-width="0.6" rx="1.5"/>`);
-    parts.push(`<text x="41" y="13.6" font-size="4" font-weight="bold" text-anchor="middle" direction="rtl" font-family="${FONT}">نموذج ${escapeXml(exam.version)}</text>`);
-  }
-
-  // ---------- title block ----------
-  parts.push(`<text x="${PAGE_W / 2}" y="${instLines.length ? 25 : 18}" font-size="5.2" font-weight="bold" fill="#1e3a5f" text-anchor="middle" font-family="${FONT}">${escapeXml(exam.title)}</text>`);
-  const infoBits = [
-    header?.courseName ? `المقرر: ${header.courseName}` : "",
-    `عدد الأسئلة: ${exam.questionCount}`,
-    `الدرجة: ${exam.maxScore}`,
-  ].filter(Boolean).join("   ·   ");
-  parts.push(`<text x="${PAGE_W / 2}" y="${instLines.length ? 30 : 23}" font-size="2.9" fill="#444" text-anchor="middle" direction="rtl" font-family="${FONT}">${escapeXml(infoBits)}</text>`);
-
-  // ---------- name box (clear labelled rectangle) ----------
-  parts.push(`<rect x="25" y="32" width="160" height="9" fill="none" stroke="#000" stroke-width="0.45" rx="1.5"/>`);
-  parts.push(`<text x="180" y="37.6" direction="rtl" font-size="3.3" font-weight="bold" text-anchor="start" font-family="${FONT}">اسم الطالب:</text>`);
-  parts.push(`<line x1="30" y1="38.9" x2="152" y2="38.9" stroke="#bbb" stroke-width="0.25"/>`);
-
-  // ---------- student number block ----------
-  if (exam.idMode === "written") {
-    // handwritten civil-ID strip: 12 joined cells inside a labelled rectangle
-    const cells = 12, cellW = 8, stripW = cells * cellW;
-    const sx = (PAGE_W - stripW) / 2, sy = 46.5, cellH = 9;
-    parts.push(`<text x="${sx + stripW}" y="${sy - 2.6}" direction="rtl" font-size="3.1" font-weight="bold" text-anchor="start" font-family="${FONT}">الرقم المدني للطالب:</text>`);
-    parts.push(`<rect x="${sx}" y="${sy}" width="${stripW}" height="${cellH}" fill="none" stroke="#000" stroke-width="0.5" rx="1.5"/>`);
-    for (let i = 1; i < cells; i++) {
-      parts.push(`<line x1="${sx + i * cellW}" y1="${sy}" x2="${sx + i * cellW}" y2="${sy + cellH}" stroke="#000" stroke-width="0.3"/>`);
-    }
-  } else {
-  const firstTop = idBubble(exam, 0, 0);
-  const lastTop = idBubble(exam, exam.studentIdDigits - 1, 0);
-  const lastBottom = idBubble(exam, exam.studentIdDigits - 1, 9);
-  const frameX = Math.min(firstTop.x, lastTop.x) - 6;
-  const frameW = Math.abs(lastTop.x - firstTop.x) + 12;
-
-  parts.push(`<rect x="${frameX}" y="43" width="${frameW}" height="${lastBottom.y + 4 - 43}" fill="none" stroke="#000" stroke-width="0.5" rx="2"/>`);
-  parts.push(`<text x="${PAGE_W / 2}" y="46.8" direction="rtl" font-size="3" font-weight="bold" text-anchor="middle" font-family="${FONT}">الرقم المدني للطالب</text>`);
-  parts.push(`<text x="${frameX - 3}" y="50" direction="rtl" font-size="2.5" fill="#555" text-anchor="start" font-family="${FONT}">اكتب رقمك في المربعات</text>`);
-  parts.push(`<text x="${frameX - 3}" y="53.6" direction="rtl" font-size="2.5" fill="#555" text-anchor="start" font-family="${FONT}">ثم ظلّل الرقم المطابق في كل عمود</text>`);
-
-  // handwritten digit boxes — one above each bubble column
-  for (let col = 0; col < exam.studentIdDigits; col++) {
-    const cx = idBubble(exam, col, 0).x;
-    parts.push(`<rect x="${cx - 3.1}" y="48.4" width="6.2" height="5.2" fill="none" stroke="#000" stroke-width="0.4" rx="0.7"/>`);
-  }
-
-  // bubble grid 0–9 per column
-  for (let col = 0; col < exam.studentIdDigits; col++) {
-    for (let d = 0; d <= 9; d++) {
-      const p = idBubble(exam, col, d);
-      parts.push(circle(p.x, p.y, BUBBLE_R, String(d)));
-    }
-  }
-  }
-
-  // ---------- questions ----------
-  const NAVY = "#1e3a5f";
-  const rows = questionRows(exam);
-  // group badge above each column block: "الأسئلة X - Y" (written mode only —
-  // in bubbles mode the ID grid leaves no room above the questions)
-  if (exam.idMode === "written") {
-    const blocksN = Math.ceil(exam.questionCount / rows);
-    for (let b = 0; b < blocksN; b++) {
-      const from = b * rows + 1;
-      const to = Math.min((b + 1) * rows, exam.questionCount);
-      const firstBubble = questionBubble(exam, b * rows, 0);
-      const bx = firstBubble.x + 14;
-      const by = firstBubble.y - 9;
-      parts.push(`<rect x="${bx - 16}" y="${by - 4.2}" width="32" height="6" fill="${NAVY}" rx="3"/>`);
-      parts.push(`<text x="${bx}" y="${by}" direction="rtl" font-size="2.9" font-weight="bold" fill="#fff" text-anchor="middle" font-family="${FONT}">الأسئلة ${from} - ${to}</text>`);
-    }
-  }
-  // light separators between question column blocks
-  const blocks = Math.ceil(exam.questionCount / rows);
-  for (let b = 1; b < blocks; b++) {
-    const x = questionNumberX(exam, b) - 6.5;
-    const yTop = questionBubble(exam, 0, 0).y - 4;
-    // separator length = the shorter of the two adjacent blocks; block b-1 is
-    // always full, block b may be partial only when it's the last one
-    const rowsRight = b === blocks - 1 ? exam.questionCount - rows * b : rows;
-    const yBot = questionBubble(exam, Math.max(rows, rowsRight) - 1, 0).y + 4;
-    parts.push(`<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBot}" stroke="#ccc" stroke-width="0.25"/>`);
-  }
-
-  for (let q = 0; q < exam.questionCount; q++) {
-    const colBlock = Math.floor(q / rows);
-    const numPos = questionBubble(exam, q, 0);
-    const labels = choiceLabelsFor(exam, q);
-    const qChoices = choiceCountFor(exam, q);
-    parts.push(`<text x="${questionNumberX(exam, colBlock)}" y="${numPos.y + 1.1}" font-size="3" font-weight="bold" fill="#333" text-anchor="end" font-family="${FONT}">${q + 1}</text>`);
-    for (let c = 0; c < qChoices; c++) {
-      const p = questionBubble(exam, q, c);
-      parts.push(circle(p.x, p.y, BUBBLE_R, labels[c]));
-    }
-  }
-
-  // ---------- footer ----------
-  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 11}" font-size="3" font-weight="bold" fill="#1e3a5f" text-anchor="middle" direction="rtl" font-family="${FONT}">تمنياتنا لكم بالتوفيق والنجاح</text>`);
-  parts.push(`<text x="${PAGE_W / 2}" y="${PAGE_H - 6.5}" font-size="2.2" fill="#999" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}">${parts.join("")}</svg>`;
-}
-
-function escapeXml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}" role="img" aria-label="ورقة إجابة OMR"><rect width="210" height="297" fill="#fff"/>` +
+    registrationMarks() + `<text x="105" y="184" font-family="${FONT}" font-size="24" font-weight="800" fill="#111827" opacity="0.035" text-anchor="middle" letter-spacing="2" transform="rotate(-24 105 184)">GradeTrackPro</text>` +
+    brand(header) + identityAndMeta(exam, header) + legend() + machineCode(exam) + bubbledStudentId(exam) + questionGrid(exam) + footer() + `</svg>`;
 }
 
 export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): string {
-  return `<!doctype html>
-<html lang="ar">
-<head>
-<meta charset="utf-8" />
-<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/dubai" />
-<title>${escapeXml(exam.title)}</title>
-<style>
-  @page { size: A4; margin: 0; }
-  html, body { margin: 0; padding: 0; }
-  svg { display: block; }
-</style>
-</head>
-<body>${buildAnswerSheetSvg(exam, header)}</body>
-</html>`;
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><title>${escapeXml(exam.title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{width:210mm;height:297mm;margin:0;padding:0;background:#fff;overflow:hidden}svg{display:block;width:210mm;height:297mm}</style></head><body>${buildAnswerSheetSvg(exam, header)}</body></html>`;
 }
 
-// Open the sheet in a new window and trigger the print dialog.
 export function printAnswerSheet(exam: OmrExam, header?: SheetHeader): boolean {
-  const html = buildAnswerSheetHtml(exam, header);
   const w = window.open("", "_blank");
   if (!w) return false;
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  const go = () => setTimeout(() => w.print(), 150);
+  w.document.write(buildAnswerSheetHtml(exam, header)); w.document.close();
+  const print = () => setTimeout(() => { w.focus(); w.print(); }, 120);
   const fonts = (w.document as Document & { fonts?: { ready: Promise<unknown> } }).fonts;
-  if (fonts?.ready) fonts.ready.then(go, go); else setTimeout(go, 500);
+  if (fonts?.ready) fonts.ready.then(print, print); else setTimeout(print, 500);
   return true;
 }

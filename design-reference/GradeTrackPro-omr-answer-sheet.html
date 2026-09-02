@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ورقة إجابة OMR - GradeTrackPro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: #f3f4f6;
+      font-family: "IBM Plex Sans Arabic", "Tajawal", system-ui, sans-serif;
+      padding: 24px;
+    }
+    .gtp-sheet {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 18mm 16mm;
+      margin: 0 auto 8mm;
+      background: #ffffff;
+      color: #111827;
+      direction: rtl;
+      position: relative;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    }
+    .gtp-brand-blue { color: #2947d1; }
+    .gtp-marker {
+      position: absolute;
+      width: 12mm;
+      height: 12mm;
+      background: #000000;
+    }
+    .gtp-marker--tl { top: 6mm; left: 6mm; }
+    .gtp-marker--tr { top: 6mm; right: 6mm; }
+    .gtp-marker--bl { bottom: 6mm; left: 6mm; }
+    .gtp-marker--br { bottom: 6mm; right: 6mm; }
+    .gtp-marker--tr-small {
+      position: absolute;
+      top: 8mm;
+      right: 22mm;
+      width: 5mm;
+      height: 5mm;
+      background: #000000;
+    }
+    .gtp-bubble {
+      width: 8mm;
+      height: 8mm;
+      border: 1.2pt solid #111827;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8pt;
+      line-height: 1;
+      color: #111827;
+    }
+    .gtp-idbox {
+      width: 9mm;
+      height: 12mm;
+      border: 1pt solid #111827;
+    }
+    .gtp-watermark {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      font-size: 42pt;
+      font-weight: 800;
+      letter-spacing: 6px;
+      color: rgba(17, 24, 39, 0.05);
+      transform: rotate(-18deg);
+    }
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      body { background: #ffffff !important; }
+      .gtp-sheet {
+        box-shadow: none;
+        margin: 0;
+        page-break-after: always;
+        break-after: page;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <section class="gtp-sheet" aria-label="ورقة إجابة OMR">
+    <!-- Alignment markers -->
+    <span class="gtp-marker gtp-marker--tl"></span>
+    <span class="gtp-marker gtp-marker--tr"></span>
+    <span class="gtp-marker--tr-small"></span>
+    <span class="gtp-marker gtp-marker--bl"></span>
+    <span class="gtp-marker gtp-marker--br"></span>
+
+    <div class="gtp-watermark" aria-hidden="true">GRADETRACKPRO OMR</div>
+
+    <header class="flex items-start justify-between">
+      <div class="flex items-center gap-3">
+        <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-[#2947d1] text-lg font-extrabold text-white">GTP</div>
+        <div class="text-left" dir="ltr">
+          <p class="text-xl font-extrabold gtp-brand-blue">GradeTrackPro</p>
+          <p class="text-[10pt] text-gray-500" dir="rtl">نظام التصحيح الآلي المعتمد</p>
+        </div>
+      </div>
+      <div class="text-left">
+        <p class="text-[14pt] font-extrabold text-gray-900">ورقة إجابة نموذجية (OMR)</p>
+        <p class="mt-1 text-[9.5pt] text-gray-500">يرجى استخدام قلم رصاص داكن أو قلم حبر أسود</p>
+      </div>
+    </header>
+
+    <!-- Student identity + exam meta -->
+    <div class="mt-6 grid grid-cols-2 gap-5">
+      <div>
+        <p class="text-[9.5pt] font-semibold text-gray-700">اسم الطالب (بخط اليد):</p>
+        <div class="mt-1.5 h-[14mm] rounded-md border border-gray-300"></div>
+        <p class="mt-4 text-[9.5pt] font-semibold text-gray-700">الرقم الجامعي:</p>
+        <div class="mt-1.5 flex gap-1">
+          <span class="gtp-idbox"></span><span class="gtp-idbox"></span><span class="gtp-idbox"></span><span class="gtp-idbox"></span><span class="gtp-idbox"></span><span class="gtp-idbox"></span><span class="gtp-idbox"></span><span class="gtp-idbox"></span><span class="gtp-idbox"></span><span class="gtp-idbox"></span>
+        </div>
+      </div>
+      <div class="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+        <div class="grid grid-cols-2 gap-3 text-[9.5pt]">
+          <div><p class="text-gray-500">المقرر:</p><p class="font-bold text-gray-900">مبادئ الرياضيات</p></div>
+          <div><p class="text-gray-500">الاختبار:</p><p class="font-bold text-gray-900">الاختبار النهائي</p></div>
+          <div><p class="text-gray-500">عدد الأسئلة:</p><p class="font-bold text-gray-900">٨ سؤال</p></div>
+          <div><p class="text-gray-500">الدرجة الكلية:</p><p class="font-bold text-gray-900">٦٠ درجة</p></div>
+        </div>
+        <div class="mt-3 flex items-center gap-4 border-t border-gray-200 pt-3">
+          <p class="text-[9.5pt] text-gray-500">النموذج:</p>
+          <span class="flex items-center gap-1.5 text-[9.5pt] text-gray-700">
+            أ
+            <span class="gtp-bubble" style="background: #2947d1; border-color: #2947d1;"></span>
+          </span>
+          <span class="flex items-center gap-1.5 text-[9.5pt] text-gray-700">
+            ب
+            <span class="gtp-bubble"></span>
+          </span>
+          <span class="flex items-center gap-1.5 text-[9.5pt] text-gray-700">
+            ج
+            <span class="gtp-bubble"></span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5 border-t-2 border-gray-900"></div>
+
+    <!-- Shading legend -->
+    <div class="mt-5 flex items-center justify-between rounded-lg border border-dashed border-gray-300 px-4 py-2.5">
+      <p class="text-[9.5pt] text-gray-500">طريقة التظليل الصحيحة:</p>
+      <div class="flex items-center gap-5 text-[9pt] text-gray-600">
+        <span class="flex items-center gap-1.5"><span class="gtp-bubble" style="background: #111827;"></span> صح</span>
+        <span class="flex items-center gap-1.5"><span class="gtp-bubble">✕</span> خطأ</span>
+        <span class="flex items-center gap-1.5"><span class="gtp-bubble">•</span> خطأ</span>
+      </div>
+    </div>
+
+    <!-- Bubble grids -->
+    <div class="mt-6 grid grid-cols-2 gap-8">
+      <div>
+        <div class="mb-3 flex items-center gap-2">
+          <span class="h-4 w-1.5 rounded bg-[#2947d1]"></span>
+          <p class="text-[10.5pt] font-bold text-gray-900">الجزء الأول: اختيار من متعدد</p>
+        </div>
+        <div class="space-y-2">
+          <div class="flex items-center gap-3"><span class="w-7 shrink-0 text-[10pt] font-semibold text-gray-700">١</span><div class="flex gap-2.5"><span class="gtp-bubble">أ</span><span class="gtp-bubble">ب</span><span class="gtp-bubble">ج</span><span class="gtp-bubble">د</span></div></div>
+          <div class="flex items-center gap-3"><span class="w-7 shrink-0 text-[10pt] font-semibold text-gray-700">٢</span><div class="flex gap-2.5"><span class="gtp-bubble">أ</span><span class="gtp-bubble">ب</span><span class="gtp-bubble">ج</span><span class="gtp-bubble">د</span></div></div>
+          <div class="flex items-center gap-3"><span class="w-7 shrink-0 text-[10pt] font-semibold text-gray-700">٣</span><div class="flex gap-2.5"><span class="gtp-bubble">أ</span><span class="gtp-bubble">ب</span><span class="gtp-bubble">ج</span><span class="gtp-bubble">د</span></div></div>
+          <div class="flex items-center gap-3"><span class="w-7 shrink-0 text-[10pt] font-semibold text-gray-700">٤</span><div class="flex gap-2.5"><span class="gtp-bubble">أ</span><span class="gtp-bubble">ب</span><span class="gtp-bubble">ج</span><span class="gtp-bubble">د</span></div></div>
+          <div class="flex items-center gap-3"><span class="w-7 shrink-0 text-[10pt] font-semibold text-gray-700">٥</span><div class="flex gap-2.5"><span class="gtp-bubble">أ</span><span class="gtp-bubble">ب</span><span class="gtp-bubble">ج</span><span class="gtp-bubble">د</span></div></div>
+          <div class="flex items-center gap-3"><span class="w-7 shrink-0 text-[10pt] font-semibold text-gray-700">٦</span><div class="flex gap-2.5"><span class="gtp-bubble">أ</span><span class="gtp-bubble">ب</span><span class="gtp-bubble">ج</span><span class="gtp-bubble">د</span></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="mb-3 flex items-center gap-2">
+          <span class="h-4 w-1.5 rounded bg-gray-400"></span>
+          <p class="text-[10.5pt] font-bold text-gray-900">الجزء الثاني: صح أو خطأ</p>
+        </div>
+        <div class="space-y-2">
+          <div class="flex items-center gap-3"><span class="w-7 shrink-0 text-[10pt] font-semibold text-gray-700">٧</span><div class="flex gap-2.5"><span class="gtp-bubble">أ</span><span class="gtp-bubble">ب</span></div></div>
+          <div class="flex items-center gap-3"><span class="w-7 shrink-0 text-[10pt] font-semibold text-gray-700">٨</span><div class="flex gap-2.5"><span class="gtp-bubble">أ</span><span class="gtp-bubble">ب</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="absolute inset-x-[16mm] bottom-[22mm]">
+      <div class="flex items-end justify-between border-t border-gray-200 pt-3 text-[9pt] text-gray-500">
+        <div>
+          <div class="mb-1 h-[8mm] w-[45mm] border-b border-gray-400"></div>
+          توقيع الطالب
+        </div>
+        <p class="pb-1 italic text-gray-600">"النجاح هو مجموع مجهودات صغيرة تتكرر يوماً بعد يوم"</p>
+        <div class="text-left">
+          <div class="mb-1 h-[8mm] w-[45mm] border-b border-gray-400"></div>
+          توقيع المراقب
+        </div>
+      </div>
+      <p class="mt-3 text-center text-[8pt] uppercase tracking-wider text-gray-400" dir="ltr">
+        GTP-OMR-SYSTEM-V2.0 | SESSION: ٢٠٢٦-فصل-١ | SHEET-ID: GTP-OMR-001
+      </p>
+    </footer>
+  </section>
+
+</body>
+</html>

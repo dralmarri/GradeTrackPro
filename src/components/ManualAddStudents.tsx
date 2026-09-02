@@ -6,7 +6,9 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { tf } from "@/lib/translations";
 
 interface ManualAddStudentsProps {
-  onAdd: (names: string[]) => void;
+  // Returning false (or a rejected promise) is treated as a failed add — the
+  // dialog stays open and an error toast is shown instead of a false "success".
+  onAdd: (names: string[]) => void | boolean | Promise<void | boolean>;
   variant?: "primary" | "outline";
   label?: string;
 }
@@ -19,6 +21,7 @@ export default function ManualAddStudents({
   const { t, dir } = useLanguage();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
   const displayLabel = label ?? t("addManually");
 
   const parsedNames = text
@@ -26,15 +29,29 @@ export default function ManualAddStudents({
     .map((n) => n.trim())
     .filter((n) => n.length > 0 && n.length <= 100);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (parsedNames.length === 0) {
       toast.error(t("enterAtLeastOne"));
       return;
     }
-    onAdd(parsedNames);
-    toast.success(tf(t("addedSuccess"), { n: parsedNames.length }));
-    setText("");
-    setOpen(false);
+    setSaving(true);
+    try {
+      const result = await onAdd(parsedNames);
+      // Callers that don't return a boolean (legacy void handlers) are
+      // assumed successful — only an explicit `false` counts as a failure.
+      if (result === false) {
+        toast.error(t("errorTryAgain"));
+        return;
+      }
+      toast.success(tf(t("addedSuccess"), { n: parsedNames.length }));
+      setText("");
+      setOpen(false);
+    } catch (err) {
+      console.error("Error adding students:", err);
+      toast.error(t("errorTryAgain"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const triggerClass =
@@ -110,7 +127,7 @@ export default function ManualAddStudents({
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={handleAdd}
-                  disabled={parsedNames.length === 0}
+                  disabled={parsedNames.length === 0 || saving}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110 disabled:opacity-50"
                 >
                   <Plus size={16} />

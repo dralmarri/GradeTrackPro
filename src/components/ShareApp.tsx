@@ -50,7 +50,7 @@ export default function ShareApp() {
       <div className="mb-3 flex items-center gap-2">
         <Share2 className="text-primary" size={20} />
         <h2 className="font-display text-lg font-bold">
-          {isAr ? "مشاركة التطبيق" : "Share the app"}
+          {isAr ? "دعوة الزملاء" : "Invite colleagues"}
         </h2>
       </div>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
@@ -64,7 +64,7 @@ export default function ShareApp() {
         className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98]"
       >
         <Share2 size={16} />
-        {isAr ? "مشاركة التطبيق" : "Share app"}
+        {isAr ? "دعوة زميل" : "Invite a colleague"}
       </button>
 
       {open && (
