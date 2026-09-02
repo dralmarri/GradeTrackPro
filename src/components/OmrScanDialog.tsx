@@ -166,9 +166,17 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         photo,
         needsReview: unresolvedCount > 0,
         reviewCount: unresolvedCount,
-      }).catch(() => false);
-      if (!archived) {
-        toast.warning(ar ? "رُصدت الدرجة لكن تعذّرت أرشفة صورة الورقة" : "Score saved, but archiving the sheet photo failed");
+      }).catch((e: unknown) => ({ ok: false, imageFailed: false, error: e instanceof Error ? e.message : String(e) }));
+      if (!archived.ok) {
+        // surface the real reason instead of a generic message — silently
+        // swallowing it here is exactly what made a real archiving failure
+        // undiagnosable before.
+        toast.warning(
+          ar ? `رُصدت الدرجة لكن تعذّرت أرشفة الورقة: ${archived.error || "سبب غير معروف"}` : `Score saved, but archiving failed: ${archived.error || "unknown reason"}`,
+          { duration: 8000 },
+        );
+      } else if (archived.imageFailed) {
+        toast.warning(ar ? "رُصدت الدرجة والنتيجة، لكن تعذّر رفع صورة الورقة نفسها" : "Score and result saved, but the sheet photo itself failed to upload");
       }
       if (unresolvedCount > 0) {
         toast.warning(

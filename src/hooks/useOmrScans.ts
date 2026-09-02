@@ -86,9 +86,10 @@ export function useOmrScans(examId: string | null) {
     photo: Blob | null;
     needsReview?: boolean;
     reviewCount?: number;
-  }): Promise<boolean> => {
-    if (!user) return false;
+  }): Promise<{ ok: boolean; imageFailed?: boolean; error?: string }> => {
+    if (!user) return { ok: false, error: "not signed in" };
     let imagePath: string | null = null;
+    let imageFailed = false;
     if (input.photo) {
       try {
         const compressed = await compressImage(input.photo);
@@ -96,9 +97,10 @@ export function useOmrScans(examId: string | null) {
         const { error: upErr } = await supabase.storage
           .from("scans")
           .upload(imagePath, compressed, { contentType: "image/jpeg" });
-        if (upErr) { console.error("Scan image upload failed:", upErr); imagePath = null; }
+        if (upErr) { console.error("Scan image upload failed:", upErr); imagePath = null; imageFailed = true; }
       } catch (e) {
         console.error("Scan image compress failed:", e);
+        imageFailed = true;
       }
     }
     const { error } = await db.from("omr_scans").insert({
@@ -114,9 +116,9 @@ export function useOmrScans(examId: string | null) {
       needs_review: input.needsReview ?? false,
       review_count: input.reviewCount ?? 0,
     });
-    if (error) { console.error("Error recording scan:", error); return false; }
+    if (error) { console.error("Error recording scan:", error); return { ok: false, error: error.message }; }
     await fetchScans();
-    return true;
+    return { ok: true, imageFailed };
   }, [user, fetchScans]);
 
   const getImageUrl = useCallback(async (imagePath: string): Promise<string | null> => {
