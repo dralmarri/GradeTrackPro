@@ -47,9 +47,11 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [resolvedQs, setResolvedQs] = useState<Set<number>>(new Set());
   const [studentSearch, setStudentSearch] = useState("");
   const [wrongExamMatch, setWrongExamMatch] = useState<OmrExam | null>(null);
+  // which question's choice-picker is expanded in the answer-details list
+  const [editingQ, setEditingQ] = useState<number | null>(null);
   const { addScan } = useOmrScans(null); // used for recording only
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); };
 
   // Shared by the initial photo upload AND by re-analysing the same photo
   // after switching to the exam the sheet's printed code actually matches —
@@ -446,31 +448,76 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
               </div>
             </div>
 
-            {/* per-question detail */}
-            <details className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            {/* per-question detail — every question is correctable here, not
+                just the ones the scanner itself flagged. A confidently but
+                WRONGLY read bubble (student filled B, scanner mis-sampled it
+                as A) never gets flagged as "needs review", so the professor
+                needs a way to fix any answer by hand, not only the
+                ambiguous ones. Tapping a question expands the same
+                choice-picker used for flagged questions. */}
+            <details className="rounded-2xl border border-border bg-card p-4 shadow-sm" open={reviewItems.length > 0}>
               <summary className="cursor-pointer text-xs font-bold text-muted-foreground">
-                {ar ? "تفاصيل الإجابات" : "Answer details"}
+                {ar ? "تفاصيل الإجابات (اضغط أي سؤال لتصحيحه يدوياً)" : "Answer details (tap any question to correct it by hand)"}
               </summary>
-              <div className="mt-3 grid grid-cols-2 gap-1 sm:grid-cols-3">
-                {result.results.map((r) => (
-                  <div
-                    key={r.questionIndex}
-                    className={cn(
-                      "flex items-center justify-between rounded-lg px-2 py-1 text-[11px] font-semibold",
-                      r.correct ? "bg-success/10 text-success" :
-                      r.marked === -1 ? "bg-muted text-muted-foreground" :
-                      r.marked === -2 ? "bg-amber-500/10 text-amber-600" :
-                      "bg-destructive/10 text-destructive",
-                    )}
-                  >
-                    <span>{r.questionIndex + 1}</span>
-                    <span>
-                      {r.marked >= 0 ? choiceLabelsFor(exam, r.questionIndex)[r.marked] : r.marked === -1 ? "—" : "؟"}
-                      {" / "}
-                      {exam.answerKey[r.questionIndex] >= 0 ? choiceLabelsFor(exam, r.questionIndex)[exam.answerKey[r.questionIndex]] : "؟"}
-                    </span>
-                  </div>
-                ))}
+              <div className="mt-3 space-y-1">
+                {result.results.map((r) => {
+                  const isEditing = editingQ === r.questionIndex;
+                  return (
+                    <div key={r.questionIndex} className="rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setEditingQ((v) => (v === r.questionIndex ? null : r.questionIndex))}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors",
+                          isEditing ? "ring-1 ring-primary" : "",
+                          r.correct ? "bg-success/10 text-success" :
+                          r.marked === -1 ? "bg-muted text-muted-foreground" :
+                          r.marked === -2 ? "bg-amber-500/10 text-amber-600" :
+                          "bg-destructive/10 text-destructive",
+                        )}
+                      >
+                        <span>{r.questionIndex + 1}</span>
+                        <span>
+                          {r.marked >= 0 ? choiceLabelsFor(exam, r.questionIndex)[r.marked] : r.marked === -1 ? "—" : "؟"}
+                          {" / "}
+                          {exam.answerKey[r.questionIndex] >= 0 ? choiceLabelsFor(exam, r.questionIndex)[exam.answerKey[r.questionIndex]] : "؟"}
+                        </span>
+                      </button>
+                      {isEditing && (
+                        <div className="mt-1 flex flex-wrap gap-1.5 rounded-lg bg-muted/40 p-2">
+                          {choiceLabelsFor(exam, r.questionIndex).map((label, ci) => (
+                            <button
+                              key={ci}
+                              onClick={() => { overrideAnswer(r.questionIndex, ci); setEditingQ(null); }}
+                              className={cn(
+                                "min-w-9 rounded-lg border px-2.5 py-1 text-xs font-bold transition-colors",
+                                answers[r.questionIndex] === ci
+                                  ? "border-success bg-success/15 text-success"
+                                  : "border-border text-muted-foreground hover:bg-muted",
+                              )}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => {
+                              if (answers[r.questionIndex] !== -1) overrideAnswer(r.questionIndex, answers[r.questionIndex]);
+                              setEditingQ(null);
+                            }}
+                            className={cn(
+                              "rounded-lg border px-2.5 py-1 text-xs font-bold transition-colors",
+                              answers[r.questionIndex] === -1
+                                ? "border-muted-foreground bg-muted text-foreground"
+                                : "border-border text-muted-foreground hover:bg-muted",
+                            )}
+                          >
+                            {ar ? "بلا إجابة" : "No answer"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </details>
 
