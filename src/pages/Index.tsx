@@ -28,6 +28,7 @@ import {
   CalendarIcon,
   Users,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -205,11 +206,27 @@ export default function Index() {
   }
 
 
-  // Course list view
+  // Course list view — no bottom nav here: just the course list + "new
+  // course" (both rendered by CourseManager's own header/list). The bottom
+  // nav's other tabs (attendance/assessment/status) only make sense once a
+  // course is open, so they move to the course-detail view below; settings
+  // gets its own entry point here instead since it would otherwise be
+  // unreachable from Home.
   if (!activeCourse) {
     return (
       <div className="flex h-dvh flex-col overflow-hidden bg-background">
-        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-4 py-6 pb-24">
+        <header className="flex-shrink-0 border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
+          <div className="mx-auto flex max-w-5xl items-center justify-end px-4 py-3">
+            <button
+              onClick={goSettings}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-foreground/70 transition-colors hover:bg-muted"
+              title={t("settingsAndCourses")}
+            >
+              <Settings size={18} />
+            </button>
+          </div>
+        </header>
+        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-4 py-6">
           {/* New Course Modal */}
           <AnimatePresence>
             {showNewCourse && (
@@ -394,14 +411,6 @@ export default function Index() {
             onNewCourse={() => setShowNewCourse(true)}
           />
         </main>
-
-        <BottomNav
-          active="home"
-          hasActiveCourse={!!activeCourseId}
-          onHome={goHome}
-          onCourseTab={goCourseTab}
-          onSettings={goSettings}
-        />
       </div>
     );
   }
