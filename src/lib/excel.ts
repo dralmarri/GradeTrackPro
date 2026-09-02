@@ -35,7 +35,9 @@ export function getPercentage(total: number, maxTotal: number): number {
   return Math.max(0, Math.min(100, (total / maxTotal) * 100));
 }
 
-export function parseExcelFile(file: File): Promise<string[]> {
+export interface ImportedStudent { name: string; civilId?: string }
+
+export function parseExcelFile(file: File): Promise<ImportedStudent[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -92,8 +94,31 @@ export function parseExcelFile(file: File): Promise<string[]> {
 
         if (nameColIdx === -1) { resolve([]); return; }
 
+        // civil-ID column: header keyword first, else the column where most
+        // cells are long digit runs (7-14 digits — serial numbers are short)
+        const normDigits = (v: string) => v.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/\s/g, "");
+        const isCivil = (v: string) => /^\d{7,14}$/.test(normDigits(String(v ?? "").trim()));
+        let civilColIdx = -1;
+        for (let r = 0; r < Math.min(5, rows.length) && civilColIdx === -1; r++) {
+          for (let c = 0; c < rows[r].length; c++) {
+            const cell = String(rows[r][c] ?? "").trim().toLowerCase();
+            if (["الرقم المدني", "رقم مدني", "الرقم المدنى", "civil id", "civil", "المدني"].includes(cell)) {
+              civilColIdx = c; break;
+            }
+          }
+        }
+        if (civilColIdx === -1) {
+          let best = 0;
+          for (let c = 0; c < colCount; c++) {
+            if (c === nameColIdx) continue;
+            const count = rows.filter((r) => isCivil(String(r[c] ?? ""))).length;
+            if (count > best) { best = count; civilColIdx = c; }
+          }
+          if (best < 2) civilColIdx = -1; // not confident it's a civil-ID column
+        }
+
         const seen = new Set<string>();
-        const names: string[] = [];
+        const names: ImportedStudent[] = [];
 
         // check if column has any 3-part names; if so, require ≥3 parts to filter noise
         const threePartCount = rows.filter((r) => isThreePartName(String(r[nameColIdx] ?? ""))).length;
@@ -109,7 +134,9 @@ export function parseExcelFile(file: File): Promise<string[]> {
           if (arabicTokenCount(raw) < minParts) continue;  // require enough name parts
           if (seen.has(raw)) continue;               // deduplicate
           seen.add(raw);
-          names.push(raw);
+          const civilRaw = civilColIdx >= 0 ? String(row[civilColIdx] ?? "").trim() : "";
+          const civilId = isCivil(civilRaw) ? normDigits(civilRaw) : undefined;
+          names.push({ name: raw, civilId });
         }
 
         resolve(names);

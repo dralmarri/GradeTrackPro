@@ -7,8 +7,10 @@ export interface CustomComponent {
 export interface Student {
   id: string;
   name: string;
+  studentNumber?: string;  // bubbled sheet number — learned automatically on first scan
   lectureBonus: number[];
   attendance: boolean[]; // true = present (default), false = absent
+  lectureNotes?: string[]; // free-text per-lecture note, one slot per lecture index
   exam1: number;
   exam2: number;
   finalExam: number;
@@ -32,9 +34,9 @@ export interface ComponentLabels {
 }
 
 export const DEFAULT_COMPONENT_LABELS: Required<ComponentLabels> = {
-  exam1: "اختبار أول",
-  exam2: "اختبار ثاني",
-  finalExam: "نهائي",
+  exam1: "الامتحان الفصلي الأول",
+  exam2: "الامتحان الفصلي الثاني",
+  finalExam: "الامتحان النهائي",
   participation: "مشاركة",
   homework: "واجب",
   bonus: "بونص",

@@ -3,49 +3,46 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { useCourses } from "@/hooks/useCourses";
-import { exportToExcel } from "@/lib/excel";
+import { exportToExcel, ImportedStudent } from "@/lib/excel";
 import { generateLectureDates, WEEKDAYS } from "@/lib/lectures";
 import { LectureInfo } from "@/types/student";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ExamsPage from "@/components/ExamsPage";
+import OmrExamsPage from "@/components/OmrExamsPage";
 import StudentStatus from "@/components/StudentStatus";
 import AttendanceSummary from "@/components/AttendanceSummary";
 import AttendancePerLecture from "@/components/AttendancePerLecture";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
 import CourseStudentsDialog from "@/components/CourseStudentsDialog";
-import BottomNav, { type BottomNavKey } from "@/components/BottomNav";
+import BottomNav from "@/components/BottomNav";
 
-import ConfirmDialog from "@/components/ConfirmDialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import appIcon from "@/assets/app-icon.png";
 import {
   BookOpen,
-  Plus,
   Upload,
-  Trash2,
   ChevronLeft,
   CalendarIcon,
   Users,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 
 import { tf } from "@/lib/translations";
-import AppStoreBanner from "@/components/AppStoreBanner";
 
 
-type CourseTab = "attendance" | "exams" | "status";
+type CourseTab = "attendance" | "exams" | "omr" | "status";
 type MainView = "courses" | "settings";
 
 export default function Index() {
   
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const {
     courses,
     loading,
@@ -55,6 +52,7 @@ export default function Index() {
     syncStudentsToCourse,
     updateStudent,
     updateAttendance,
+    updateLectureNote,
     importPaaetAttendance,
     deleteCourse,
     deleteStudent,
@@ -70,10 +68,9 @@ export default function Index() {
   const [endOpen, setEndOpen] = useState(false);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [lectureTime, setLectureTime] = useState("");
-  const [pendingStudentNames, setPendingStudentNames] = useState<string[]>([]);
+  const [pendingStudents, setPendingStudents] = useState<ImportedStudent[]>([]);
   const [courseTab, setCourseTab] = useState<CourseTab>("attendance");
   const [mainView, setMainView] = useState<MainView>("courses");
-  const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{ id: string; name: string } | null>(null);
   const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
   const [coursesManageOpen, setCoursesManageOpen] = useState(false);
 
@@ -108,12 +105,12 @@ export default function Index() {
       semesterStart: semesterStart.toISOString(),
       semesterEnd: semesterEnd.toISOString(),
     });
-    if (id && pendingStudentNames.length > 0) {
-      await addStudentsToCourse(id, pendingStudentNames);
+    if (id && pendingStudents.length > 0) {
+      await addStudentsToCourse(id, pendingStudents);
     }
     if (id) setActiveCourseId(id);
     resetModal();
-    toast.success(tf(t("courseCreated"), { lectures: lectures.length }) + (pendingStudentNames.length > 0 ? tf(t("andStudents"), { n: pendingStudentNames.length }) : ""));
+    toast.success(tf(t("courseCreated"), { lectures: lectures.length }) + (pendingStudents.length > 0 ? tf(t("andStudents"), { n: pendingStudents.length }) : ""));
   };
 
   const resetModal = () => {
@@ -124,7 +121,7 @@ export default function Index() {
     setSemesterEnd(undefined);
     setSelectedDays([]);
     setLectureTime("");
-    setPendingStudentNames([]);
+    setPendingStudents([]);
   };
 
   if (loading) {
@@ -138,7 +135,10 @@ export default function Index() {
   // Bottom nav handlers shared across views
   const goHome = () => { setActiveCourseId(null); setMainView("courses"); };
   const goSettings = () => { setMainView("settings"); };
-  const goCourseTab = (tab: CourseTab) => { setMainView("courses"); setCourseTab(tab); };
+  const goCourseTab = (tab: "attendance" | "assess" | "status") => {
+    setMainView("courses");
+    setCourseTab(tab === "assess" ? "omr" : tab);
+  };
 
 
   // Settings / Course management view
@@ -206,40 +206,27 @@ export default function Index() {
   }
 
 
-  // Course list view
+  // Course list view — no bottom nav here: just the course list + "new
+  // course" (both rendered by CourseManager's own header/list). The bottom
+  // nav's other tabs (attendance/assessment/status) only make sense once a
+  // course is open, so they move to the course-detail view below; settings
+  // gets its own entry point here instead since it would otherwise be
+  // unreachable from Home.
   if (!activeCourse) {
     return (
       <div className="flex h-dvh flex-col overflow-hidden bg-background">
         <header className="flex-shrink-0 border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
-          <div className="flex flex-col items-center gap-2 px-4 py-4 text-center">
-            <img
-              src={appIcon}
-              alt="GradeTrackPro"
-              className="h-16 w-16 rounded-2xl shadow-md"
-            />
-            <div>
-              <h1 className="font-display text-xl font-bold text-foreground">GradeTrackPro</h1>
-              <p className="text-xs text-muted-foreground">{t("appTagline")}</p>
-            </div>
-          </div>
-        </header>
-
-
-
-        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-4 py-8 pb-24">
-          <AppStoreBanner />
-          <div className="mb-6 flex items-center justify-between">
-
-            <h2 className="font-display text-lg font-semibold">{t("coursesTitle")}</h2>
+          <div className="mx-auto flex max-w-5xl items-center justify-end px-4 py-3">
             <button
-              onClick={() => setShowNewCourse(true)}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow-md transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.98]"
+              onClick={goSettings}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-foreground/70 transition-colors hover:bg-muted"
+              title={t("settingsAndCourses")}
             >
-              <Plus size={18} />
-              {t("newCourse")}
+              <Settings size={18} />
             </button>
           </div>
-
+        </header>
+        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-4 py-6">
           {/* New Course Modal */}
           <AnimatePresence>
             {showNewCourse && (
@@ -368,27 +355,27 @@ export default function Index() {
                         <div>
                           <h4 className="font-display text-sm font-semibold text-foreground">{t("addStudents")}</h4>
                           <p className="text-[11px] text-muted-foreground">
-                            {pendingStudentNames.length > 0
-                              ? `✓ ${t("studentsLoadedCount")} ${pendingStudentNames.length} ${t("student")}`
+                            {pendingStudents.length > 0
+                              ? `✓ ${t("studentsLoadedCount")} ${pendingStudents.length} ${t("student")}`
                               : t("optionalLater")}
                           </p>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <ExcelImport onImport={(names) => {
-                          setPendingStudentNames((prev) => [...prev, ...names]);
+                          setPendingStudents((prev) => [...prev, ...names]);
                           toast.success(tf(t("studentLoadedSuccess"), { n: names.length }));
                         }} />
                         <ManualAddStudents
                           label={t("addManually")}
                           onAdd={(names) => {
-                            setPendingStudentNames((prev) => [...prev, ...names]);
+                            setPendingStudents((prev) => [...prev, ...names.map((name) => ({ name }))]);
                           }}
                         />
-                        {pendingStudentNames.length > 0 && (
+                        {pendingStudents.length > 0 && (
                           <button
                             type="button"
-                            onClick={() => setPendingStudentNames([])}
+                            onClick={() => setPendingStudents([])}
                             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
                           >
                             {t("clearList")}
@@ -399,7 +386,7 @@ export default function Index() {
 
                     <div className="flex gap-3 pt-1">
                       <button onClick={handleCreateCourse} className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-display text-sm font-semibold text-primary-foreground shadow transition-all hover:brightness-110">
-                        {t("create")} ({previewLectures.length} {t("lectureWord")}{pendingStudentNames.length > 0 ? ` • ${pendingStudentNames.length} ${t("student")}` : ""})
+                        {t("create")} ({previewLectures.length} {t("lectureWord")}{pendingStudents.length > 0 ? ` • ${pendingStudents.length} ${t("student")}` : ""})
                       </button>
                       <button onClick={resetModal} className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted">
                         {t("cancel")}
@@ -411,85 +398,27 @@ export default function Index() {
             )}
           </AnimatePresence>
 
-          {/* Course Cards */}
-          {courses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-                <BookOpen className="text-muted-foreground" size={28} />
-              </div>
-              <p className="font-display text-lg font-semibold text-foreground">{t("noCoursesYet")}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{t("createToStart")}</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {courses.map((course) => (
-                <motion.div
-                  key={course.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="group cursor-pointer rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
-                  onClick={() => setActiveCourseId(course.id)}
-                >
-                  <div className="mb-3 flex items-start justify-between">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                      <BookOpen className="text-primary" size={18} />
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPendingDeleteCourse({ id: course.id, name: course.name });
-                      }}
-                      className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <h3 className="font-display text-base font-bold text-foreground">{course.name}</h3>
-                  {course.section && (
-                    <p className="text-xs text-muted-foreground">{t("sectionLabel")}: {course.section}</p>
-                  )}
-                  <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-                    <span>{course.students.length} {t("student")}</span>
-                    <span>{course.lectureCount} {t("lectureWord")}</span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-
+          <CourseManager
+            courses={courses}
+            onDeleteCourse={(id) => {
+              if (id === activeCourseId) setActiveCourseId(null);
+              deleteCourse(id);
+            }}
+            onUpdateCourse={updateCourse}
+            onAddStudents={addStudentsToCourse}
+            onDeleteStudent={deleteStudent}
+            onSelectCourse={(id) => setActiveCourseId(id)}
+            onNewCourse={() => setShowNewCourse(true)}
+            showManage={false}
+          />
         </main>
-
-
-        <ConfirmDialog
-          open={!!pendingDeleteCourse}
-          onOpenChange={(o) => !o && setPendingDeleteCourse(null)}
-          title={t("deleteCourseTitle")}
-          description={pendingDeleteCourse ? tf(t("deleteCourseDesc"), { name: pendingDeleteCourse.name }) : ""}
-          confirmLabel={t("delete")}
-          destructive
-          onConfirm={() => {
-            if (pendingDeleteCourse) {
-              deleteCourse(pendingDeleteCourse.id);
-              toast.success(t("courseDeleted"));
-              setPendingDeleteCourse(null);
-            }
-          }}
-        />
-
-        <BottomNav
-          active="home"
-          hasActiveCourse={!!activeCourseId}
-          onHome={goHome}
-          onCourseTab={goCourseTab}
-          onSettings={goSettings}
-        />
       </div>
     );
   }
 
   // Course detail view
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <header className="flex-shrink-0 border-b border-sky-200 dark:border-sky-800 bg-sky-100/90 dark:bg-sky-950/90 backdrop-blur-sm safe-top">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4">
           <button
@@ -535,24 +464,66 @@ export default function Index() {
       </header>
 
 
-      <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto px-4 py-6 pb-24">
+      <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto px-4 py-6 pb-32">
+
+        {(courseTab === "exams" || courseTab === "omr") && (
+          <div className="mb-4 flex gap-2">
+            {([
+              { key: "omr", label: lang === "ar" ? "التصحيح الآلي والاختبارات" : "Auto grading & exams" },
+              { key: "exams", label: lang === "ar" ? "رصد الدرجات" : "Grade entry" },
+            ] as const).map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setCourseTab(m.key)}
+                className={
+                  courseTab === m.key
+                    ? "flex-1 rounded-xl border border-primary bg-primary/10 px-3 py-2 text-xs font-bold text-primary"
+                    : "flex-1 rounded-xl border border-border px-3 py-2 text-xs font-bold text-muted-foreground hover:bg-muted"
+                }
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {courseTab === "exams" && (
-          <ExamsPage
-            students={activeCourse.students}
-            courseId={activeCourse.id}
-            maxExam1={activeCourse.maxExam1}
-            maxExam2={activeCourse.maxExam2}
-            maxFinal={activeCourse.maxFinal}
-            maxParticipation={activeCourse.maxParticipation}
-            maxHomework={activeCourse.maxHomework}
-            maxBonus={activeCourse.maxBonus}
-            bonusEnabled={activeCourse.bonusEnabled !== false}
-            lectureCount={activeCourse.lectureCount}
-            componentLabels={activeCourse.componentLabels}
-            customComponents={activeCourse.customComponents}
-            hiddenComponents={activeCourse.hiddenComponents}
-            onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
+          <div className="space-y-6">
+            <ExamsPage
+              students={activeCourse.students}
+              courseId={activeCourse.id}
+              maxExam1={activeCourse.maxExam1}
+              maxExam2={activeCourse.maxExam2}
+              maxFinal={activeCourse.maxFinal}
+              maxParticipation={activeCourse.maxParticipation}
+              maxHomework={activeCourse.maxHomework}
+              maxBonus={activeCourse.maxBonus}
+              bonusEnabled={activeCourse.bonusEnabled !== false}
+              lectureCount={activeCourse.lectureCount}
+              componentLabels={activeCourse.componentLabels}
+              customComponents={activeCourse.customComponents}
+              hiddenComponents={activeCourse.hiddenComponents}
+              onUpdateStudent={(sid, updates) => updateStudent(activeCourse.id, sid, updates)}
+            />
+          </div>
+        )}
+
+        {courseTab === "omr" && (
+          <OmrExamsPage
+            course={activeCourse}
+            bankCourseIds={courses.filter((c) => c.name.trim() === activeCourse.name.trim()).map((c) => c.id)}
+            onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
+            onApplyScore={async (studentId, targetComponent, score) => {
+              const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
+              if (standard.includes(targetComponent)) {
+                await updateStudent(activeCourse.id, studentId, { [targetComponent]: score } as any);
+              } else {
+                const st = activeCourse.students.find((s) => s.id === studentId);
+                await updateStudent(activeCourse.id, studentId, {
+                  customScores: { ...(st?.customScores || {}), [targetComponent]: score },
+                } as any);
+              }
+            }}
           />
         )}
 
@@ -563,6 +534,7 @@ export default function Index() {
               lectures={activeCourse.lectures}
               course={activeCourse}
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
+              onUpdateNote={(sid, li, note) => updateLectureNote(activeCourse.id, sid, li, note)}
               onImportPaaet={(matched, newStudents) => importPaaetAttendance(activeCourse.id, matched, newStudents)}
             />
 
@@ -586,6 +558,10 @@ export default function Index() {
             course={activeCourse}
           />
         )}
+
+        {/* explicit spacer — guarantees the last item clears the fixed
+            bottom nav regardless of container padding/dvh edge cases */}
+        <div aria-hidden className="h-24" />
       </main>
 
       <CourseStudentsDialog
@@ -599,10 +575,10 @@ export default function Index() {
       />
 
       <BottomNav
-        active={courseTab as BottomNavKey}
+        active={courseTab === "attendance" ? "attendance" : courseTab === "status" ? "status" : "assess"}
         hasActiveCourse={true}
         onHome={goHome}
-        onCourseTab={(tab) => setCourseTab(tab)}
+        onCourseTab={(tab) => setCourseTab(tab === "assess" ? "omr" : tab)}
         onSettings={goSettings}
       />
     </div>
