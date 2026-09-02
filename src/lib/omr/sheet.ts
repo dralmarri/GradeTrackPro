@@ -27,7 +27,8 @@ function circle(x: number, y: number, r: number, letter: string): string {
     <text x="${x}" y="${y + 1.3}" font-size="3.6" fill="#a8a8a8" text-anchor="middle" font-family="${FONT}">${letter}</text>`;
 }
 
-const NAVY = "#1e3a5f";
+const NAVY = "#1f2937";       // gray-800 — body/heading text and borders, matching the mockup's neutral ink
+const INDIGO = "#2d46b9";     // the mockup's one accent color (badge, active states, section markers)
 const NAVY_SOFT = "#eef3f9";  // safe pale tint — never dark enough to be read as "filled" by the scanner
 
 // A very light zebra-row background behind each question, purely decorative.
@@ -56,10 +57,11 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   // 7+HEADER_SHIFT+18 ≈ 28mm) to match the approved mockup's extra rows —
   // everything below it (code marks, name box, ID grid, questions) is pushed
   // down by the same HEADER_SHIFT in layout.ts, so nothing drifts out of sync. ----------
+  // No filled card behind the header — the mockup keeps this area plain
+  // white and marks the block's end with a single bottom border only
+  // (its "border-b-2 border-gray-800").
   const HEAD_BOTTOM = 25 + HEADER_SHIFT; // 35
-  parts.push(`<rect x="20" y="7" width="170" height="${HEAD_BOTTOM - 7}" fill="${NAVY_SOFT}" stroke="${NAVY}" stroke-width="0.4" rx="3"/>`);
-  parts.push(`<rect x="20" y="7" width="170" height="1.8" fill="${NAVY}" rx="3"/>`);
-  parts.push(`<rect x="20" y="7.4" width="170" height="1.4" fill="${NAVY}"/>`);
+  parts.push(`<line x1="20" y1="${HEAD_BOTTOM}" x2="190" y2="${HEAD_BOTTOM}" stroke="${NAVY}" stroke-width="0.6"/>`);
 
   // orientation anchor (small square beside the TL mark — breaks 180°
   // ambiguity). Drawn AFTER the header card background: the card's fill
@@ -70,9 +72,9 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   // ---------- brand row: GTP badge + name (right, RTL logical start) vs
   // institution/college/department stack (left) — falls back to the exam
   // title when no institution info was given. ----------
-  parts.push(`<rect x="24" y="9.5" width="9" height="9" fill="${NAVY}" rx="1.6"/>`);
+  parts.push(`<rect x="24" y="9.5" width="9" height="9" fill="${INDIGO}" rx="1.6"/>`);
   parts.push(`<text x="28.5" y="15.3" font-size="3.6" font-weight="bold" fill="#fff" text-anchor="middle" font-family="${FONT}">GTP</text>`);
-  parts.push(`<text x="35.5" y="13.2" font-size="3.4" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">GradeTrackPro</text>`);
+  parts.push(`<text x="35.5" y="13.2" font-size="3.4" font-weight="bold" fill="${INDIGO}" text-anchor="start" font-family="${FONT}">GradeTrackPro</text>`);
   parts.push(`<text x="35.5" y="16.6" font-size="2.2" fill="#667" text-anchor="end" direction="rtl" font-family="${FONT}">نظام التصحيح الآلي المعتمد</text>`);
 
   const instLines: string[] = [];
@@ -122,7 +124,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     VERSIONS.forEach((v, i) => {
       const vx = 60 - i * 9;
       const active = v === exam.version;
-      parts.push(`<circle cx="${vx}" cy="${midY}" r="2.1" fill="${active ? NAVY : "#fff"}" stroke="${active ? NAVY : "#9ca3af"}" stroke-width="0.4"/>`);
+      parts.push(`<circle cx="${vx}" cy="${midY}" r="2.1" fill="${active ? INDIGO : "#fff"}" stroke="${active ? INDIGO : "#9ca3af"}" stroke-width="0.4"/>`);
       parts.push(`<text x="${vx}" y="${midY + 0.9}" font-size="2.1" font-weight="bold" fill="${active ? "#fff" : "#374151"}" text-anchor="middle" font-family="${FONT}">${v}</text>`);
     });
     parts.push(`<line x1="78" y1="${ly + 0.8}" x2="78" y2="${ly + lh - 0.8}" stroke="#9ca3af" stroke-width="0.25" opacity="0.5"/>`);
@@ -244,7 +246,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
       const bx = firstBubble.x + 14;
       const by = firstBubble.y - 7;
       const kind = choiceCountFor(exam, b * rows) === 2 ? "صح أو خطأ" : "اختيار من متعدد";
-      parts.push(`<rect x="${bx - 21}" y="${by - 4.4}" width="21" height="6.8" fill="${NAVY}" rx="2.2"/>`);
+      parts.push(`<rect x="${bx - 21}" y="${by - 4.4}" width="21" height="6.8" fill="${INDIGO}" rx="2.2"/>`);
       parts.push(`<text x="${bx - 10.5}" y="${by}" direction="rtl" font-size="2.4" font-weight="bold" fill="#fff" text-anchor="middle" font-family="${FONT}">الأسئلة ${from}-${to}</text>`);
       parts.push(`<text x="${bx - 23}" y="${by}" direction="rtl" font-size="2.9" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">${kind}</text>`);
     }
@@ -291,12 +293,12 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   // motivational line centered between them, matching the mockup — no
   // fabricated session/sheet-ID stamp. ----------
   const FB_TOP = PAGE_H - 19;
-  parts.push(`<rect x="20" y="${FB_TOP}" width="170" height="14" fill="${NAVY_SOFT}" rx="2.5"/>`);
+  parts.push(`<line x1="20" y1="${FB_TOP}" x2="190" y2="${FB_TOP}" stroke="#d1d5db" stroke-width="0.3"/>`);
   const sigY = FB_TOP + 5;
-  parts.push(`<line x1="${PAGE_W - 62}" y1="${sigY}" x2="${PAGE_W - 32}" y2="${sigY}" stroke="#889" stroke-width="0.35"/>`);
-  parts.push(`<text x="${PAGE_W - 47}" y="${sigY + 3.4}" font-size="2.3" fill="#667" text-anchor="middle" direction="rtl" font-family="${FONT}">توقيع الطالب</text>`);
-  parts.push(`<line x1="32" y1="${sigY}" x2="62" y2="${sigY}" stroke="#889" stroke-width="0.35"/>`);
-  parts.push(`<text x="47" y="${sigY + 3.4}" font-size="2.3" fill="#667" text-anchor="middle" direction="rtl" font-family="${FONT}">توقيع المراقب</text>`);
+  parts.push(`<line x1="${PAGE_W - 62}" y1="${sigY}" x2="${PAGE_W - 32}" y2="${sigY}" stroke="#9ca3af" stroke-width="0.35"/>`);
+  parts.push(`<text x="${PAGE_W - 47}" y="${sigY + 3.4}" font-size="2.3" fill="#6b7280" text-anchor="middle" direction="rtl" font-family="${FONT}">توقيع الطالب</text>`);
+  parts.push(`<line x1="32" y1="${sigY}" x2="62" y2="${sigY}" stroke="#9ca3af" stroke-width="0.35"/>`);
+  parts.push(`<text x="47" y="${sigY + 3.4}" font-size="2.3" fill="#6b7280" text-anchor="middle" direction="rtl" font-family="${FONT}">توقيع المراقب</text>`);
   parts.push(`<text x="${PAGE_W / 2}" y="${sigY + 1}" font-size="3.2" font-weight="bold" fill="${NAVY}" text-anchor="middle" direction="rtl" font-family="${FONT}">تمنياتنا لكم بالتوفيق والنجاح</text>`);
   parts.push(`<text x="${PAGE_W / 2}" y="${FB_TOP + 11}" font-size="2.3" fill="#9ca3af" text-anchor="middle" direction="rtl" font-family="${FONT}">GradeTrackPro — التصحيح الآلي · لا تكتب فوق المربعات السوداء في الزوايا</text>`);
 

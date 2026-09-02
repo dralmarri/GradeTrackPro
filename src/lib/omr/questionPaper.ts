@@ -82,7 +82,7 @@ export function buildQuestionPaperHtml(
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <title>${esc(title)} — نموذج ${esc(form.version)}</title>
 <style>
-  :root { --navy: #1e3a5f; --navy2: #2d46b9; --navy-soft: #eef3f9; --line: #d5e2f0; }
+  :root { --navy: #1f2937; --navy2: #2d46b9; --navy-soft: #eef3f9; --line: #e5e7eb; }
   @page { size: A4; margin: 16mm 16mm; }
   body { font-family: 'IBM Plex Sans Arabic', 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; margin: 0; }
 
