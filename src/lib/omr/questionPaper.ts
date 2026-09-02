@@ -86,7 +86,12 @@ export function buildQuestionPaperHtml(
   @page { size: A4 portrait; margin: 20mm; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body { width: 100%; margin: 0; padding: 0; }
-  body { font-family: 'IBM Plex Sans Arabic', 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; }
+  /* @page margin only applies once actually printed/paginated — add the
+     same margin as body padding so an on-screen preview (no pagination)
+     isn't flush against the edge; printing zeroes it back out so the two
+     margins never stack. */
+  body { font-family: 'IBM Plex Sans Arabic', 'Dubai', 'Segoe UI', Tahoma, Arial; font-weight: 500; color: #111; padding: 20mm; }
+  @media print { body { padding: 0; } }
 
   .head { border-bottom: 3px solid var(--navy2); padding-bottom: 4mm; }
   .head-top { display: flex; justify-content: space-between; align-items: flex-start; }
