@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Prevent iOS rubber-band bounce on the page shell */
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  box-sizing: border-box;
+  overscroll-behavior: none;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .h-dvh {
+    height: 100dvh;
+    height: 100vh; /* fallback */
+  }
+}
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 220 25% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 10%;
+
+    --primary: 229 61% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 30% 93%;
+    --secondary-foreground: 220 25% 15%;
+
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 15% 50%;
+
+    --accent: 160 60% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 25% 88%;
+    --input: 214 25% 88%;
+    --ring: 215 80% 45%;
+
+    --radius: 0.75rem;
+
+    --success: 145 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --font-display: 'Tajawal', sans-serif;
+    --font-body: 'IBM Plex Sans Arabic', sans-serif;
+  }
+
+  .dark {
+    --background: 222 30% 8%;
+    --foreground: 210 20% 96%;
+
+    --card: 222 28% 12%;
+    --card-foreground: 210 20% 96%;
+
+    --popover: 222 28% 12%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 229 65% 62%;
+    --primary-foreground: 222 30% 10%;
+
+    --secondary: 222 20% 18%;
+    --secondary-foreground: 210 20% 96%;
+
+    --muted: 222 20% 16%;
+    --muted-foreground: 215 15% 65%;
+
+    --accent: 160 55% 50%;
+    --accent-foreground: 222 30% 10%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 222 20% 20%;
+    --input: 222 20% 22%;
+    --ring: 215 85% 60%;
+
+    --success: 145 55% 50%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 222 30% 10%;
+
+    --sidebar-background: 222 28% 10%;
+    --sidebar-foreground: 210 20% 90%;
+    --sidebar-primary: 215 85% 60%;
+    --sidebar-primary-foreground: 222 30% 10%;
+    --sidebar-accent: 222 20% 16%;
+    --sidebar-accent-foreground: 210 20% 96%;
+    --sidebar-border: 222 20% 18%;
+    --sidebar-ring: 215 85% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
