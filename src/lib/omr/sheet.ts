@@ -73,7 +73,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   parts.push(`<rect x="24" y="9.5" width="9" height="9" fill="${NAVY}" rx="1.6"/>`);
   parts.push(`<text x="28.5" y="15.3" font-size="3.6" font-weight="bold" fill="#fff" text-anchor="middle" font-family="${FONT}">GTP</text>`);
   parts.push(`<text x="35.5" y="13.2" font-size="3.4" font-weight="bold" fill="${NAVY}" text-anchor="start" font-family="${FONT}">GradeTrackPro</text>`);
-  parts.push(`<text x="35.5" y="16.6" font-size="2.2" fill="#667" text-anchor="start" direction="rtl" font-family="${FONT}">نظام التصحيح الآلي المعتمد</text>`);
+  parts.push(`<text x="35.5" y="16.6" font-size="2.2" fill="#667" text-anchor="end" direction="rtl" font-family="${FONT}">نظام التصحيح الآلي المعتمد</text>`);
 
   const instLines: string[] = [];
   if (header?.institution) instLines.push(header.institution);
@@ -146,7 +146,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
       parts.push(`<circle cx="${it.x}" cy="${midY}" r="${exR}" fill="none" stroke="#333" stroke-width="0.4"/>`);
       parts.push(`<circle cx="${it.x}" cy="${midY}" r="0.7" fill="#333"/>`);
     }
-    parts.push(`<text x="${it.x - exR - 1}" y="${midY + 0.9}" font-size="2.1" fill="#556" text-anchor="end" direction="rtl" font-family="${FONT}">${it.label}</text>`);
+    parts.push(`<text x="${it.x - exR - 1}" y="${midY + 0.9}" font-size="2.1" fill="#556" text-anchor="start" direction="rtl" font-family="${FONT}">${it.label}</text>`);
   }
 
   // ---------- exam-code marks: machine-readable "which exam is this sheet"
