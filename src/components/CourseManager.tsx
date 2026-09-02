@@ -38,6 +38,10 @@ interface CourseManagerProps {
   onDeleteStudent: (courseId: string, studentId: string) => void;
   onSelectCourse: (courseId: string) => void;
   onNewCourse?: () => void;
+  // false on Home: cards there are just a clickable list that opens the
+  // course — grade weights/schedule/edit/delete now live only on the
+  // Settings page's course manager (true there, the default).
+  showManage?: boolean;
 }
 
 export default function CourseManager({
@@ -48,6 +52,7 @@ export default function CourseManager({
   onDeleteStudent,
   onSelectCourse,
   onNewCourse,
+  showManage = true,
 }: CourseManagerProps) {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
@@ -127,11 +132,6 @@ export default function CourseManager({
     return end.getTime() < Date.now() ? "ended" : "active";
   };
 
-  // "Continue with the most recent course" — courses are loaded ordered by
-  // created_at ascending (see useCourses), so the last item is genuinely
-  // the most recently created course, not a fabricated pick.
-  const mostRecentCourse = courses.length > 0 ? courses[courses.length - 1] : null;
-
   const welcomeName = user?.email ? user.email.split("@")[0] : (lang === "ar" ? "زائر" : "Guest");
 
   const header = (
@@ -155,23 +155,6 @@ export default function CourseManager({
         </p>
       </div>
 
-      {mostRecentCourse && (
-        <button
-          type="button"
-          onClick={() => onSelectCourse(mostRecentCourse.id)}
-          className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-4 text-right shadow-sm transition-colors hover:bg-muted/50 rtl:text-right ltr:text-left"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Sparkles size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground">
-              {lang === "ar" ? "متابعة أحدث مادة" : "Continue most recent course"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">{mostRecentCourse.name}</p>
-          </div>
-        </button>
-      )}
     </div>
   );
 
@@ -216,7 +199,8 @@ export default function CourseManager({
       {courses.map((course) => (
         <div
           key={course.id}
-          className="rounded-3xl border border-border bg-card p-5 md:p-6 shadow-sm"
+          onClick={!showManage ? () => onSelectCourse(course.id) : undefined}
+          className={`rounded-3xl border border-border bg-card p-5 shadow-sm md:p-6 ${!showManage ? "cursor-pointer transition-colors hover:bg-muted/40" : ""}`}
         >
           {editingId === course.id ? (
             // Edit mode
@@ -386,39 +370,38 @@ export default function CourseManager({
                 )}
               </div>
 
-              {/* Primary action: this is what a professor does almost every
-                  visit (open the course to take attendance/grade), so it
-                  stays visible on the compact card instead of waiting behind
-                  "إدارة المقرر". */}
-              <button
-                onClick={() => onSelectCourse(course.id)}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110"
-              >
-                <Calendar size={15} />
-                {t("manageLectures")}
-              </button>
+              {/* On Home the whole card is already clickable (opens the
+                  course), so neither the redundant "open" button nor the
+                  management toggle below belong here — both stay Settings-
+                  only, where showManage is true. */}
+              {showManage && (
+                <>
+                  <button
+                    onClick={() => onSelectCourse(course.id)}
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:brightness-110"
+                  >
+                    <Calendar size={15} />
+                    {t("manageLectures")}
+                  </button>
 
-              {/* Everything below (grade weights, schedule, excel import,
-                  edit, delete) is management detail a professor needs
-                  occasionally, not on every visit — kept collapsed so the
-                  Home screen stays a clean list of courses, not a wall of
-                  detail per card. */}
-              <button
-                type="button"
-                onClick={() => setManageOpenId((v) => (v === course.id ? null : course.id))}
-                className="mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted"
-              >
-                <span className="flex items-center gap-1.5">
-                  <Settings2 size={13} />
-                  {lang === "ar" ? "إدارة المقرر" : "Manage course"}
-                </span>
-                <ChevronDown
-                  size={14}
-                  className={`text-muted-foreground transition-transform ${manageOpenId === course.id ? "rotate-180" : ""}`}
-                />
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setManageOpenId((v) => (v === course.id ? null : course.id))}
+                    className="mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Settings2 size={13} />
+                      {lang === "ar" ? "إدارة المقرر" : "Manage course"}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      className={`text-muted-foreground transition-transform ${manageOpenId === course.id ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </>
+              )}
 
-              {manageOpenId === course.id && (
+              {showManage && manageOpenId === course.id && (
                 <div className="mt-3 space-y-3 border-t border-border pt-3">
                   <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                     <span className="rounded-full bg-muted px-2.5 py-1">{getLabel(course, "exam1")}: {course.maxExam1}</span>

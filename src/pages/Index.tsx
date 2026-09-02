@@ -409,6 +409,7 @@ export default function Index() {
             onDeleteStudent={deleteStudent}
             onSelectCourse={(id) => setActiveCourseId(id)}
             onNewCourse={() => setShowNewCourse(true)}
+            showManage={false}
           />
         </main>
       </div>
