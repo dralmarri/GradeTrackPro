@@ -44,8 +44,16 @@ function brand(header?: SheetHeader): string {
   const logo = header?.logoDataUrl
     ? `<image href="${header.logoDataUrl}" x="136" y="10" width="13" height="13" preserveAspectRatio="xMidYMid meet"/>`
     : `<rect x="136" y="10" width="13" height="13" rx="2.2" fill="${INDIGO}"/>${svgText(142.5, 18.1, "GTP", 3.6, `fill="#fff" direction="ltr" unicode-bidi="bidi-override" text-anchor="middle" font-weight="800"`)}`;
+  // text-anchor="start"/"end" resolution for a pure-Latin run inside an
+  // RTL-ancestor document proved to vary across real browsers even with
+  // direction="ltr" + unicode-bidi="bidi-override" set explicitly (worked
+  // in this sandbox's Chromium, still broke in the reporter's browser) —
+  // text-anchor="middle" sidesteps the ambiguity entirely, since a
+  // symmetric anchor point can't flip with direction in any implementation.
+  // cx picked generously past the badge's right edge (149) for the widest
+  // fallback-font measurement of "GradeTrackPro" at this size (~26.5mm).
   return titleBlock + logo +
-    svgText(152, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" direction="ltr" unicode-bidi="bidi-override" text-anchor="start" font-weight="800"`) +
+    svgText(167, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" direction="ltr" unicode-bidi="bidi-override" text-anchor="middle" font-weight="800"`) +
     svgText(152, 20.1, "نظام التصحيح الآلي المعتمد", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="end"`) +
     `<line x1="30" y1="29" x2="180" y2="29" stroke="${INK}" stroke-width="0.65"/>`;
 }
