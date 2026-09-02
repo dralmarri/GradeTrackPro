@@ -13,7 +13,7 @@ interface Props {
   lectures: LectureInfo[];
   course: Course;
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
-  onUpdateNote: (studentId: string, lectureIndex: number, note: string) => Promise<boolean> | void;
+  onUpdateNote: (studentId: string, lectureIndex: number, note: string) => Promise<{ ok: boolean; error?: string }> | void;
   onImportPaaet: (
     matched: { studentId: string; attendance: boolean[] }[],
     newStudents: { name: string; attendance: boolean[] }[],
@@ -27,7 +27,7 @@ function NoteButton({
 }: {
   note: string;
   lang: string;
-  onSave: (text: string) => Promise<boolean> | void;
+  onSave: (text: string) => Promise<{ ok: boolean; error?: string }> | void;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(note);
@@ -36,13 +36,17 @@ function NoteButton({
 
   // a failed save silently closing the popover (no toast, note just gone)
   // is exactly what made a real failure look like nothing happened —
-  // await the result and tell the professor when it didn't actually save.
+  // await the result and show the real server error when it didn't
+  // actually save, instead of a generic "try again".
   const save = async (text: string) => {
     setSaving(true);
     try {
-      const ok = await onSave(text);
-      if (ok === false) {
-        toast.error(lang === "ar" ? "تعذّر حفظ الملاحظة — حاول مجدداً" : "Could not save the note — try again");
+      const result = await onSave(text);
+      if (result && !result.ok) {
+        toast.error(
+          lang === "ar" ? `تعذّر حفظ الملاحظة: ${result.error || "سبب غير معروف"}` : `Could not save the note: ${result.error || "unknown reason"}`,
+          { duration: 8000 },
+        );
         return;
       }
       setOpen(false);

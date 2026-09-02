@@ -222,16 +222,16 @@ export function useCourses() {
     else await fetchCourses();
   }, [courses, fetchCourses]);
 
-  const updateLectureNote = useCallback(async (courseId: string, studentId: string, lectureIndex: number, note: string): Promise<boolean> => {
+  const updateLectureNote = useCallback(async (courseId: string, studentId: string, lectureIndex: number, note: string): Promise<{ ok: boolean; error?: string }> => {
     const course = courses.find((c) => c.id === courseId);
     const student = course?.students.find((s) => s.id === studentId);
-    if (!student || !course) return false;
+    if (!student || !course) return { ok: false, error: "student/course not found locally" };
     const newNotes = [...(student.lectureNotes || new Array(course.lectureCount).fill(""))];
     newNotes[lectureIndex] = note;
     const { error } = await db.from("students").update({ lecture_notes: newNotes }).eq("id", studentId);
-    if (error) { console.error("Error updating note:", error); return false; }
+    if (error) { console.error("Error updating note:", error); return { ok: false, error: error.message }; }
     await fetchCourses();
-    return true;
+    return { ok: true };
   }, [courses, fetchCourses]);
 
   const importPaaetAttendance = useCallback(async (
