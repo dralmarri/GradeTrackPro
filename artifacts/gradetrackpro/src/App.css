@@ -1,0 +1,18 @@
+/* App-level polish lives in index.css. Keep this file intentionally small so
+   individual screens remain easy to compare with future UX references. */
+
+.gtp-enter {
+  animation: gtp-enter 420ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes gtp-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gtp-grid {
+  background-image:
+    linear-gradient(hsl(var(--primary) / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}

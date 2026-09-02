@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "GradeTrackPro"
+description = "A student grade and attendance tracker for instructors, designed to make course performance, attendance, exams, and student status easy to manage at a glance."
+version = "1.0.0"
+id = "artifacts/gradetrackpro"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18588
+
+[services.development]
+run = "pnpm --filter @workspace/gradetrackpro run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gradetrackpro", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/gradetrackpro/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18588"
+BASE_PATH = "/"

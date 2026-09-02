@@ -1,0 +1,209 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap');
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* GradeTrackPro — calm academic command center
+   Layout paradigm: a spacious command canvas with anchored navigation.
+   Mood: editorial, dependable, quietly warm. */
+
+html {
+  height: 100%;
+  overflow: hidden;
+  background: hsl(var(--background));
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  box-sizing: border-box;
+  overscroll-behavior: none;
+  background:
+    radial-gradient(circle at 8% -10%, hsl(var(--primary) / 0.09), transparent 32rem),
+    radial-gradient(circle at 96% 14%, hsl(var(--accent) / 0.07), transparent 28rem),
+    hsl(var(--background));
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+@layer utilities {
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .h-dvh { height: 100dvh; height: 100vh; }
+  .font-mono-data { font-family: 'DM Mono', ui-monospace, monospace; }
+  .text-balance { text-wrap: balance; }
+}
+
+@layer base {
+  :root {
+    --background: 44 35% 97%;
+    --foreground: 205 36% 17%;
+    --card: 42 40% 99%;
+    --card-foreground: 205 36% 17%;
+    --popover: 42 40% 99%;
+    --popover-foreground: 205 36% 17%;
+    --primary: 201 62% 32%;
+    --primary-foreground: 42 40% 99%;
+    --secondary: 201 25% 92%;
+    --secondary-foreground: 205 36% 20%;
+    --muted: 40 24% 93%;
+    --muted-foreground: 205 16% 45%;
+    --accent: 169 38% 40%;
+    --accent-foreground: 42 40% 99%;
+    --destructive: 2 61% 48%;
+    --destructive-foreground: 42 40% 99%;
+    --border: 39 21% 84%;
+    --input: 39 21% 79%;
+    --ring: 201 62% 32%;
+    --radius: 0.9rem;
+    --success: 156 43% 35%;
+    --success-foreground: 42 40% 99%;
+    --warning: 34 78% 48%;
+    --warning-foreground: 205 36% 17%;
+    --sidebar-background: 204 38% 16%;
+    --sidebar-foreground: 42 35% 94%;
+    --sidebar-primary: 169 44% 60%;
+    --sidebar-primary-foreground: 204 38% 16%;
+    --sidebar-accent: 204 30% 23%;
+    --sidebar-accent-foreground: 42 35% 96%;
+    --sidebar-border: 204 24% 28%;
+    --sidebar-ring: 169 44% 60%;
+    --font-display: 'Tajawal', 'IBM Plex Sans Arabic', sans-serif;
+    --font-body: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
+  }
+
+  .dark {
+    --background: 205 31% 10%;
+    --foreground: 42 30% 94%;
+    --card: 205 28% 14%;
+    --card-foreground: 42 30% 94%;
+    --popover: 205 28% 14%;
+    --popover-foreground: 42 30% 94%;
+    --primary: 177 42% 61%;
+    --primary-foreground: 205 35% 12%;
+    --secondary: 205 24% 21%;
+    --secondary-foreground: 42 30% 94%;
+    --muted: 205 24% 18%;
+    --muted-foreground: 205 14% 67%;
+    --accent: 35 70% 59%;
+    --accent-foreground: 205 35% 12%;
+    --destructive: 4 65% 61%;
+    --destructive-foreground: 205 35% 12%;
+    --border: 205 21% 26%;
+    --input: 205 21% 31%;
+    --ring: 177 42% 61%;
+    --success: 155 45% 55%;
+    --success-foreground: 205 35% 12%;
+    --warning: 35 77% 59%;
+    --warning-foreground: 205 35% 12%;
+    --sidebar-background: 205 35% 8%;
+    --sidebar-foreground: 42 30% 94%;
+    --sidebar-primary: 177 42% 61%;
+    --sidebar-primary-foreground: 205 35% 12%;
+    --sidebar-accent: 205 26% 16%;
+    --sidebar-accent-foreground: 42 30% 94%;
+    --sidebar-border: 205 20% 21%;
+    --sidebar-ring: 177 42% 61%;
+  }
+
+  * {
+    @apply border-border;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  button, input, textarea, select { font: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  ::selection { background: hsl(var(--primary) / 0.18); color: hsl(var(--foreground)); }
+}
+
+@layer components {
+  .app-topbar {
+    @apply border-b border-border/80 bg-card/85 backdrop-blur-xl;
+    box-shadow: 0 1px 0 hsl(var(--foreground) / 0.025);
+  }
+
+  .brand-mark {
+    box-shadow: 0 8px 20px hsl(var(--primary) / 0.2);
+  }
+
+  .page-canvas {
+    background:
+      linear-gradient(180deg, hsl(var(--card) / 0.42), transparent 13rem),
+      radial-gradient(circle at 80% 0%, hsl(var(--accent) / 0.06), transparent 24rem);
+  }
+
+  .surface-card {
+    @apply border border-border bg-card shadow-sm;
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.03), 0 12px 34px hsl(var(--foreground) / 0.045);
+  }
+
+  .surface-card:hover {
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.04), 0 16px 38px hsl(var(--primary) / 0.08);
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.16em] text-primary;
+  }
+
+  .focus-ring {
+    @apply outline-none ring-2 ring-primary/20;
+  }
+}
+
+@media (max-width: 640px) {
+  body { font-size: 14px; }
+}
