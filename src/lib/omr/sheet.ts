@@ -53,6 +53,11 @@ function brand(header?: SheetHeader): string {
   // symmetric anchor point can't flip with direction in any implementation.
   // cx picked generously past the badge's right edge (149) for the widest
   // fallback-font measurement of "GradeTrackPro" at this size (~26.5mm).
+  // institution/college/department text doesn't fit legibly in this
+  // header's ~29mm height at any readable size (tried — came out too
+  // cramped/small to read once printed). The answer sheet keeps just the
+  // logo; the full letterhead (institution/college/department) lives only
+  // on the question paper, which has room for it.
   return titleBlock + logo +
     svgText(167, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" direction="ltr" unicode-bidi="bidi-override" text-anchor="middle" font-weight="800"`) +
     svgText(152, 20.1, "نظام التصحيح الآلي المعتمد", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="end"`) +
