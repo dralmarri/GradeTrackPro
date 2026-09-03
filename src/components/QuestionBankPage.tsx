@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { Course } from "@/types/student";
 import { ChoiceCount, choiceLabels } from "@/types/exam";
 import {
@@ -12,23 +12,34 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
 import {
-  Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste,
+  Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste, Wand2,
 } from "lucide-react";
 
-// Generating an exam FROM the bank lives in GenerateExamPanel (rendered
-// under "نماذج الاختبارات") — this component is purely about managing the
-// bank's own content (add/import/paste/browse/delete questions).
+// This is the single place questions are browsed AND selected for exam
+// generation — the same checkboxes used to pick questions to delete also
+// pick questions to build an exam from, so there is only one list to learn
+// instead of a separate "manual selection" screen duplicating it (see
+// GenerateExamPanel, which now only owns the generation *settings* and
+// reads this selection instead of rendering its own question list).
 interface Props {
   course: Course;
   bankCourseIds: string[];
+  selectedIds: Set<string>;
+  setSelectedIds: Dispatch<SetStateAction<Set<string>>>;
+  examPoints: Record<string, number>;
+  setExamPoints: Dispatch<SetStateAction<Record<string, number>>>;
+  onGenerateFromSelection: () => void;
+  onGenerateRandom: () => void;
 }
 
-export default function QuestionBankPage({ course, bankCourseIds }: Props) {
+export default function QuestionBankPage({
+  course, bankCourseIds, selectedIds, setSelectedIds, examPoints, setExamPoints,
+  onGenerateFromSelection, onGenerateRandom,
+}: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const { questions, loading, addQuestion, addQuestions, deleteQuestion, deleteQuestions } = useQuestionBank(course.id, bankCourseIds);
   const [showBank, setShowBank] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const importRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
@@ -661,7 +672,7 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
         questions.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <button
-              onClick={() => { setShowBank((v) => !v); setSelectedIds(new Set()); }}
+              onClick={() => setShowBank((v) => !v)}
               className="flex w-full items-center justify-between text-sm font-bold text-foreground"
             >
               <span className="flex items-center gap-2">
@@ -672,7 +683,11 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
             </button>
             {showBank && (
               <div className="mt-3 space-y-2">
-                <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2">
+                {/* selecting questions here also feeds "توليد اختبار من
+                    البنك" below — pick questions, set their points (shown
+                    once selected), then either delete or generate. No
+                    separate manual-selection screen needed. */}
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/50 px-3 py-2">
                   <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-foreground">
                     <input
                       type="checkbox"
@@ -680,22 +695,39 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
                       onChange={(e) => setSelectedIds(e.target.checked ? new Set(questions.map((q) => q.id)) : new Set())}
                       className="h-4 w-4 accent-primary"
                     />
-                    {ar ? "تحديد الكل" : "Select all"}
+                    {ar ? `تحديد الكل${selectedIds.size ? ` (${selectedIds.size} محدد)` : ""}` : `Select all${selectedIds.size ? ` (${selectedIds.size} selected)` : ""}`}
                   </label>
-                  <button
-                    onClick={async () => {
-                      if (!selectedIds.size) return;
-                      if (!window.confirm(ar ? `حذف ${selectedIds.size} سؤالاً من البنك؟` : `Delete ${selectedIds.size} questions?`)) return;
-                      const ok = await deleteQuestions(Array.from(selectedIds));
-                      if (ok) { toast.success(ar ? `حُذف ${selectedIds.size} سؤالاً` : "Deleted"); setSelectedIds(new Set()); }
-                      else toast.error(ar ? "فشل الحذف" : "Delete failed");
-                    }}
-                    disabled={selectedIds.size === 0}
-                    className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-bold text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-40"
-                  >
-                    <Trash2 size={13} />
-                    {ar ? `حذف المحدد (${selectedIds.size})` : `Delete selected (${selectedIds.size})`}
-                  </button>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={onGenerateRandom}
+                      className="flex items-center gap-1.5 rounded-lg bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition-colors hover:bg-success/20"
+                    >
+                      <Wand2 size={13} />
+                      {ar ? "توليد عشوائي" : "Random generate"}
+                    </button>
+                    <button
+                      onClick={onGenerateFromSelection}
+                      disabled={selectedIds.size === 0}
+                      className="flex items-center gap-1.5 rounded-lg bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition-colors hover:bg-success/20 disabled:opacity-40"
+                    >
+                      <Wand2 size={13} />
+                      {ar ? `توليد من المحدد (${selectedIds.size})` : `Generate from selection (${selectedIds.size})`}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!selectedIds.size) return;
+                        if (!window.confirm(ar ? `حذف ${selectedIds.size} سؤالاً من البنك؟` : `Delete ${selectedIds.size} questions?`)) return;
+                        const ok = await deleteQuestions(Array.from(selectedIds));
+                        if (ok) { toast.success(ar ? `حُذف ${selectedIds.size} سؤالاً` : "Deleted"); setSelectedIds(new Set()); }
+                        else toast.error(ar ? "فشل الحذف" : "Delete failed");
+                      }}
+                      disabled={selectedIds.size === 0}
+                      className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-bold text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-40"
+                    >
+                      <Trash2 size={13} />
+                      {ar ? `حذف المحدد (${selectedIds.size})` : `Delete selected (${selectedIds.size})`}
+                    </button>
+                  </div>
                 </div>
                 {Array.from(new Set(questions.map((q) => q.chapter || ""))).flatMap((ch) => {
                   const items = questions.filter((q) => (q.chapter || "") === ch);
@@ -736,11 +768,12 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
                         </p>,
                         ...group.map((q) => {
                           const i = questions.indexOf(q);
+                          const selected = selectedIds.has(q.id);
                           return (
-                            <div key={q.id} className={cn("flex items-start gap-2 rounded-xl px-3 py-2", selectedIds.has(q.id) ? "bg-destructive/5 ring-1 ring-destructive/30" : "bg-muted/40")}>
+                            <div key={q.id} className={cn("flex items-start gap-2 rounded-xl px-3 py-2", selected ? "bg-primary/5 ring-1 ring-primary/30" : "bg-muted/40")}>
                               <input
                                 type="checkbox"
-                                checked={selectedIds.has(q.id)}
+                                checked={selected}
                                 onChange={(e) => setSelectedIds((s) => {
                                   const n = new Set(s);
                                   if (e.target.checked) n.add(q.id); else n.delete(q.id);
@@ -763,6 +796,15 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
                                   {q.difficulty ? ` · ${DIFFICULTY_LABELS[q.difficulty]}` : ""}
                                 </p>
                               </div>
+                              {selected && (
+                                <input
+                                  type="number" min={0.25} step={0.25}
+                                  value={examPoints[q.id] ?? q.points ?? 1}
+                                  onChange={(e) => setExamPoints((p) => ({ ...p, [q.id]: Number(e.target.value) || 1 }))}
+                                  title={ar ? "درجة السؤال في الاختبار القادم" : "Points in the next generated exam"}
+                                  className="mt-0.5 w-14 shrink-0 rounded-lg border border-input bg-background px-1.5 py-1 text-center text-xs text-foreground outline-none focus:border-primary"
+                                />
+                              )}
                               <button
                                 onClick={async () => {
                                   if (!window.confirm(ar ? "حذف هذا السؤال من البنك؟" : "Delete this question?")) return;

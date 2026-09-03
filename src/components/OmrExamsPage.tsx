@@ -64,6 +64,15 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [bankOpen, setBankOpen] = useState(false);
   const [formsOpen, setFormsOpen] = useState(false);
   const [gradingOpen, setGradingOpen] = useState(false);
+  // Question selection lives here, not inside either section, so the SAME
+  // pick made while browsing the bank (QuestionBankPage) is what
+  // GenerateExamPanel builds an exam from — one list instead of two.
+  const [examSelected, setExamSelected] = useState<Set<string>>(new Set());
+  const [examPoints, setExamPoints] = useState<Record<string, number>>({});
+  // bumped to force-open the generate panel (in the right pick mode) when a
+  // "توليد" button is pressed from inside the bank list
+  const [genOpenSignal, setGenOpenSignal] = useState(0);
+  const [genOpenMode, setGenOpenMode] = useState<"random" | "manual">("random");
   // When more than one exam has a saved key, "Start scanning" can't just
   // guess which one — this opens a small picker instead.
   const [scanPickerOpen, setScanPickerOpen] = useState(false);
@@ -266,7 +275,24 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", bankOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
       </button>
       {bankOpen && (
-        <QuestionBankPage course={course} bankCourseIds={bankCourseIds} />
+        <QuestionBankPage
+          course={course}
+          bankCourseIds={bankCourseIds}
+          selectedIds={examSelected}
+          setSelectedIds={setExamSelected}
+          examPoints={examPoints}
+          setExamPoints={setExamPoints}
+          onGenerateRandom={() => {
+            setFormsOpen(true);
+            setGenOpenMode("random");
+            setGenOpenSignal((n) => n + 1);
+          }}
+          onGenerateFromSelection={() => {
+            setFormsOpen(true);
+            setGenOpenMode("manual");
+            setGenOpenSignal((n) => n + 1);
+          }}
+        />
       )}
 
       {/* Section 2: Exam forms — create/print/edit/key per exam, plus
@@ -293,6 +319,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         bankCourseIds={bankCourseIds}
         sheetHeader={sheetHeader}
         componentOptions={componentOptions}
+        manualSelected={examSelected}
+        setManualSelected={setExamSelected}
+        manualPoints={examPoints}
+        setManualPoints={setExamPoints}
+        openSignal={genOpenSignal}
+        openMode={genOpenMode}
+        onOpenBank={() => setBankOpen(true)}
         onCreateExam={addExam}
         onSetAnswerKey={updateAnswerKey}
         buildExam={(id, form: GeneratedForm, t, target, max, mode, essayQuestions) => ({
