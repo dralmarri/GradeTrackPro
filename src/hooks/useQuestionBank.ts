@@ -110,6 +110,32 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
     return rows.length;
   }, [user, courseId, fetchQuestions]);
 
+  const updateQuestion = useCallback(async (id: string, input: {
+    text: string; kind?: "choice" | "essay"; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty; points?: number;
+  }): Promise<boolean> => {
+    const row: any = {
+      text: input.text, kind: input.kind || "choice", choices: input.choices, correct: input.correct,
+      chapter: input.chapter || null, topic: input.topic || null, difficulty: input.difficulty || null,
+      points: input.points ?? 1,
+    };
+    let { error } = await db.from("omr_questions").update(row).eq("id", id);
+    // same schema catch-up as addQuestion: drop columns an older database
+    // doesn't have yet and retry, instead of failing the edit outright.
+    for (let i = 0; i < 2 && error && /(kind|points)/.test(error.message || ""); i++) {
+      if (/kind/.test(error.message || "")) delete row.kind;
+      if (/points/.test(error.message || "")) delete row.points;
+      ({ error } = await db.from("omr_questions").update(row).eq("id", id));
+    }
+    if (error) {
+      console.error("Error updating question:", error);
+      const { toast } = await import("sonner");
+      toast.error(`فشل حفظ التعديل: ${error.message || "خطأ غير معروف"}`, { duration: 9000 });
+      return false;
+    }
+    await fetchQuestions();
+    return true;
+  }, [fetchQuestions]);
+
   const deleteQuestion = useCallback(async (id: string) => {
     const { error } = await db.from("omr_questions").delete().eq("id", id);
     if (error) console.error("Error deleting question:", error);
@@ -124,5 +150,5 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
     return true;
   }, [fetchQuestions]);
 
-  return { questions, loading, addQuestion, addQuestions, deleteQuestion, deleteQuestions, refetch: fetchQuestions };
+  return { questions, loading, addQuestion, addQuestions, updateQuestion, deleteQuestion, deleteQuestions, refetch: fetchQuestions };
 }
