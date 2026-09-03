@@ -3,6 +3,10 @@
 import type { OmrExam } from "@/types/exam";
 import { choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import { PAGE_W, PAGE_H, MARK_SIZE, MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, questionRows, questionNumberX, CODE_BITS, codeMarkPos, examCode } from "@/lib/omr/layout";
+import {
+  CARD_W, CARD_PAD, CARD_MARK_SIZE, CARD_ORIENT_SIZE, CARD_BUBBLE_R, MAX_ROW_SCORE,
+  cardHeight, cardMarks, cardOrientMark, cardCodeBits, cardCodeMarkPos, essayScoreBubble, essayRowLabelY,
+} from "@/lib/omr/essayCardLayout";
 import { printHtml } from "@/lib/printHtml";
 
 export interface SheetHeader {
@@ -180,6 +184,42 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     brand(header) + identityAndMeta(exam, header) + legend() + machineCode(exam) + bubbledStudentId(exam) + questionGrid(exam) + footer(totalPages) + `</svg>`;
 }
 
+// Small self-contained scannable card: the professor bubbles in the score
+// they're awarding each essay question (after reading the handwritten
+// answer) and photographs just this card — same read pipeline as the main
+// bubble sheet (see scan.ts's scanEssayCard), just with its own tiny set of
+// registration marks instead of the full page's.
+function essayGradingCardSvg(exam: OmrExam): string {
+  const qs = exam.essayQuestions || [];
+  if (!qs.length) return "";
+  const h = cardHeight(qs.length);
+  const marks = cardMarks(qs.length);
+  const orient = cardOrientMark();
+  const code = examCode(exam.id);
+  const out: string[] = [
+    `<rect width="${CARD_W}" height="${h}" fill="#fff" stroke="${INK}" stroke-width="0.4" rx="2"/>`,
+  ];
+  marks.forEach((m) => out.push(`<rect x="${m.x - CARD_MARK_SIZE / 2}" y="${m.y - CARD_MARK_SIZE / 2}" width="${CARD_MARK_SIZE}" height="${CARD_MARK_SIZE}" fill="#000"/>`));
+  out.push(`<rect x="${orient.x - orient.size / 2}" y="${orient.y - orient.size / 2}" width="${orient.size}" height="${orient.size}" fill="#000"/>`);
+  for (let b = 0; b < cardCodeBits(); b++) {
+    const p = cardCodeMarkPos(b);
+    const on = (code >> b) & 1;
+    out.push(`<rect x="${p.x - p.size / 2}" y="${p.y - p.size / 2}" width="${p.size}" height="${p.size}" fill="${on ? "#000" : "#fff"}" stroke="${on ? "#000" : "#d1d5db"}" stroke-width="0.2"/>`);
+  }
+  out.push(svgText(CARD_W / 2, CARD_PAD + 3, "بطاقة رصد الدرجة المقالية — للأستاذ فقط", 2.4, `text-anchor="middle" font-weight="700" direction="rtl"`));
+  qs.forEach((q, i) => {
+    const y = essayRowLabelY(i);
+    const max = Math.min(MAX_ROW_SCORE, Math.max(1, Math.round(q.points ?? 1)));
+    out.push(svgText(CARD_W - CARD_PAD, y + 1, `س${i + 1} (من ${q.points ?? 1}):`, 2.4, `text-anchor="end" font-weight="700" direction="rtl"`));
+    for (let d = 0; d <= max; d++) {
+      const p = essayScoreBubble(i, d);
+      out.push(`<circle cx="${p.x}" cy="${p.y}" r="${CARD_BUBBLE_R}" fill="#fff" stroke="${INK}" stroke-width="0.4"/>`);
+      out.push(svgText(p.x, p.y + 0.9, String(d), 2.2, `text-anchor="middle" fill="#555" font-weight="600"`));
+    }
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}mm" height="${h}mm" viewBox="0 0 ${CARD_W} ${h}" role="img" aria-label="بطاقة رصد الدرجة المقالية">${out.join("")}</svg>`;
+}
+
 // Essay answer lines don't fit the mm-exact bubble page — that page's every
 // coordinate is tied to scan.ts's read geometry, so nothing else can share
 // it. Essay writing space instead becomes its own extra page appended after
@@ -225,6 +265,9 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
           <div class="emeta-cell"><span class="elabel">الرقم الجامعي:</span><span class="eblank-line"></span></div>
         </div>
       </div>
+      <div class="ecard-cap">بطاقة رصد الدرجة — تُملأ من الأستاذ بعد التصحيح، وتُصوَّر منفردة بالكاميرا (بدون باقي الصفحة)</div>
+      <div class="ecard-wrap">${essayGradingCardSvg(exam)}</div>
+
       <div class="esec-head"><span class="epill">إجابات مقالية</span><h3>اكتب إجابتك بخط واضح داخل الأسطر</h3></div>
       ${rows}
       <div class="epage">2/2</div>
@@ -273,8 +316,11 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
     .epts { font-size: 10px; font-weight: 600; color: ${MUTED}; }
     .elines { padding-inline-start: 6mm; }
     .eline { height: 8mm; border-bottom: 1px solid #cbd5e1; }
-    .epage { position: absolute; bottom: 12mm; right: 20mm; font-size: 9px; font-weight: 700; color: ${MUTED}; direction: ltr; }` : "";
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><title>${escapeXml(exam.title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{width:210mm;margin:0;padding:0;background:#fff}.sheet-page{width:210mm;height:297mm;overflow:hidden}svg{display:block;width:210mm;height:297mm}${essayCss}</style></head><body><div class="sheet-page">${buildAnswerSheetSvg(exam, header)}</div>${essayPage}</body></html>`;
+    .epage { position: absolute; bottom: 12mm; right: 20mm; font-size: 9px; font-weight: 700; color: ${MUTED}; direction: ltr; }
+    .ecard-cap { font-size: 9px; font-weight: 700; color: #b45309; background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 2mm; padding: 2mm 3mm; margin: 5mm 0 3mm; }
+    .ecard-wrap { display: flex; justify-content: center; margin-bottom: 6mm; }
+    .ecard-wrap svg { display: block; border: 1px dashed #cbd5e1; }` : "";
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><title>${escapeXml(exam.title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{width:210mm;margin:0;padding:0;background:#fff}.sheet-page{width:210mm;height:297mm;overflow:hidden}.sheet-page svg{display:block;width:210mm;height:297mm}${essayCss}</style></head><body><div class="sheet-page">${buildAnswerSheetSvg(exam, header)}</div>${essayPage}</body></html>`;
 }
 
 export function printAnswerSheet(exam: OmrExam, header?: SheetHeader): boolean {
