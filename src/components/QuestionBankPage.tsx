@@ -699,6 +699,16 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
                 </div>
                 {Array.from(new Set(questions.map((q) => q.chapter || ""))).flatMap((ch) => {
                   const items = questions.filter((q) => (q.chapter || "") === ch);
+                  // within each chapter, group further by question type so
+                  // T/F, MCQ and essay questions don't run together
+                  // ("سايحة على بعض") — each sub-group gets its own label.
+                  const kindOf = (q: (typeof items)[number]): "tf" | "mcq" | "essay" =>
+                    q.kind === "essay" ? "essay" : q.choices.length === 2 ? "tf" : "mcq";
+                  const typeGroups: { key: "tf" | "mcq" | "essay"; label: string }[] = [
+                    { key: "tf", label: ar ? "صح وخطأ" : "True/False" },
+                    { key: "mcq", label: ar ? "اختيار من متعدد" : "Multiple choice" },
+                    { key: "essay", label: ar ? "مقالي" : "Essay" },
+                  ];
                   return [
                     <div key={"h" + ch} className="flex items-center justify-between pt-2 first:pt-0">
                       <p className="text-xs font-extrabold text-primary">
@@ -717,48 +727,57 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
                         {ar ? "إضافة أسئلة" : "Add questions"}
                       </button>
                     </div>,
-                    ...items.map((q) => {
-                      const i = questions.indexOf(q);
-                      return (
-                        <div key={q.id} className={cn("flex items-start gap-2 rounded-xl px-3 py-2", selectedIds.has(q.id) ? "bg-destructive/5 ring-1 ring-destructive/30" : "bg-muted/40")}>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(q.id)}
-                            onChange={(e) => setSelectedIds((s) => {
-                              const n = new Set(s);
-                              if (e.target.checked) n.add(q.id); else n.delete(q.id);
-                              return n;
-                            })}
-                            className="mt-1 h-4 w-4 shrink-0 accent-primary"
-                          />
-                          <span className="mt-0.5 w-6 shrink-0 text-center text-xs font-bold text-muted-foreground">{i + 1}</span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-foreground">{q.text}</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                              {q.kind === "essay"
-                                ? (ar ? "مقالي" : "Essay")
-                                : <>
-                                    {q.choices.length === 2 ? (ar ? "صح/خطأ" : "T/F") : `${q.choices.length} ${ar ? "خيارات" : "choices"}`}
-                                    {" · "}{ar ? "الإجابة:" : "Answer:"} <b className="text-success">{q.choices.length === 2 ? q.choices[q.correct] : choiceLabels(q.choices.length as ChoiceCount)[q.correct]}</b>
-                                  </>}
-                              {" · "}{ar ? "الدرجة:" : "Pts:"} <b>{q.points ?? 1}</b>
-                              {q.topic ? ` · ${q.topic}` : ""}
-                              {q.difficulty ? ` · ${DIFFICULTY_LABELS[q.difficulty]}` : ""}
-                            </p>
-                          </div>
-                          <button
-                            onClick={async () => {
-                              if (!window.confirm(ar ? "حذف هذا السؤال من البنك؟" : "Delete this question?")) return;
-                              await deleteQuestion(q.id);
-                              setSelectedIds((sel) => { const n = new Set(sel); n.delete(q.id); return n; });
-                              toast.success(ar ? "حُذف السؤال" : "Deleted");
-                            }}
-                            className="shrink-0 rounded-lg p-1.5 text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      );
+                    ...typeGroups.flatMap(({ key, label }) => {
+                      const group = items.filter((q) => kindOf(q) === key);
+                      if (!group.length) return [];
+                      return [
+                        <p key={"t" + ch + key} className="ps-1 pt-1 text-[11px] font-bold text-muted-foreground">
+                          {label} <span className="text-muted-foreground/70">({group.length})</span>
+                        </p>,
+                        ...group.map((q) => {
+                          const i = questions.indexOf(q);
+                          return (
+                            <div key={q.id} className={cn("flex items-start gap-2 rounded-xl px-3 py-2", selectedIds.has(q.id) ? "bg-destructive/5 ring-1 ring-destructive/30" : "bg-muted/40")}>
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(q.id)}
+                                onChange={(e) => setSelectedIds((s) => {
+                                  const n = new Set(s);
+                                  if (e.target.checked) n.add(q.id); else n.delete(q.id);
+                                  return n;
+                                })}
+                                className="mt-1 h-4 w-4 shrink-0 accent-primary"
+                              />
+                              <span className="mt-0.5 w-6 shrink-0 text-center text-xs font-bold text-muted-foreground">{i + 1}</span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-foreground">{q.text}</p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                  {q.kind === "essay"
+                                    ? (ar ? "مقالي" : "Essay")
+                                    : <>
+                                        {q.choices.length === 2 ? (ar ? "صح/خطأ" : "T/F") : `${q.choices.length} ${ar ? "خيارات" : "choices"}`}
+                                        {" · "}{ar ? "الإجابة:" : "Answer:"} <b className="text-success">{q.choices.length === 2 ? q.choices[q.correct] : choiceLabels(q.choices.length as ChoiceCount)[q.correct]}</b>
+                                      </>}
+                                  {" · "}{ar ? "الدرجة:" : "Pts:"} <b>{q.points ?? 1}</b>
+                                  {q.topic ? ` · ${q.topic}` : ""}
+                                  {q.difficulty ? ` · ${DIFFICULTY_LABELS[q.difficulty]}` : ""}
+                                </p>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(ar ? "حذف هذا السؤال من البنك؟" : "Delete this question?")) return;
+                                  await deleteQuestion(q.id);
+                                  setSelectedIds((sel) => { const n = new Set(sel); n.delete(q.id); return n; });
+                                  toast.success(ar ? "حُذف السؤال" : "Deleted");
+                                }}
+                                className="shrink-0 rounded-lg p-1.5 text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          );
+                        }),
+                      ];
                     }),
                   ];
                 })}
