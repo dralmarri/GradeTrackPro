@@ -1,7 +1,7 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
+    "@capacitor/camera": "^8.2.4",
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
     "@capacitor/ios": "^8.2.0",

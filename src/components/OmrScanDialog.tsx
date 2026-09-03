@@ -5,6 +5,8 @@ import { scanAnswerSheet } from "@/lib/omr/scan";
 import { examCode } from "@/lib/omr/layout";
 import { useOmrScans } from "@/hooks/useOmrScans";
 import { useLanguage } from "@/hooks/useLanguage";
+import { isNativeApp } from "@/lib/platform";
+import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -124,6 +126,37 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
     await runScan(file, exam);
   };
 
+  // On iOS/Android the plain HTML file input's `capture` attribute is
+  // unreliable inside a WKWebView (no native picker, no permission prompt —
+  // it silently does nothing). The native Capacitor Camera plugin talks to
+  // the OS directly and reliably triggers the permission prompt + camera UI,
+  // so use it whenever running inside the native app shell; the file input
+  // stays as the (working) fallback for the web app.
+  const capture = async () => {
+    if (!isNativeApp()) {
+      fileRef.current?.click();
+      return;
+    }
+    try {
+      const photo = await CapCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+      });
+      if (!photo.webPath) return;
+      const blob = await (await fetch(photo.webPath)).blob();
+      setPhoto(blob);
+      await runScan(blob, exam);
+    } catch (err: unknown) {
+      // User cancelling the camera sheet also lands here — only surface
+      // real failures, not a cancelled capture.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/cancel/i.test(msg)) return;
+      toast.error(ar ? "تعذّر فتح الكاميرا" : "Couldn't open the camera");
+    }
+  };
+
   // professor picks the intended answer for a flagged question → regrade
   const overrideAnswer = (q: number, c: number) => {
     setAnswers((prev) => {
@@ -234,7 +267,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                 : "Photograph the student's sheet. Make sure all four black corner marks are visible with good lighting."}
             </p>
             <button
-              onClick={() => fileRef.current?.click()}
+              onClick={capture}
               disabled={scanning}
               className="group relative flex aspect-[3/4] w-full flex-col items-center justify-center overflow-hidden rounded-[32px] border-4 border-card bg-foreground/90 shadow-2xl disabled:cursor-not-allowed disabled:opacity-70"
             >
