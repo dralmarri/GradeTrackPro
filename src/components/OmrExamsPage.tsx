@@ -347,21 +347,23 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           updatedAt: "",
         })}
       />
-      <button
-        onClick={() => setShowCreate((v) => !v)}
-        className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
-      >
-        <Plus size={14} />
-        {ar ? "اختبار جديد" : "New exam"}
-      </button>
+      <div className="flex items-start justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2.5">
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          {ar
+            ? "لأسئلة عندك خارج بنك الأسئلة (اختبار ورقي جاهز مسبقاً) — يُنشئ ورقة إجابة فقط، بدون سحب أي شيء من البنك."
+            : "For a paper exam you already have outside the question bank — creates an answer sheet only, without pulling anything from the bank."}
+        </p>
+        <button
+          onClick={() => setShowCreate((v) => !v)}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <Plus size={14} />
+          {ar ? "اختبار جديد" : "New exam"}
+        </button>
+      </div>
 
       {showCreate && (
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            {ar
-              ? "لإنشاء ورقة إجابة فقط لأسئلة عندك خارج بنك الأسئلة (اختبار ورقي جاهز مسبقاً). لتوليد اختبار كامل بأسئلة من بنك المقرر استخدم \"توليد اختبار من البنك\" أعلاه."
-              : "For an answer sheet only, matching a paper exam you already have outside the question bank. To generate a full exam from the course's question bank, use \"Generate exam from bank\" above."}
-          </p>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
