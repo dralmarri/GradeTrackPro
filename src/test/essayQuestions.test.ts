@@ -63,7 +63,7 @@ describe("essay questions", () => {
     };
     const html = buildAnswerSheetHtml(exam);
     expect(html).toContain("essay-page");
-    expect(html).toContain("إجابات مقالية");
+    expect(html).toContain("الجزء الثالث");
     expect(html).toContain("GradeTrackPro"); // matches page 1's brand header
     expect(html).toContain("سؤال مقالي 1");
     expect(html).toContain("سؤال مقالي 2");

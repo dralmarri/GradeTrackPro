@@ -202,17 +202,13 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
   const badge = header?.logoDataUrl
     ? `<img src="${header.logoDataUrl}" class="ebadge-img" />`
     : `<div class="ebadge">GTP</div>`;
-  // mirrors page 1's header (badge + brand, title block) so the essay page
-  // reads as the same document continuing, not a different sheet stapled
-  // on — but WITHOUT repeating page 1's own name/student-number fields,
-  // since this is still the same physical answer sheet, not a separate one.
+  // Just the brand mark (matching page 1's header) plus a "الجزء الثالث"
+  // section — same continuation style page 1 itself uses for its own
+  // "الجزء الأول"/"الجزء الثاني" bubble sections — instead of a standalone
+  // title that reads as if this were a different, separate answer sheet.
   return `
     <div class="essay-page">
       <div class="ehead-top">
-        <div class="etitleblock">
-          <div class="etitle">ورقة إجابة نموذجية — الأسئلة المقالية</div>
-          <div class="esub">إجابتك يجب أن تكون في المساحة المخصصة أدناه فقط</div>
-        </div>
         <div class="ebrand-wrap">
           ${badge}
           <div>
@@ -220,14 +216,12 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
             <div class="ebrand-sub">نظام التصحيح الآلي المعتمد</div>
           </div>
         </div>
-      </div>
-      <div class="eident">
         <div class="emeta-box">
           <div class="emeta-cell"><span class="elabel">المقرر:</span><span class="eval">${escapeXml(header?.courseName || "—")}</span></div>
           <div class="emeta-cell"><span class="elabel">الاختبار:</span><span class="eval">${escapeXml(exam.title)}</span></div>
         </div>
       </div>
-      <div class="esec-head"><span class="epill">إجابات مقالية</span><h3>اكتب إجابتك بخط واضح داخل الأسطر</h3></div>
+      <div class="esec-head"><span class="epill">الجزء الثالث</span><h3>أسئلة مقالية — اكتب إجابتك بخط واضح داخل الأسطر</h3></div>
       ${rows}
       <div class="epage">2/2</div>
     </div>`;
@@ -246,10 +240,7 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
     .essay-page { position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 20mm; overflow: visible; page-break-before: always; break-before: page; font-family: ${FONT}; color: ${INK}; }
     @media print { .essay-page { padding: 15mm 20mm; } }
 
-    .ehead-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 0.65mm solid ${INK}; padding-bottom: 4mm; }
-    .etitleblock { text-align: end; }
-    .etitle { font-size: 13px; font-weight: 700; }
-    .esub { font-size: 8.5px; color: ${MUTED}; margin-top: 1mm; }
+    .ehead-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 0.65mm solid ${INK}; padding-bottom: 4mm; }
     .ebrand-wrap { display: flex; align-items: center; gap: 3mm; }
     .ebadge { width: 12mm; height: 12mm; border-radius: 2.5mm; background: ${INDIGO}; color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; }
     .ebadge-img { width: 12mm; height: 12mm; object-fit: contain; }
