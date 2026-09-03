@@ -53,25 +53,14 @@ function brand(header?: SheetHeader): string {
   // symmetric anchor point can't flip with direction in any implementation.
   // cx picked generously past the badge's right edge (149) for the widest
   // fallback-font measurement of "GradeTrackPro" at this size (~26.5mm).
-  // institution/college/department (same header data the question paper
-  // shows) — printed on the answer sheet too so both pages carry it, not
-  // just the question paper. Stacked as short separate lines, same visual
-  // language as the question paper's letterhead (bold institution line,
-  // muted college/department below it) rather than one long joined line,
-  // which ran wider than the header could hold at a readable size.
-  const instLines = [header?.institution, header?.college, header?.department].filter(Boolean) as string[];
-  const inst = instLines
-    .map((line, i) => svgText(
-      180, 22.6 + i * 2.1, line, 1.65,
-      i === 0
-        ? `fill="${INK}" direction="rtl" text-anchor="end" font-weight="700"`
-        : `fill="${MUTED}" direction="rtl" text-anchor="end"`,
-    ))
-    .join("");
+  // institution/college/department text doesn't fit legibly in this
+  // header's ~29mm height at any readable size (tried — came out too
+  // cramped/small to read once printed). The answer sheet keeps just the
+  // logo; the full letterhead (institution/college/department) lives only
+  // on the question paper, which has room for it.
   return titleBlock + logo +
     svgText(167, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" direction="ltr" unicode-bidi="bidi-override" text-anchor="middle" font-weight="800"`) +
     svgText(152, 20.1, "نظام التصحيح الآلي المعتمد", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="end"`) +
-    inst +
     `<line x1="30" y1="29" x2="180" y2="29" stroke="${INK}" stroke-width="0.65"/>`;
 }
 
