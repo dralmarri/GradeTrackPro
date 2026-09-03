@@ -4,10 +4,12 @@
 
 export type ChoiceCount = 2 | 3 | 4 | 5; // 2 = صح/خطأ, 3 = أ–ج, 4 = أ–د, 5 = أ–هـ
 
-// display letters per choice count — Arabic alphabet letters (أ ب ج د هـ),
-// matching the approved OMR sheet mockup, which labels every bubble
-// (MCQ and true/false alike) with أ/ب/ج/د rather than Latin A/B/C/D.
+// display letters per choice count — Arabic alphabet letters (أ ب ج د هـ)
+// for multiple choice, matching the approved OMR sheet mockup. True/false
+// (choiceCount 2) uses ص/خ (صح/خطأ) instead — labeling it أ/ب read as
+// arbitrary rather than naming the actual answer.
 export function choiceLabels(choiceCount: ChoiceCount): string[] {
+  if (choiceCount === 2) return ["ص", "خ"];
   return ["أ", "ب", "ج", "د", "هـ"].slice(0, choiceCount);
 }
 
