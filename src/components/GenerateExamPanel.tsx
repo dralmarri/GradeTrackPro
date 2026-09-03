@@ -72,11 +72,28 @@ export default function GenerateExamPanel({
   const [genForms, setGenForms] = useState(2);
   const [genTarget, setGenTarget] = useState("exam1");
   const [genMax, setGenMax] = useState(20);
+  // when on, the bubble-graded questions' points are overridden to split
+  // "الدرجة القصوى" evenly across them, instead of using each question's
+  // bank/per-type points — guarantees the total always matches what was
+  // typed, no confirmation needed
+  const [autoDistribute, setAutoDistribute] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{ exam: OmrExam | null; form: GeneratedForm }[]>([]);
 
   const kindOf = (q: { kind?: "choice" | "essay"; choices: string[] }): "tf" | "mcq" | "essay" =>
     q.kind === "essay" ? "essay" : q.choices.length === 2 ? "tf" : "mcq";
+
+  // split `total` evenly across `count` items, each rounded to 2 decimals,
+  // with any rounding remainder folded into the last item so the exact sum
+  // is preserved.
+  const distributeEvenly = (count: number, total: number): number[] => {
+    if (count <= 0) return [];
+    const base = Math.round((total / count) * 100) / 100;
+    const arr = new Array(count).fill(base);
+    const drift = Math.round((total - arr.reduce((a, b) => a + b, 0)) * 100) / 100;
+    arr[arr.length - 1] = Math.round((arr[arr.length - 1] + drift) * 100) / 100;
+    return arr;
+  };
 
   const genPool = useMemo(
     () => questions.filter((q) =>
@@ -150,6 +167,16 @@ export default function GenerateExamPanel({
         : pickRandom(pool, genCount, seedBase)
             .map((q) => ({ ...q, points: genKindPoints[kindOf(q)] ?? q.points ?? 1 }));
 
+      // "وزّع الدرجات تلقائياً": override the bubble-graded questions'
+      // points to split "الدرجة القصوى" evenly across them, instead of
+      // using each question's own bank/per-type points — guarantees the
+      // total always matches what was typed, so no mismatch is possible.
+      if (genMode === "full" && genPickMode === "random" && autoDistribute) {
+        const bubbleIdx = picked.map((_, i) => i).filter((i) => kindOf(picked[i]) !== "essay");
+        const dist = distributeEvenly(bubbleIdx.length, genMax);
+        bubbleIdx.forEach((idx, j) => { picked[idx] = { ...picked[idx], points: dist[j] }; });
+      }
+
       // Bank points are always the real weights now — a question saved as
       // "1 درجة" is worth exactly 1 point when graded, never silently
       // redistributed to match "الدرجة القصوى" just because every picked
@@ -159,8 +186,9 @@ export default function GenerateExamPanel({
       // target the professor is aiming for — if the actual total (bank
       // points, or essay points added on top) doesn't match what they
       // typed, confirm with them before generating instead of overriding
-      // their bank silently.
-      if (genMode === "full" && genPickMode === "random") {
+      // their bank silently. Skipped entirely when "توزيع تلقائي" is on,
+      // since the total is then guaranteed to match by construction.
+      if (genMode === "full" && genPickMode === "random" && !autoDistribute) {
         const bubbleTotal = picked.filter((q) => kindOf(q) !== "essay").reduce((a, q) => a + (q.points ?? 1), 0);
         const essayTotal = picked.filter((q) => kindOf(q) === "essay").reduce((a, q) => a + (q.points ?? 1), 0);
         if (bubbleTotal !== genMax) {
@@ -460,6 +488,27 @@ export default function GenerateExamPanel({
               </select>
             </label>}
           </div>
+
+          {genMode === "full" && genPickMode === "random" && (
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-border bg-card p-3 text-xs">
+              <input
+                type="checkbox"
+                checked={autoDistribute}
+                onChange={(e) => setAutoDistribute(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+              />
+              <span>
+                <span className="font-bold text-foreground">
+                  {ar ? "توزيع الدرجات تلقائياً لتصل للمجموع" : "Auto-distribute points to reach the total"}
+                </span>
+                <span className="block text-muted-foreground">
+                  {ar
+                    ? "يقسّم \"الدرجة القصوى\" بالتساوي على أسئلة صح/خطأ واختيار من متعدد المختارة، متجاهلاً درجاتها في البنك (المقالي يبقى إضافياً كما هو)."
+                    : "Splits \"Max score\" evenly across the selected T/F and MCQ questions, ignoring their bank points (essay stays additive as usual)."}
+                </span>
+              </span>
+            </label>
+          )}
 
           {genPickMode === "manual" && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card p-3">
