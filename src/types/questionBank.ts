@@ -8,8 +8,13 @@ export interface BankQuestion {
   id: string;
   courseId: string;
   text: string;
-  choices: string[];      // 2 = true/false (ص/خ), 3-5 = MCQ
-  correct: number;        // index into choices
+  // "essay" questions have no choices/correct answer — they print with a
+  // blank writing area and are graded manually (see gradeOmr's essay path
+  // and OmrScanDialog's manual essay-score entry). Absent = "choice", for
+  // backward compatibility with rows saved before this field existed.
+  kind?: "choice" | "essay";
+  choices: string[];      // 2 = true/false (ص/خ), 3-5 = MCQ. Empty for essay.
+  correct: number;        // index into choices. -1 for essay.
   chapter?: string;       // الفصل / الوحدة
   topic?: string;         // الموضوع داخل الفصل
   difficulty?: Difficulty;
@@ -44,10 +49,14 @@ export function seededShuffle<T>(arr: T[], seed: number): T[] {
 
 export interface GeneratedForm {
   version: string;                 // "أ", "ب", …
-  questions: BankQuestion[];       // in exam order (MCQ block first, then T/F)
+  questions: BankQuestion[];       // bubble-graded questions in exam order (MCQ block first, then T/F)
   choiceOrders: number[][];        // per question: mapping display-pos -> original choice index
   answerKey: number[];             // per question: correct choice index in DISPLAY order
   sections: { questionCount: number; choiceCount: 2 | 3 | 4 | 5 }[];
+  // Essay questions never appear on the bubble answer sheet — they print on
+  // the question paper with a blank writing area and are scored manually
+  // (see OmrScanDialog), separately from the OMR-read questions above.
+  essayQuestions: BankQuestion[];
 }
 
 export const VERSION_LETTERS = ["أ", "ب", "ج", "د"];
@@ -55,19 +64,22 @@ export const VERSION_LETTERS = ["أ", "ب", "ج", "د"];
 // Build N exam forms from a pool: shuffle question order and (for MCQ) choice
 // order per form. T/F choices are never shuffled (ص always first).
 export function generateForms(pool: BankQuestion[], formsCount: number, seedBase: number): GeneratedForm[] {
+  const choicePool = pool.filter((q) => q.kind !== "essay");
+  const essayPool = pool.filter((q) => q.kind === "essay");
   const forms: GeneratedForm[] = [];
   for (let v = 0; v < formsCount; v++) {
     const seed = seedBase + v * 7919;
     // group by EXACT choice count (5,4,3 then 2) so every question's printed
     // bubbles match its real choices — no phantom D/E bubbles on 3-choice items
-    const widths = Array.from(new Set(pool.map((q) => q.choices.length)))
+    const widths = Array.from(new Set(choicePool.map((q) => q.choices.length)))
       .sort((a, b) => b - a)
       .filter((w) => w > 2);
     const groups = widths.map((w) =>
-      seededShuffle(pool.filter((q) => q.choices.length === w), seed + w * 31),
+      seededShuffle(choicePool.filter((q) => q.choices.length === w), seed + w * 31),
     );
-    const tf = seededShuffle(pool.filter((q) => q.choices.length === 2), seed + 13);
+    const tf = seededShuffle(choicePool.filter((q) => q.choices.length === 2), seed + 13);
     const ordered = [...groups.flat(), ...tf];
+    const essayQuestions = seededShuffle(essayPool, seed + 211);
 
     const choiceOrders: number[][] = [];
     const answerKey: number[] = [];
@@ -84,7 +96,7 @@ export function generateForms(pool: BankQuestion[], formsCount: number, seedBase
     });
     if (tf.length) sections.push({ questionCount: tf.length, choiceCount: 2 });
 
-    forms.push({ version: VERSION_LETTERS[v] || String(v + 1), questions: ordered, choiceOrders, answerKey, sections });
+    forms.push({ version: VERSION_LETTERS[v] || String(v + 1), questions: ordered, choiceOrders, answerKey, sections, essayQuestions });
   }
   return forms;
 }

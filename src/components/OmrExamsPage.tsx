@@ -295,12 +295,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         componentOptions={componentOptions}
         onCreateExam={addExam}
         onSetAnswerKey={updateAnswerKey}
-        buildExam={(id, form: GeneratedForm, t, target, max, mode) => ({
+        buildExam={(id, form: GeneratedForm, t, target, max, mode, essayQuestions) => ({
           id,
           courseId: course.id,
           title: t,
           questionCount: form.questions.length,
-          choiceCount: form.sections[0].choiceCount,
+          // an essay-only form has no bubbled section at all
+          choiceCount: form.sections[0]?.choiceCount ?? 4,
           targetComponent: target,
           maxScore: max,
           answerKey: form.answerKey,
@@ -308,6 +309,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           sections: form.sections.length > 1 ? form.sections : undefined,
           version: form.version,
           idMode: mode,
+          essayQuestions: essayQuestions && essayQuestions.length ? essayQuestions : undefined,
           createdAt: "",
           updatedAt: "",
         })}
@@ -528,7 +530,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                   <Pencil size={15} />
                 </button>
                 <button
-                  onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "اسمح بالنوافذ المنبثقة للطباعة" : "Allow pop-ups to print"); }}
+                  onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print"); }}
                   title={ar ? "طباعة ورقة الإجابة" : "Print sheet"}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted"
                 >

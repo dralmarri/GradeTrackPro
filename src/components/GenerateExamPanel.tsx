@@ -26,9 +26,13 @@ interface Props {
     targetComponent: string; maxScore: number; studentIdDigits: number;
     sections?: { questionCount: number; choiceCount: ChoiceCount }[];
     version?: string; idMode?: "bubbles" | "written";
+    essayQuestions?: { text: string; points: number }[];
   }) => Promise<string>;
   onSetAnswerKey: (examId: string, key: number[], weights?: number[]) => Promise<void>;
-  buildExam: (id: string, form: GeneratedForm, title: string, targetComponent: string, maxScore: number, idMode: "bubbles" | "written") => OmrExam;
+  buildExam: (
+    id: string, form: GeneratedForm, title: string, targetComponent: string, maxScore: number,
+    idMode: "bubbles" | "written", essayQuestions?: { text: string; points: number }[],
+  ) => OmrExam;
 }
 
 export default function GenerateExamPanel({ course, bankCourseIds, sheetHeader, componentOptions, onCreateExam, onSetAnswerKey, buildExam }: Props) {
@@ -100,22 +104,29 @@ export default function GenerateExamPanel({ course, bankCourseIds, sheetHeader, 
       for (const form of forms) {
         const weights = form.questions.map((q) => q.points ?? 1);
         const customWeights = weights.some((w) => w !== 1);
+        // maxScore covers only the bubble-graded (OMR) portion — same as
+        // before essay questions existed. Essay points are additional,
+        // manually-graded marks on top (see OmrScanDialog), so they must
+        // NOT feed into gradeOmr()'s proportional-score math via maxScore.
         const maxScore = customWeights ? weights.reduce((a, b) => a + b, 0) : genMax;
+        const essayQuestions = form.essayQuestions.map((q) => ({ text: q.text, points: q.points ?? 1 }));
         const id = await onCreateExam({
           title: genTitle.trim(),
           questionCount: form.questions.length,
-          choiceCount: form.sections[0].choiceCount,
+          // an essay-only form has no bubbled section at all
+          choiceCount: form.sections[0]?.choiceCount ?? 4,
           targetComponent: genTarget,
           maxScore,
           studentIdDigits: 10,
           sections: form.sections.length > 1 ? form.sections : undefined,
           version: genForms > 1 ? form.version : undefined,
           idMode: "written",
+          essayQuestions: essayQuestions.length ? essayQuestions : undefined,
         });
         if (!id) throw new Error(ar ? "فشل إنشاء الاختبار" : "Failed to create exam");
         await onSetAnswerKey(id, form.answerKey, customWeights ? weights : undefined);
         out.push({
-          exam: buildExam(id, form, genTitle.trim(), genTarget, maxScore, "written"),
+          exam: buildExam(id, form, genTitle.trim(), genTarget, maxScore, "written", essayQuestions),
           form,
         });
       }
@@ -414,14 +425,18 @@ export default function GenerateExamPanel({ course, bankCourseIds, sheetHeader, 
                   </span>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { if (!printQuestionPaper(exam?.title ?? genTitle.trim(), form, sheetHeader(), exam?.maxScore)) toast.error(ar ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups"); }}
+                      onClick={() => {
+                        const essayTotal = form.essayQuestions.reduce((a, q) => a + (q.points ?? 1), 0);
+                        const displayMax = exam ? exam.maxScore + essayTotal : undefined;
+                        if (!printQuestionPaper(exam?.title ?? genTitle.trim(), form, sheetHeader(), displayMax)) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print");
+                      }}
                       className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-muted"
                     >
                       <FileText size={13} />
                       {ar ? "ورقة الأسئلة" : "Questions"}
                     </button>
                     {exam && <button
-                      onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups"); }}
+                      onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print"); }}
                       className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-muted"
                     >
                       <Printer size={13} />

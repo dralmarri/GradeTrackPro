@@ -11,6 +11,7 @@ function rowToQuestion(row: any): BankQuestion {
     id: row.id,
     courseId: row.course_id,
     text: row.text,
+    kind: row.kind === "essay" ? "essay" : "choice",
     choices: (row.choices || []) as string[],
     correct: Number(row.correct) || 0,
     chapter: row.chapter || undefined,
@@ -52,27 +53,22 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 
   const addQuestion = useCallback(async (input: {
-    text: string; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty; points?: number;
+    text: string; kind?: "choice" | "essay"; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty; points?: number;
   }): Promise<boolean> => {
     if (!user || !courseId) return false;
-    let { error } = await db.from("omr_questions").insert({
-      user_id: user.id,
-      course_id: courseId,
-      text: input.text,
-      choices: input.choices,
-      correct: input.correct,
-      chapter: input.chapter || null,
-      topic: input.topic || null,
-      difficulty: input.difficulty || null,
-      points: input.points ?? 1,
-    });
-    if (error && /points/.test(error.message || "")) {
-      const { points: _p, ...rest } = {
-        user_id: user.id, course_id: courseId, text: input.text, choices: input.choices,
-        correct: input.correct, chapter: input.chapter || null, topic: input.topic || null,
-        difficulty: input.difficulty || null, points: input.points ?? 1,
-      };
-      ({ error } = await db.from("omr_questions").insert(rest));
+    const baseRow: any = {
+      user_id: user.id, course_id: courseId, text: input.text, kind: input.kind || "choice",
+      choices: input.choices, correct: input.correct, chapter: input.chapter || null,
+      topic: input.topic || null, difficulty: input.difficulty || null, points: input.points ?? 1,
+    };
+    let { error } = await db.from("omr_questions").insert(baseRow);
+    // schema catch-up: the "kind" and/or "points" columns may not exist yet
+    // in an older database — drop whichever ones the error names and retry,
+    // instead of failing to save the question outright.
+    for (let i = 0; i < 2 && error && /(kind|points)/.test(error.message || ""); i++) {
+      if (/kind/.test(error.message || "")) delete baseRow.kind;
+      if (/points/.test(error.message || "")) delete baseRow.points;
+      ({ error } = await db.from("omr_questions").insert(baseRow));
     }
     if (error) {
       console.error("Error adding question:", error);
