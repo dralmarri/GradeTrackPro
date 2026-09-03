@@ -118,6 +118,7 @@ export function buildQuestionPaperHtml(
   .head-top { display: flex; justify-content: space-between; align-items: flex-start; }
   .brand { display: flex; align-items: center; gap: 3mm; }
   .badge { width: 12mm; height: 12mm; background: var(--navy2); color: #fff; border-radius: 2.5mm; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .badge-img { width: 12mm; height: 12mm; object-fit: contain; }
   .brand-name { font-weight: 800; font-size: 15px; color: var(--navy2); }
   .brand-tag { font-size: 10px; color: #6b7280; }
   .meta-bar .cell.model .val { font-size: 15px; color: var(--navy2); }
@@ -166,7 +167,7 @@ export function buildQuestionPaperHtml(
   <div class="head">
     <div class="head-top">
       <div class="brand">
-        <div class="badge">GTP</div>
+        ${header?.logoDataUrl ? `<img src="${header.logoDataUrl}" class="badge-img" />` : `<div class="badge">GTP</div>`}
         <div>
           <div class="brand-name">GradeTrackPro</div>
           <div class="brand-tag">نظام إدارة التقييم الأكاديمي</div>
