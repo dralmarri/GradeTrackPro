@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Course, Student } from "@/types/student";
 import { OmrExam, gradeOmr, OmrScanResult, choiceLabelsFor } from "@/types/exam";
-import { scanAnswerSheet, scanEssayCard } from "@/lib/omr/scan";
+import { scanAnswerSheet } from "@/lib/omr/scan";
 import { examCode } from "@/lib/omr/layout";
 import { useOmrScans } from "@/hooks/useOmrScans";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -51,12 +51,9 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [wrongExamMatch, setWrongExamMatch] = useState<OmrExam | null>(null);
   // which question's choice-picker is expanded in the answer-details list
   const [editingQ, setEditingQ] = useState<number | null>(null);
-  // points per essay question — either read automatically from the essay
-  // grading card's bubbles, or entered by hand; added on top of the
-  // auto-graded score before the final grade is applied
+  // manually-entered points per essay question (not OMR-read) — added on
+  // top of the auto-graded score before the final grade is applied
   const [essayScores, setEssayScores] = useState<number[]>(() => (exam.essayQuestions || []).map(() => 0));
-  const [essayCardScanning, setEssayCardScanning] = useState(false);
-  const essayCardFileRef = useRef<HTMLInputElement>(null);
   const { addScan } = useOmrScans(null); // used for recording only
 
   const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
@@ -139,28 +136,21 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   // it silently does nothing). The native Capacitor Camera plugin talks to
   // the OS directly and reliably triggers the permission prompt + camera UI,
   // so use it whenever running inside the native app shell; the file input
-  // stays as the (working) fallback for the web app. Shared by the main
-  // sheet capture and the essay-card capture below.
-  const takePhoto = async (): Promise<Blob | null> => {
-    if (!isNativeApp()) return null; // caller falls back to its own file input
-    const photo = await CapCamera.getPhoto({
-      quality: 90,
-      allowEditing: false,
-      resultType: CameraResultType.Uri,
-      source: CameraSource.Camera,
-    });
-    if (!photo.webPath) return null;
-    return await (await fetch(photo.webPath)).blob();
-  };
-
+  // stays as the (working) fallback for the web app.
   const capture = async () => {
     if (!isNativeApp()) {
       fileRef.current?.click();
       return;
     }
     try {
-      const blob = await takePhoto();
-      if (!blob) return;
+      const photo = await CapCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+      });
+      if (!photo.webPath) return;
+      const blob = await (await fetch(photo.webPath)).blob();
       setPhoto(blob);
       await runScan(blob, exam);
     } catch (err: unknown) {
@@ -170,64 +160,6 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       if (/cancel/i.test(msg)) return;
       toast.error(ar ? "تعذّر فتح الكاميرا" : "Couldn't open the camera");
     }
-  };
-
-  const runEssayCardScan = async (blob: Blob) => {
-    setEssayCardScanning(true);
-    try {
-      const res = await scanEssayCard(blob, exam);
-      if (allExams && res.detectedExamCode !== examCode(exam.id)) {
-        const match = allExams.find((e) => e.id !== exam.id && examCode(e.id) === res.detectedExamCode);
-        toast.warning(
-          match
-            ? (ar ? `يبدو أن هذه البطاقة من اختبار «${match.title}» — تأكد من التصوير` : `This card looks like it's from "${match.title}" — check you photographed the right one`)
-            : (ar ? "لم يتم التعرف على الاختبار من البطاقة" : "Couldn't confirm which exam this card belongs to"),
-        );
-      }
-      let readCount = 0, ambiguousCount = 0;
-      setEssayScores((prev) => prev.map((old, i) => {
-        const s = res.scores[i];
-        if (s == null || s < 0) { if (s === -2) ambiguousCount++; return old; }
-        readCount++;
-        return s;
-      }));
-      if (readCount === 0) {
-        toast.error(ar ? "لم تُقرأ أي درجة من البطاقة — أدخلها يدوياً" : "Couldn't read any score from the card — enter manually");
-      } else {
-        toast.success(
-          ar
-            ? `قُرئت ${readCount} من ${res.scores.length} درجة${ambiguousCount ? ` — ${ambiguousCount} تحتاج إدخالاً يدوياً` : ""}`
-            : `Read ${readCount}/${res.scores.length} score(s)${ambiguousCount ? `, ${ambiguousCount} need manual entry` : ""}`,
-        );
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : (ar ? "فشل قراءة بطاقة الدرجة" : "Failed to read the grading card"));
-    } finally {
-      setEssayCardScanning(false);
-    }
-  };
-
-  const captureEssayCard = async () => {
-    if (!isNativeApp()) {
-      essayCardFileRef.current?.click();
-      return;
-    }
-    try {
-      const blob = await takePhoto();
-      if (!blob) return;
-      await runEssayCardScan(blob);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (/cancel/i.test(msg)) return;
-      toast.error(ar ? "تعذّر فتح الكاميرا" : "Couldn't open the camera");
-    }
-  };
-
-  const handleEssayCardFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    await runEssayCardScan(file);
   };
 
   // professor picks the intended answer for a flagged question → regrade
@@ -419,38 +351,12 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
               )}
             </div>
 
-            {/* essay grading — auto-read from the grading card's bubbles when
-                photographed, editable by hand either way (fallback, and for
-                anything the scan couldn't read confidently) */}
+            {/* manual essay grading — not read by the scanner, entered by hand */}
             {(exam.essayQuestions || []).length > 0 && (
               <div className="space-y-2.5 rounded-2xl border border-amber-400/50 bg-amber-500/5 p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold text-amber-700 dark:text-amber-400">
-                    {ar ? "الأسئلة المقالية:" : "Essay questions:"}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={captureEssayCard}
-                    disabled={essayCardScanning}
-                    className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-2.5 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
-                  >
-                    {essayCardScanning ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
-                    {ar ? "صوّر بطاقة الدرجة" : "Scan grading card"}
-                  </button>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  {ar
-                    ? "بعد تظليل الدرجة على البطاقة (الصفحة الثانية من ورقة الإجابة)، صوّرها بالزر أعلاه فيُدخل التطبيق الدرجات تلقائياً — أو أدخلها يدوياً في الخانات أدناه."
-                    : "After bubbling the score on the grading card (answer sheet's second page), tap the button above to read it automatically — or enter it manually below."}
+                <p className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                  {ar ? "الأسئلة المقالية — أدخل الدرجة يدوياً بعد قراءة إجابة الطالب:" : "Essay questions — enter the score manually after reading the student's answer:"}
                 </p>
-                <input
-                  ref={essayCardFileRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={handleEssayCardFile}
-                />
                 {(exam.essayQuestions || []).map((q, ei) => (
                   <div key={ei} className="flex items-center gap-2 rounded-xl bg-background p-2.5">
                     <p className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground" title={q.text}>

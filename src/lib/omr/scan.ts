@@ -9,9 +9,6 @@
 
 import { OmrExam, choiceCountFor } from "@/types/exam";
 import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, CODE_BITS, codeMarkPos } from "@/lib/omr/layout";
-import {
-  CARD_BUBBLE_R, MAX_ROW_SCORE, cardHeight, cardMarks, cardOrientMark, cardCodeBits, cardCodeMarkPos, essayScoreBubble,
-} from "@/lib/omr/essayCardLayout";
 
 export interface OmrScanRaw {
   studentNumber: string;      // "" digits that were readable, in order
@@ -35,45 +32,27 @@ export interface OmrScanRaw {
 
 const MAX_DIM = 1700;
 
-interface LocatedSheet {
-  dark: Uint8Array;
-  srcRgba: Uint8ClampedArray;
-  w: number;
-  h: number;
-  H: number[];
-  markQuality: number;
-  corners: { x: number; y: number }[];
-  threshold: number;
-  rotation: number;
-}
-
-// Shared by scanAnswerSheet AND scanEssayCard: load the photo, binarize it,
-// find the 4 corner registration marks, and resolve the homography +
-// rotation from whichever set of sheet-mm mark positions the caller passes
-// in (the full page's marks, or the small essay-card's own marks) — the
-// pixel-level pipeline neither knows nor cares which document it's reading.
-async function locateSheet(
-  file: File | Blob,
-  srcMarks: readonly { x: number; y: number }[],
-  orientMark: { x: number; y: number; size: number },
-  notFoundMsg: string,
-  orientMsg: string,
-): Promise<LocatedSheet> {
+export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise<OmrScanRaw> {
   const img = await loadImage(file);
   const { data, w, h } = drawToCanvas(img);
+  const srcRgba = data; // kept for rectified crops (name box, civil-ID strip)
 
   const gray = toGray(data, w, h);
   const thr = otsu(gray);
   const dark = new Uint8Array(w * h);
   for (let i = 0; i < gray.length; i++) dark[i] = gray[i] < thr ? 1 : 0;
 
+  // --- find corner marks ---
   const corners = findCornerMarks(dark, w, h);
-  if (!corners) throw new Error(notFoundMsg);
+  if (!corners) throw new Error("لم يتم العثور على علامات المحاذاة الأربع — صوّر الورقة كاملة بإضاءة جيدة");
 
+  // --- resolve orientation ---
   // Four identical corner squares are rotationally ambiguous: an upside-down
   // photo still yields a valid homography. Try all 4 rotation assignments and
-  // keep the one where the orientation anchor actually reads dark.
-  const src = srcMarks.map((m) => [m.x, m.y] as [number, number]);
+  // keep the one where the orientation anchor (next to the sheet's TL mark)
+  // actually reads dark.
+  const src = MARKS.map((m) => [m.x, m.y] as [number, number]);
+  // image corners in [TL,TR,BL,BR] order → sheet corners under each rotation
   const ROTATIONS: number[][] = [
     [0, 1, 2, 3], // 0°
     [1, 3, 0, 2], // 90°  (sheet TL appears at image TR)
@@ -88,20 +67,12 @@ async function locateSheet(
     const dst = perm.map((i) => [corners[i].x, corners[i].y] as [number, number]);
     let Hc: number[];
     try { Hc = solveHomography(src, dst); } catch { continue; }
-    const dot = sampleSquare(dark, w, h, Hc, orientMark.x, orientMark.y, orientMark.size * 0.35);
+    const dot = sampleSquare(dark, w, h, Hc, ORIENT_MARK.x, ORIENT_MARK.y, ORIENT_MARK.size * 0.35);
     if (dot > bestDot) { bestDot = dot; H = Hc; bestRotation = ri; }
   }
-  if (!H || bestDot < 0.5) throw new Error(orientMsg);
-
-  return { dark, srcRgba: data, w, h, H, markQuality: bestDot, corners, threshold: thr, rotation: bestRotation };
-}
-
-export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise<OmrScanRaw> {
-  const { dark, srcRgba, w, h, H, markQuality: bestDot, corners, threshold: thr, rotation: bestRotation } = await locateSheet(
-    file, MARKS, ORIENT_MARK,
-    "لم يتم العثور على علامات المحاذاة الأربع — صوّر الورقة كاملة بإضاءة جيدة",
-    "تعذّر تحديد اتجاه الورقة — تأكد أن المربع الصغير بجانب علامة الزاوية ظاهر",
-  );
+  if (!H || bestDot < 0.5) {
+    throw new Error("تعذّر تحديد اتجاه الورقة — تأكد أن المربع الصغير بجانب علامة الزاوية ظاهر");
+  }
 
   // --- decode the exam-code marks (which exam this printed sheet is) ---
   let detectedExamCode = 0;
@@ -112,7 +83,24 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   }
 
   // --- sample bubbles ---
-  const fillAt = (mmX: number, mmY: number): number => bubbleFill(dark, w, h, H, mmX, mmY, BUBBLE_R);
+  const fillAt = (mmX: number, mmY: number): number => {
+    // sample a disc of radius 0.72*r in sheet space
+    let darkCount = 0, total = 0;
+    const steps = 6;
+    for (let dy = -steps; dy <= steps; dy++) {
+      for (let dx = -steps; dx <= steps; dx++) {
+        const rx = (dx / steps) * BUBBLE_R * 0.72;
+        const ry = (dy / steps) * BUBBLE_R * 0.72;
+        if (rx * rx + ry * ry > BUBBLE_R * BUBBLE_R * 0.52) continue;
+        const [px, py] = applyH(H, mmX + rx, mmY + ry);
+        const ix = Math.round(px), iy = Math.round(py);
+        if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+        total++;
+        if (dark[iy * w + ix]) darkCount++;
+      }
+    }
+    return total > 0 ? darkCount / total : 0;
+  };
 
   // student number (bubble grid only — "written" mode is read by eye/AI later)
   let studentNumber = "";
@@ -178,49 +166,6 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   };
 }
 
-export interface EssayCardScanResult {
-  scores: number[];             // per essay question, -1 = blank/ambiguous (professor fills in manually)
-  markQuality: number;
-  detectedExamCode: number;
-}
-
-// Reads the small "essay grading card" (see essayCardLayout.ts + sheet.ts's
-// essayGradingCardSvg) — the professor bubbles in the score for each essay
-// question, photographs just the card, and this fills those scores into
-// OmrScanDialog automatically instead of manual keyboard entry.
-export async function scanEssayCard(file: File | Blob, exam: OmrExam): Promise<EssayCardScanResult> {
-  const qs = exam.essayQuestions || [];
-  if (!qs.length) return { scores: [], markQuality: 0, detectedExamCode: 0 };
-
-  const marks = cardMarks(qs.length);
-  const orient = cardOrientMark();
-  const { dark, w, h, H, markQuality } = await locateSheet(
-    file, marks, orient,
-    "لم يتم العثور على علامات المحاذاة الأربع لبطاقة الدرجات — صوّر البطاقة كاملة بإضاءة جيدة",
-    "تعذّر تحديد اتجاه البطاقة — تأكد أن المربع الصغير بجانب علامة الزاوية ظاهر",
-  );
-
-  let detectedExamCode = 0;
-  for (let b = 0; b < cardCodeBits(); b++) {
-    const p = cardCodeMarkPos(b);
-    const dot = sampleSquare(dark, w, h, H, p.x, p.y, p.size * 0.35);
-    if (dot > 0.5) detectedExamCode |= (1 << b);
-  }
-
-  const scores = qs.map((q, i) => {
-    const max = Math.min(MAX_ROW_SCORE, Math.max(1, Math.round(q.points ?? 1)));
-    const ratios: number[] = [];
-    for (let d = 0; d <= max; d++) {
-      const p = essayScoreBubble(i, d);
-      ratios.push(bubbleFill(dark, w, h, H, p.x, p.y, CARD_BUBBLE_R));
-    }
-    const picked = pickOne(ratios);
-    return picked; // -1 blank, -2 ambiguous, else the bubbled digit itself
-  });
-
-  return { scores, markQuality, detectedExamCode };
-}
-
 // Warp a sheet-mm rectangle out of the photo into an upright crop (data URL).
 // Uses the same homography as bubble sampling, so the crop is always straight
 // even if the photo was tilted or upside-down.
@@ -258,29 +203,6 @@ function rectifyRegion(
   } catch {
     return undefined;
   }
-}
-
-// mean darkness of a disc (radius 0.72*r, sheet-mm space) under homography H
-// — used for round bubbles, as opposed to sampleSquare's square patches.
-function bubbleFill(
-  dark: Uint8Array, w: number, h: number,
-  H: number[], mmX: number, mmY: number, r: number,
-): number {
-  let darkCount = 0, total = 0;
-  const steps = 6;
-  for (let dy = -steps; dy <= steps; dy++) {
-    for (let dx = -steps; dx <= steps; dx++) {
-      const rx = (dx / steps) * r * 0.72;
-      const ry = (dy / steps) * r * 0.72;
-      if (rx * rx + ry * ry > r * r * 0.52) continue;
-      const [px, py] = applyH(H, mmX + rx, mmY + ry);
-      const ix = Math.round(px), iy = Math.round(py);
-      if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
-      total++;
-      if (dark[iy * w + ix]) darkCount++;
-    }
-  }
-  return total > 0 ? darkCount / total : 0;
 }
 
 // mean darkness of a small square patch (sheet-mm space) under homography H
