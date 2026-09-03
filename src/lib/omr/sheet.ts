@@ -191,7 +191,13 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
   const rows = essayQuestions.map((q, i) => {
     const lines = Math.max(3, Math.min(10, Math.round(q.points ?? 1) * 2));
     const linesHtml = Array.from({ length: lines }, () => `<div class="eline"></div>`).join("");
-    return `<div class="eq"><div class="etext"><b>${i + 1}.</b> ${escapeXml(q.text)} <span class="epts">(${q.points ?? 1} ${(q.points ?? 1) === 1 ? "درجة" : "درجات"})</span></div><div class="elines">${linesHtml}</div></div>`;
+    return `<div class="eq">
+        <div class="etext-row">
+          <div class="etext"><b>${i + 1}.</b> ${escapeXml(q.text)} <span class="epts">(${q.points ?? 1} ${(q.points ?? 1) === 1 ? "درجة" : "درجات"})</span></div>
+          <div class="egrade"><span class="elabel">الدرجة:</span><div class="egrade-box"></div><span class="egrade-max">/ ${q.points ?? 1}</span></div>
+        </div>
+        <div class="elines">${linesHtml}</div>
+      </div>`;
   }).join("");
   const badge = header?.logoDataUrl
     ? `<img src="${header.logoDataUrl}" class="ebadge-img" />`
@@ -268,9 +274,14 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
     .esec-head h3 { margin: 0; font-size: 11px; font-weight: 600; color: ${MUTED}; border-bottom: 0.35mm solid ${INDIGO}; padding-bottom: 1.5mm; flex: 1; }
 
     .eq { margin-bottom: 6mm; }
-    .etext { font-size: 12.5pt; font-weight: 700; margin-bottom: 2.5mm; }
+    .etext-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 4mm; margin-bottom: 2.5mm; }
+    .etext { flex: 1; font-size: 12.5pt; font-weight: 700; }
     .etext b { color: ${INDIGO}; margin-inline-end: 1mm; }
     .epts { font-size: 10px; font-weight: 600; color: ${MUTED}; }
+    .egrade { display: flex; align-items: center; gap: 1.5mm; flex-shrink: 0; }
+    .egrade .elabel { font-size: 9px; font-weight: 700; color: ${MUTED}; white-space: nowrap; }
+    .egrade-box { width: 14mm; height: 8mm; border: 0.4mm solid ${INK}; border-radius: 1.5mm; background: #fff; }
+    .egrade-max { font-size: 9px; font-weight: 600; color: ${MUTED}; white-space: nowrap; }
     .elines { padding-inline-start: 6mm; }
     .eline { height: 8mm; border-bottom: 1px solid #cbd5e1; }
     .epage { position: absolute; bottom: 12mm; right: 20mm; font-size: 9px; font-weight: 700; color: ${MUTED}; direction: ltr; }` : "";

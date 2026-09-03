@@ -38,16 +38,19 @@ describe("essay questions", () => {
     expect(form.essayQuestions).toHaveLength(2);
   });
 
-  it("the printed question paper shows only the essay question text (no writing area), numbered after the bubbled ones", () => {
+  it("the printed question paper shows only the essay question text — no writing area and no grades at all", () => {
     const pool = [mcq("m1"), essay("e1", 4)];
     const [form] = generateForms(pool, 1, 1);
     const html = buildQuestionPaperHtml("اختبار تجريبي", form);
     expect(html).toContain("أسئلة مقالية");
     expect(html).toContain("سؤال مقالي e1");
-    expect(html).toContain("(4 درجات)");
     // essay question is numbered right after the single bubbled question
     expect(html).toContain("<b>2.</b>");
-    // the writing area itself lives on the answer sheet, not here
+    // no per-question grades anywhere on the paper (T/F and MCQ never
+    // showed them either) — the writing area AND the grade box both live
+    // on the answer sheet instead, not here
+    expect(html).not.toContain("درجة");
+    expect(html).not.toContain("درجات");
     expect(html).not.toContain("eline");
   });
 
@@ -69,6 +72,8 @@ describe("essay questions", () => {
     expect(html).toContain(">2/2<");
     // 4 points -> 8 lines, 1 point -> min 3 lines
     expect((html.match(/class="eline"/g) || []).length).toBe(11);
+    // a plain box for the professor to write the grade in, one per question
+    expect((html.match(/class="egrade-box"/g) || []).length).toBe(2);
     // an exam with no essay questions gets no second page at all
     const plainHtml = buildAnswerSheetHtml({ ...exam, essayQuestions: undefined });
     expect(plainHtml).not.toContain("essay-page");
