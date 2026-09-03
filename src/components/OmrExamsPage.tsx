@@ -324,6 +324,11 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
 
       {showCreate && (
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            {ar
+              ? "لإنشاء ورقة إجابة فقط لأسئلة عندك خارج بنك الأسئلة (اختبار ورقي جاهز مسبقاً). لتوليد اختبار كامل بأسئلة من بنك المقرر استخدم \"توليد اختبار من البنك\" أعلاه."
+              : "For an answer sheet only, matching a paper exam you already have outside the question bank. To generate a full exam from the course's question bank, use \"Generate exam from bank\" above."}
+          </p>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
