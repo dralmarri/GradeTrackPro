@@ -7,6 +7,7 @@
 import type { GeneratedForm } from "@/types/questionBank";
 import type { SheetHeader } from "@/lib/omr/sheet";
 import { choiceLabels } from "@/types/exam";
+import { printHtml } from "@/lib/printHtml";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -180,14 +181,5 @@ export function buildQuestionPaperHtml(
 }
 
 export function printQuestionPaper(title: string, form: GeneratedForm, header?: SheetHeader, maxScore?: number): boolean {
-  const html = buildQuestionPaperHtml(title, form, header, maxScore);
-  const w = window.open("", "_blank");
-  if (!w) return false;
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  const go = () => setTimeout(() => w.print(), 150);
-  const fonts = (w.document as Document & { fonts?: { ready: Promise<unknown> } }).fonts;
-  if (fonts?.ready) fonts.ready.then(go, go); else setTimeout(go, 500);
-  return true;
+  return printHtml(buildQuestionPaperHtml(title, form, header, maxScore));
 }
