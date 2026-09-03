@@ -46,6 +46,13 @@ export default function GenerateExamPanel({ course, bankCourseIds, sheetHeader, 
   const [genMode, setGenMode] = useState<"full" | "paper">("full");
   const [genChapters, setGenChapters] = useState<Set<string>>(new Set());
   const [genTopics, setGenTopics] = useState<Set<string>>(new Set());
+  // empty = "الكل" (let the app pick from every type); otherwise restrict
+  // the random-pick pool to just the selected question type(s)
+  const [genKinds, setGenKinds] = useState<Set<"tf" | "mcq" | "essay">>(new Set());
+  // per-type point override for random pick — unset = keep each question's
+  // own stored points from the bank (per-question override stays the
+  // manual-pick mode's job, via manualPoints below)
+  const [genKindPoints, setGenKindPoints] = useState<Partial<Record<"tf" | "mcq" | "essay", number>>>({});
   const [genPickMode, setGenPickMode] = useState<"random" | "manual">("random");
   const [manualSelected, setManualSelected] = useState<Set<string>>(new Set());
   const [manualPoints, setManualPoints] = useState<Record<string, number>>({});
@@ -56,11 +63,15 @@ export default function GenerateExamPanel({ course, bankCourseIds, sheetHeader, 
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{ exam: OmrExam | null; form: GeneratedForm }[]>([]);
 
+  const kindOf = (q: { kind?: "choice" | "essay"; choices: string[] }): "tf" | "mcq" | "essay" =>
+    q.kind === "essay" ? "essay" : q.choices.length === 2 ? "tf" : "mcq";
+
   const genPool = useMemo(
     () => questions.filter((q) =>
       (genChapters.size === 0 || genChapters.has(q.chapter || "")) &&
-      (genTopics.size === 0 || genTopics.has(q.topic || ""))),
-    [questions, genChapters, genTopics],
+      (genTopics.size === 0 || genTopics.has(q.topic || "")) &&
+      (genKinds.size === 0 || genKinds.has(kindOf(q)))),
+    [questions, genChapters, genTopics, genKinds],
   );
   const topics = useMemo(
     () => Array.from(new Set(questions.map((q) => q.topic).filter(Boolean))) as string[],
@@ -86,7 +97,8 @@ export default function GenerateExamPanel({ course, bankCourseIds, sheetHeader, 
       const seedBase = (genTitle.trim().length * 2654435761) ^ pool.length;
       const picked = genPickMode === "manual"
         ? pool.filter((q) => manualSelected.has(q.id)).map((q) => ({ ...q, points: manualPoints[q.id] ?? q.points ?? 1 }))
-        : seededShuffle(pool, seedBase).slice(0, genCount);
+        : seededShuffle(pool, seedBase).slice(0, genCount)
+            .map((q) => ({ ...q, points: genKindPoints[kindOf(q)] ?? q.points ?? 1 }));
       const forms = generateForms(picked, genForms, seedBase + 17);
 
       if (genMode === "paper") {
@@ -238,6 +250,66 @@ export default function GenerateExamPanel({ course, bankCourseIds, sheetHeader, 
                   >
                     {t}
                   </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-muted-foreground">
+              {ar ? "نوع الأسئلة (اتركه بلا تحديد ليختار التطبيق تلقائياً من كل الأنواع):" : "Question type (none = let the app pick from every type):"}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                { key: "tf" as const, label: ar ? "صح وخطأ" : "True/False" },
+                { key: "mcq" as const, label: ar ? "اختيار من متعدد" : "Multiple choice" },
+                { key: "essay" as const, label: ar ? "مقالي" : "Essay" },
+              ]).map((k) => (
+                <button
+                  key={k.key}
+                  type="button"
+                  onClick={() => setGenKinds((s) => { const n = new Set(s); if (n.has(k.key)) n.delete(k.key); else n.add(k.key); return n; })}
+                  className={cn(
+                    "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors",
+                    genKinds.has(k.key)
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {genPickMode === "random" && (
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-muted-foreground">
+                {ar ? "درجة كل نوع (اتركها فارغة لاستخدام درجة كل سؤال كما في البنك):" : "Points per type (blank = keep each question's own points):"}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { key: "tf" as const, label: ar ? "صح وخطأ" : "True/False" },
+                  { key: "mcq" as const, label: ar ? "اختيار من متعدد" : "Multiple choice" },
+                  { key: "essay" as const, label: ar ? "مقالي" : "Essay" },
+                ]).filter((k) => genKinds.size === 0 || genKinds.has(k.key)).map((k) => (
+                  <label key={k.key} className="space-y-1 text-[11px] text-muted-foreground">
+                    {k.label}
+                    <input
+                      type="number"
+                      min={0.25}
+                      step={0.25}
+                      placeholder={ar ? "تلقائي" : "auto"}
+                      value={genKindPoints[k.key] ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setGenKindPoints((prev) => {
+                          const next = { ...prev };
+                          if (v === "") delete next[k.key]; else next[k.key] = Number(v);
+                          return next;
+                        });
+                      }}
+                      className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-center text-sm text-foreground outline-none focus:border-primary"
+                    />
+                  </label>
                 ))}
               </div>
             </div>
