@@ -3,6 +3,7 @@
 import type { OmrExam } from "@/types/exam";
 import { choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import { PAGE_W, PAGE_H, MARK_SIZE, MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, questionRows, questionNumberX, CODE_BITS, codeMarkPos, examCode } from "@/lib/omr/layout";
+import { printHtml } from "@/lib/printHtml";
 
 export interface SheetHeader {
   institution?: string;
@@ -182,11 +183,5 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
 }
 
 export function printAnswerSheet(exam: OmrExam, header?: SheetHeader): boolean {
-  const w = window.open("", "_blank");
-  if (!w) return false;
-  w.document.write(buildAnswerSheetHtml(exam, header)); w.document.close();
-  const print = () => setTimeout(() => { w.focus(); w.print(); }, 120);
-  const fonts = (w.document as Document & { fonts?: { ready: Promise<unknown> } }).fonts;
-  if (fonts?.ready) fonts.ready.then(print, print); else setTimeout(print, 500);
-  return true;
+  return printHtml(buildAnswerSheetHtml(exam, header));
 }
