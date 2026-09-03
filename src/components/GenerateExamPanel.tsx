@@ -108,6 +108,35 @@ export default function GenerateExamPanel({
     [questions],
   );
 
+  // When the professor explicitly selects more than one question type
+  // (e.g. صح/خطأ + مقالي), a plain shuffle-then-slice of the combined pool
+  // can — by pure chance — pick zero questions of one of the selected
+  // types (exactly what was reported: choosing T/F + essay produced an
+  // all-T/F exam). Split the count evenly across the selected types
+  // instead, so every explicitly-chosen type is actually represented.
+  const pickRandom = (pool: typeof genPool, count: number, seed: number): typeof genPool => {
+    if (genKinds.size === 0) return seededShuffle(pool, seed).slice(0, count);
+    const kinds = Array.from(genKinds);
+    const groups = kinds.map((k) => pool.filter((q) => kindOf(q) === k));
+    const base = Math.floor(count / kinds.length);
+    const quotas = kinds.map(() => base);
+    for (let i = 0; i < count - base * kinds.length; i++) quotas[i % kinds.length]++;
+    const picked: typeof genPool = [];
+    let shortfall = 0;
+    groups.forEach((g, i) => {
+      const shuffled = seededShuffle(g, seed + i * 101);
+      const take = Math.min(quotas[i], shuffled.length);
+      picked.push(...shuffled.slice(0, take));
+      shortfall += quotas[i] - take;
+    });
+    if (shortfall > 0) {
+      const usedIds = new Set(picked.map((q) => q.id));
+      const leftover = seededShuffle(pool.filter((q) => !usedIds.has(q.id)), seed + 999);
+      picked.push(...leftover.slice(0, shortfall));
+    }
+    return seededShuffle(picked, seed + 7);
+  };
+
   const handleGenerate = async () => {
     const pool = genPool;
     if (!genTitle.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
@@ -117,13 +146,22 @@ export default function GenerateExamPanel({
       }
     } else if (pool.length < genCount) {
       toast.error(ar ? `البنك يحتوي ${pool.length} سؤالاً فقط بهذا التصفية` : `Only ${pool.length} questions match`); return;
+    } else if (genKinds.size > 1) {
+      const empty = Array.from(genKinds).filter((k) => !pool.some((q) => kindOf(q) === k));
+      if (empty.length) {
+        const labels: Record<string, string> = { tf: ar ? "صح وخطأ" : "T/F", mcq: ar ? "اختيار من متعدد" : "MCQ", essay: ar ? "مقالي" : "Essay" };
+        toast.error(ar
+          ? `لا توجد أسئلة من نوع "${empty.map((k) => labels[k]).join("، ")}" بهذا التصفية`
+          : `No questions of type "${empty.map((k) => labels[k]).join(", ")}" match this filter`);
+        return;
+      }
     }
     setGenerating(true);
     try {
       const seedBase = (genTitle.trim().length * 2654435761) ^ pool.length;
       const picked = genPickMode === "manual"
         ? pool.filter((q) => manualSelected.has(q.id)).map((q) => ({ ...q, points: manualPoints[q.id] ?? q.points ?? 1 }))
-        : seededShuffle(pool, seedBase).slice(0, genCount)
+        : pickRandom(pool, genCount, seedBase)
             .map((q) => ({ ...q, points: genKindPoints[kindOf(q)] ?? q.points ?? 1 }));
       const forms = generateForms(picked, genForms, seedBase + 17);
 
