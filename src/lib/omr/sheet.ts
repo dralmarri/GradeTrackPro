@@ -234,11 +234,14 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
 export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): string {
   const essayPage = essayAnswerPageHtml(exam, header);
   const essayCss = essayPage ? `
-    /* No forced page-break: the bubble page above is a fixed 297mm block
-       that already fills a full A4 page, so this naturally starts on the
-       next page in print flow — without an explicit break, a mixed exam
-       with room to spare wouldn't force an unnecessary blank page. */
-    .essay-page { position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 20mm; overflow: visible; font-family: ${FONT}; color: ${INK}; }
+    /* The bubble page above is always a fixed, mm-exact 297mm page (its
+       geometry is tied to scan.ts's read positions, so it can never share
+       space with anything else) — there is genuinely never room left on
+       it. A forced break is required: real native print pipelines (tested
+       on-device) don't reliably split exactly at that height on their own,
+       and without it the essay page's content overlapped the bubble page's
+       footer instead of starting cleanly on its own page. */
+    .essay-page { position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 20mm; overflow: visible; page-break-before: always; break-before: page; font-family: ${FONT}; color: ${INK}; }
     @media print { .essay-page { padding: 15mm 20mm; } }
 
     .ehead-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 0.65mm solid ${INK}; padding-bottom: 4mm; }
