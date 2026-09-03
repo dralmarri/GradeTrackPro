@@ -67,10 +67,6 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   // GenerateExamPanel builds an exam from — one list instead of two.
   const [examSelected, setExamSelected] = useState<Set<string>>(new Set());
   const [examPoints, setExamPoints] = useState<Record<string, number>>({});
-  // bumped to force-open the generate panel (in the right pick mode) when a
-  // "توليد" button is pressed from inside the bank list
-  const [genOpenSignal, setGenOpenSignal] = useState(0);
-  const [genOpenMode, setGenOpenMode] = useState<"random" | "manual">("random");
   // When more than one exam has a saved key, "Start scanning" can't just
   // guess which one — this opens a small picker instead.
   const [scanPickerOpen, setScanPickerOpen] = useState(false);
@@ -279,16 +275,6 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           setSelectedIds={setExamSelected}
           examPoints={examPoints}
           setExamPoints={setExamPoints}
-          onGenerateRandom={() => {
-            setFormsOpen(true);
-            setGenOpenMode("random");
-            setGenOpenSignal((n) => n + 1);
-          }}
-          onGenerateFromSelection={() => {
-            setFormsOpen(true);
-            setGenOpenMode("manual");
-            setGenOpenSignal((n) => n + 1);
-          }}
         />
       )}
 
@@ -320,8 +306,6 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         setManualSelected={setExamSelected}
         manualPoints={examPoints}
         setManualPoints={setExamPoints}
-        openSignal={genOpenSignal}
-        openMode={genOpenMode}
         onOpenBank={() => setBankOpen(true)}
         onCreateExam={addExam}
         onSetAnswerKey={updateAnswerKey}

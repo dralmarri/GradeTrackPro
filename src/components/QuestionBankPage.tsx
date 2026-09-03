@@ -12,15 +12,17 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
 import {
-  Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste, Wand2, Pencil, X, Check,
+  Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste, Pencil, X, Check,
 } from "lucide-react";
 
 // This is the single place questions are browsed AND selected for exam
 // generation — the same checkboxes used to pick questions to delete also
 // pick questions to build an exam from, so there is only one list to learn
-// instead of a separate "manual selection" screen duplicating it (see
-// GenerateExamPanel, which now only owns the generation *settings* and
-// reads this selection instead of rendering its own question list).
+// instead of a separate "manual selection" screen duplicating it. Note
+// this page stays purely about the bank itself (browse/edit/delete) —
+// actually generating an exam is triggered from GenerateExamPanel (under
+// "نماذج الاختبارات"), which reads this same selection instead of showing
+// its own duplicate question list.
 interface Props {
   course: Course;
   bankCourseIds: string[];
@@ -28,13 +30,10 @@ interface Props {
   setSelectedIds: Dispatch<SetStateAction<Set<string>>>;
   examPoints: Record<string, number>;
   setExamPoints: Dispatch<SetStateAction<Record<string, number>>>;
-  onGenerateFromSelection: () => void;
-  onGenerateRandom: () => void;
 }
 
 export default function QuestionBankPage({
   course, bankCourseIds, selectedIds, setSelectedIds, examPoints, setExamPoints,
-  onGenerateFromSelection, onGenerateRandom,
 }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
@@ -740,9 +739,11 @@ export default function QuestionBankPage({
             {showBank && (
               <div className="mt-3 space-y-2">
                 {/* selecting questions here also feeds "توليد اختبار من
-                    البنك" below — pick questions, set their points (shown
-                    once selected), then either delete or generate. No
-                    separate manual-selection screen needed. */}
+                    البنك" under "نماذج الاختبارات" — pick questions here,
+                    set their points (shown once selected), then go there
+                    to actually generate. Only bank-management actions
+                    (select/delete) live on this page — generating an exam
+                    is a "نماذج الاختبارات" action, not a bank one. */}
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/50 px-3 py-2">
                   <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-foreground">
                     <input
@@ -753,37 +754,20 @@ export default function QuestionBankPage({
                     />
                     {ar ? `تحديد الكل${selectedIds.size ? ` (${selectedIds.size} محدد)` : ""}` : `Select all${selectedIds.size ? ` (${selectedIds.size} selected)` : ""}`}
                   </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      onClick={onGenerateRandom}
-                      className="flex items-center gap-1.5 rounded-lg bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition-colors hover:bg-success/20"
-                    >
-                      <Wand2 size={13} />
-                      {ar ? "توليد عشوائي" : "Random generate"}
-                    </button>
-                    <button
-                      onClick={onGenerateFromSelection}
-                      disabled={selectedIds.size === 0}
-                      className="flex items-center gap-1.5 rounded-lg bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition-colors hover:bg-success/20 disabled:opacity-40"
-                    >
-                      <Wand2 size={13} />
-                      {ar ? `توليد من المحدد (${selectedIds.size})` : `Generate from selection (${selectedIds.size})`}
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (!selectedIds.size) return;
-                        if (!window.confirm(ar ? `حذف ${selectedIds.size} سؤالاً من البنك؟` : `Delete ${selectedIds.size} questions?`)) return;
-                        const ok = await deleteQuestions(Array.from(selectedIds));
-                        if (ok) { toast.success(ar ? `حُذف ${selectedIds.size} سؤالاً` : "Deleted"); setSelectedIds(new Set()); }
-                        else toast.error(ar ? "فشل الحذف" : "Delete failed");
-                      }}
-                      disabled={selectedIds.size === 0}
-                      className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-bold text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-40"
-                    >
-                      <Trash2 size={13} />
-                      {ar ? `حذف المحدد (${selectedIds.size})` : `Delete selected (${selectedIds.size})`}
-                    </button>
-                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!selectedIds.size) return;
+                      if (!window.confirm(ar ? `حذف ${selectedIds.size} سؤالاً من البنك؟` : `Delete ${selectedIds.size} questions?`)) return;
+                      const ok = await deleteQuestions(Array.from(selectedIds));
+                      if (ok) { toast.success(ar ? `حُذف ${selectedIds.size} سؤالاً` : "Deleted"); setSelectedIds(new Set()); }
+                      else toast.error(ar ? "فشل الحذف" : "Delete failed");
+                    }}
+                    disabled={selectedIds.size === 0}
+                    className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-bold text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-40"
+                  >
+                    <Trash2 size={13} />
+                    {ar ? `حذف المحدد (${selectedIds.size})` : `Delete selected (${selectedIds.size})`}
+                  </button>
                 </div>
                 {Array.from(new Set(questions.map((q) => q.chapter || ""))).flatMap((ch) => {
                   const items = questions.filter((q) => (q.chapter || "") === ch);

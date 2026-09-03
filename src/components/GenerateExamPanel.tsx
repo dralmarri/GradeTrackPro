@@ -9,7 +9,7 @@
 // QuestionBankPage's browse list (lifted to the parent page and passed in
 // as manualSelected/manualPoints), so there is only one place to pick
 // questions instead of two separate, duplicated lists.
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { Course } from "@/types/student";
 import { OmrExam, ChoiceCount } from "@/types/exam";
 import { GeneratedForm, generateForms, seededShuffle } from "@/types/questionBank";
@@ -30,10 +30,6 @@ interface Props {
   setManualSelected: Dispatch<SetStateAction<Set<string>>>;
   manualPoints: Record<string, number>;
   setManualPoints: Dispatch<SetStateAction<Record<string, number>>>;
-  // bumped by the parent whenever a bank-list "generate" button is pressed,
-  // to force this panel open in the right pick mode
-  openSignal: number;
-  openMode: "random" | "manual";
   onOpenBank: () => void;
   onCreateExam: (input: {
     title: string; questionCount: number; choiceCount: ChoiceCount;
@@ -52,7 +48,7 @@ interface Props {
 export default function GenerateExamPanel({
   course, bankCourseIds, sheetHeader, componentOptions,
   manualSelected, setManualSelected, manualPoints, setManualPoints,
-  openSignal, openMode, onOpenBank,
+  onOpenBank,
   onCreateExam, onSetAnswerKey, buildExam,
 }: Props) {
   const { lang } = useLanguage();
@@ -78,16 +74,6 @@ export default function GenerateExamPanel({
   const [genMax, setGenMax] = useState(20);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{ exam: OmrExam | null; form: GeneratedForm }[]>([]);
-
-  // triggered from a "توليد" button in the bank list (QuestionBankPage) —
-  // force this panel open in the matching pick mode instead of the
-  // professor having to find and open it manually
-  useEffect(() => {
-    if (openSignal === 0) return;
-    setOpen(true);
-    setGenPickMode(openMode);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openSignal]);
 
   const kindOf = (q: { kind?: "choice" | "essay"; choices: string[] }): "tf" | "mcq" | "essay" =>
     q.kind === "essay" ? "essay" : q.choices.length === 2 ? "tf" : "mcq";
@@ -164,20 +150,24 @@ export default function GenerateExamPanel({
         : pickRandom(pool, genCount, seedBase)
             .map((q) => ({ ...q, points: genKindPoints[kindOf(q)] ?? q.points ?? 1 }));
 
-      // essay points are ADDITIVE on top of "الدرجة القصوى" (which only
-      // covers the bubble-graded portion — see the comment below on
-      // maxScore) rather than something the professor typed in that box.
-      // If they left the essay's per-type points on "تلقائي" — i.e. never
-      // told this screen what to use — the exam total silently drifts away
-      // from the number they entered. Ask first instead of surprising them.
+      // Bank points are always the real weights now — a question saved as
+      // "1 درجة" is worth exactly 1 point when graded, never silently
+      // redistributed to match "الدرجة القصوى" just because every picked
+      // question happened to share the same value (that used to make an
+      // exam of ten 1-point T/F questions grade as 2 points each, to force
+      // the total up to "الدرجة القصوى"). So "الدرجة القصوى" is now only a
+      // target the professor is aiming for — if the actual total (bank
+      // points, or essay points added on top) doesn't match what they
+      // typed, confirm with them before generating instead of overriding
+      // their bank silently.
       if (genMode === "full" && genPickMode === "random") {
-        const essayPicked = picked.filter((q) => kindOf(q) === "essay");
-        const essayTotal = essayPicked.reduce((a, q) => a + (q.points ?? 1), 0);
-        if (essayTotal > 0 && genKindPoints.essay === undefined) {
-          const total = genMax + essayTotal;
+        const bubbleTotal = picked.filter((q) => kindOf(q) !== "essay").reduce((a, q) => a + (q.points ?? 1), 0);
+        const essayTotal = picked.filter((q) => kindOf(q) === "essay").reduce((a, q) => a + (q.points ?? 1), 0);
+        if (bubbleTotal !== genMax) {
+          const total = bubbleTotal + essayTotal;
           const proceed = window.confirm(ar
-            ? `درجة السؤال المقالي مأخوذة من البنك (${essayPicked[0].points ?? 1} لكل سؤال) ولم تحددها هنا — تُضاف فوق "الدرجة القصوى" (${genMax})، فيصبح مجموع الاختبار ${total} وليس ${genMax}.\n\nموافقة = المتابعة بهذا المجموع (${total}).\nإلغاء = الرجوع لتحديد "درجة كل نوع" لسؤال المقالي أعلاه.`
-            : `The essay question's points come from the bank (${essayPicked[0].points ?? 1} each) and weren't set here — they're added on top of "Max score" (${genMax}), making the exam total ${total}, not ${genMax}.\n\nOK = proceed with this total (${total}).\nCancel = go back and set "Points per type" for essay above.`);
+            ? `درجات الأسئلة المختارة (من البنك، أو كما حددتها هنا لكل نوع) مجموعها ${bubbleTotal}${essayTotal ? ` + ${essayTotal} للمقالي` : ""} — وليس ${genMax} التي كتبتها في "الدرجة القصوى".\n\nموافقة = توليد الاختبار بمجموع ${total} فعلياً.\nإلغاء = الرجوع لتعديل درجات الأسئلة أو "الدرجة القصوى".`
+            : `The selected questions' points (from the bank, or what you set per type here) total ${bubbleTotal}${essayTotal ? ` + ${essayTotal} for essay` : ""} — not the ${genMax} you typed in "Max score".\n\nOK = generate with the actual total ${total}.\nCancel = go back and adjust the points or "Max score".`);
           if (!proceed) { setGenerating(false); return; }
         }
       }
@@ -199,12 +189,14 @@ export default function GenerateExamPanel({
       const out: { exam: OmrExam | null; form: GeneratedForm }[] = [];
       for (const form of forms) {
         const weights = form.questions.map((q) => q.points ?? 1);
-        const customWeights = weights.some((w) => w !== 1);
         // maxScore covers only the bubble-graded (OMR) portion — same as
         // before essay questions existed. Essay points are additional,
         // manually-graded marks on top (see OmrScanDialog), so they must
         // NOT feed into gradeOmr()'s proportional-score math via maxScore.
-        const maxScore = customWeights ? weights.reduce((a, b) => a + b, 0) : genMax;
+        // Always the actual sum of each question's own points — never
+        // silently redistributed to match "الدرجة القصوى" (see the
+        // confirmation above, which already caught any mismatch).
+        const maxScore = weights.length ? weights.reduce((a, b) => a + b, 0) : genMax;
         const essayQuestions = form.essayQuestions.map((q) => ({ text: q.text, points: q.points ?? 1 }));
         const id = await onCreateExam({
           title: genTitle.trim(),
@@ -220,7 +212,7 @@ export default function GenerateExamPanel({
           essayQuestions: essayQuestions.length ? essayQuestions : undefined,
         });
         if (!id) throw new Error(ar ? "فشل إنشاء الاختبار" : "Failed to create exam");
-        await onSetAnswerKey(id, form.answerKey, customWeights ? weights : undefined);
+        await onSetAnswerKey(id, form.answerKey, weights.length ? weights : undefined);
         out.push({
           exam: buildExam(id, form, genTitle.trim(), genTarget, maxScore, "written", essayQuestions),
           form,
