@@ -6,24 +6,17 @@ import { isNativeApp } from "@/lib/platform";
 // hidden same-page <iframe> and call print() on its contentWindow — no new
 // window needed, works everywhere a real browser is involved.
 //
-// Inside the native iOS/Android app shell that trick silently does nothing:
-// the app's embedded WKWebView has no print support at all (unlike real
-// Safari), so window.print() is a no-op with no error and no dialog. The
-// only reliable way to print from inside a Capacitor app is to hand the
-// content to a *real* system browser view, which does support printing (via
-// its Share sheet) — so on native we write the HTML to a temp file and open
-// it with @capacitor/browser's in-app Safari view instead.
+// Inside the native iOS/Android app shell, window.print() is a silent no-op:
+// the app's embedded WKWebView has no print support at all (confirmed via
+// Safari Web Inspector — zero console errors, nothing ever opens). Opening
+// the HTML in a real Safari view doesn't work either — SFSafariViewController
+// refuses local file:// URLs outright ("Unable to display URL"). The only
+// reliable native path is a dedicated printing plugin that drives the OS
+// print UI directly (UIPrintInteractionController on iOS, PrintManager on
+// Android), so we use @capgo/capacitor-printer there instead.
 async function printNative(html: string): Promise<boolean> {
-  const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
-  const { Browser } = await import("@capacitor/browser");
-  const fileName = `print-${Date.now()}.html`;
-  const { uri } = await Filesystem.writeFile({
-    path: fileName,
-    data: html,
-    directory: Directory.Cache,
-    encoding: Encoding.UTF8,
-  });
-  await Browser.open({ url: uri });
+  const { Printer } = await import("@capgo/capacitor-printer");
+  await Printer.printHtml({ name: "GradeTrackPro", html });
   return true;
 }
 
