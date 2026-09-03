@@ -38,20 +38,21 @@ describe("essay questions", () => {
     expect(form.essayQuestions).toHaveLength(2);
   });
 
-  it("the printed question paper shows only the essay question text — no writing area and no grades at all", () => {
-    const pool = [mcq("m1"), essay("e1", 4)];
+  it("the printed question paper shows each question's own point value, and only the essay question text (no writing area)", () => {
+    const pool = [mcq("m1", 2), essay("e1", 4)];
     const [form] = generateForms(pool, 1, 1);
     const html = buildQuestionPaperHtml("اختبار تجريبي", form);
     expect(html).toContain("أسئلة مقالية");
     expect(html).toContain("سؤال مقالي e1");
     // essay question is numbered right after the single bubbled question
     expect(html).toContain("<b>2.</b>");
-    // no per-question grades anywhere on the paper (T/F and MCQ never
-    // showed them either) — the writing area AND the grade box both live
-    // on the answer sheet instead, not here
-    expect(html).not.toContain("درجة");
-    expect(html).not.toContain("درجات");
+    // each question shows its own point value next to its number
+    expect(html).toContain("(2 درجات)");
+    expect(html).toContain("(4 درجات)");
+    // no writing lines / grade box on the question paper — those live on
+    // the answer sheet instead (see sheet.ts's essay page)
     expect(html).not.toContain("eline");
+    expect(html).not.toContain("egrade-box");
   });
 
   it("the answer sheet appends a second page with ruled writing lines for essay questions, sized to their points", () => {

@@ -23,13 +23,19 @@ export function buildQuestionPaperHtml(
   // each can get its own section pill + matching layout (2-col grid for
   // 4/5-option MCQ, compact inline row for T/F) — mirrors the mockup, which
   // shows MCQ as "الجزء الأول" and T/F as "الجزء الثاني".
+  // Each question shows its own point value next to its number, so a
+  // student knows how much it's worth while answering — the answer sheet
+  // still carries the professor-facing grade boxes/bubbles separately;
+  // this is just the "how many points is this worth" info for the student.
+  const ptsLabel = (p: number) => `(${p} ${p === 1 ? "درجة" : "درجات"})`;
+
   const items = form.questions.map((q, qi) => {
     const labels = choiceLabels(q.choices.length as 2 | 3 | 4 | 5);
     const displayChoices = form.choiceOrders[qi].map((orig, pos) => ({
       label: labels[pos],
       text: q.choices[orig],
     }));
-    return { qi, text: q.text, choices: displayChoices, isTF: q.choices.length === 2 };
+    return { qi, text: q.text, choices: displayChoices, isTF: q.choices.length === 2, points: q.points ?? 1 };
   });
   const mcq = items.filter((it) => !it.isTF);
   const tf = items.filter((it) => it.isTF);
@@ -41,25 +47,24 @@ export function buildQuestionPaperHtml(
     ).join("");
     return `
       <div class="q">
-        <div class="qtext"><b>${it.qi + 1}.</b> ${esc(it.text)}</div>
+        <div class="qtext"><b>${it.qi + 1}.</b> ${esc(it.text)} <span class="qpts">${ptsLabel(it.points)}</span></div>
         <div class="${gridClass}">${choicesHtml}</div>
       </div>`;
   }).join("");
 
   const tfHtml = tf.map((it) => `
       <div class="tf-row">
-        <div class="tf-text"><b>${it.qi + 1}.</b> ${esc(it.text)}</div>
+        <div class="tf-text"><b>${it.qi + 1}.</b> ${esc(it.text)} <span class="qpts">${ptsLabel(it.points)}</span></div>
         <div class="tf-opts"><span>أ) صح</span><span>ب) خطأ</span></div>
       </div>`).join("");
 
-  // Essay questions never get bubbles — just the question text. No grades
-  // are shown anywhere on this paper (MCQ/T-F never showed points either);
-  // the writing space AND the grade box both live on the answer sheet (see
-  // sheet.ts's essay page), so this paper stays purely the question text
-  // students read from.
+  // Essay questions never get bubbles — just the question text (the
+  // writing space AND the grade box live on the answer sheet, see
+  // sheet.ts's essay page) — but the point value is shown here too, same
+  // as every other question type.
   const essayHtml = form.essayQuestions.map((q, ei) => `
       <div class="q">
-        <div class="qtext"><b>${mcq.length + tf.length + ei + 1}.</b> ${esc(q.text)}</div>
+        <div class="qtext"><b>${mcq.length + tf.length + ei + 1}.</b> ${esc(q.text)} <span class="qpts">${ptsLabel(q.points ?? 1)}</span></div>
       </div>`).join("");
 
   const sections = [
@@ -141,6 +146,7 @@ export function buildQuestionPaperHtml(
   .q:last-child { border-bottom: none; }
   .qtext { font-size: 13pt; font-weight: 700; margin-bottom: 2.5mm; }
   .qtext b { color: var(--navy2); margin-inline-end: 1mm; }
+  .qpts { font-size: 9.5px; font-weight: 700; color: #6b7280; white-space: nowrap; }
   .choices-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 6mm; padding-inline-start: 6mm; font-size: 12pt; }
   .choices-grid1 { display: flex; flex-direction: column; gap: 2mm; padding-inline-start: 6mm; font-size: 12pt; }
   .choice { display: flex; align-items: flex-start; gap: 2mm; }

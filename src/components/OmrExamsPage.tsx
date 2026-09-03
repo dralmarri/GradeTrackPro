@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Course, getLabel } from "@/types/student";
 import { OmrExam, ChoiceCount, OmrSection, choiceLabels, choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import { useOmrExams } from "@/hooks/useOmrExams";
+import { useSheetHeaderSettings } from "@/hooks/useSheetHeaderSettings";
 import { printAnswerSheet } from "@/lib/omr/sheet";
 import { MAX_QUESTIONS } from "@/lib/omr/layout";
 import { daysUntilPurge, PURGE_WARNING_DAYS } from "@/lib/omr/archiveRetention";
@@ -54,10 +55,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [formsCount, setFormsCount] = useState(1);
   const [editVersion, setEditVersion] = useState("");
   const [idMode, setIdMode] = useState<"bubbles" | "written">("written");
-  const [logo, setLogo] = useState(() => localStorage.getItem("gtp_logo") || "");
-  const [institution, setInstitution] = useState(() => localStorage.getItem("gtp_institution") || "");
-  const [college, setCollege] = useState(() => localStorage.getItem("gtp_college") || "");
-  const [department, setDepartment] = useState(() => localStorage.getItem("gtp_department") || "");
+  const { institution, college, department, logo, update: updateSheetHeader } = useSheetHeaderSettings();
   // The page is organized into 3 collapsible sections — question bank,
   // exam forms, and grading — each closed by default so only one thing at
   // a time occupies the page instead of everything stacked at once.
@@ -152,8 +150,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       c.height = Math.round(img.height * scale);
       c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
       const dataUrl = c.toDataURL("image/png");
-      setLogo(dataUrl);
-      localStorage.setItem("gtp_logo", dataUrl);
+      updateSheetHeader({ logo: dataUrl });
       toast.success(ar ? "تم حفظ الشعار" : "Logo saved");
     };
     img.onerror = () => toast.error(ar ? "تعذّر قراءة الصورة" : "Could not read image");
@@ -347,21 +344,23 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           updatedAt: "",
         })}
       />
-      <button
-        onClick={() => setShowCreate((v) => !v)}
-        className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
-      >
-        <Plus size={14} />
-        {ar ? "اختبار جديد" : "New exam"}
-      </button>
+      <div className="flex items-start justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2.5">
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          {ar
+            ? "لأسئلة عندك خارج بنك الأسئلة (اختبار ورقي جاهز مسبقاً) — يُنشئ ورقة إجابة فقط، بدون سحب أي شيء من البنك."
+            : "For a paper exam you already have outside the question bank — creates an answer sheet only, without pulling anything from the bank."}
+        </p>
+        <button
+          onClick={() => setShowCreate((v) => !v)}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <Plus size={14} />
+          {ar ? "اختبار جديد" : "New exam"}
+        </button>
+      </div>
 
       {showCreate && (
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            {ar
-              ? "لإنشاء ورقة إجابة فقط لأسئلة عندك خارج بنك الأسئلة (اختبار ورقي جاهز مسبقاً). لتوليد اختبار كامل بأسئلة من بنك المقرر استخدم \"توليد اختبار من البنك\" أعلاه."
-              : "For an answer sheet only, matching a paper exam you already have outside the question bank. To generate a full exam from the course's question bank, use \"Generate exam from bank\" above."}
-          </p>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -473,7 +472,10 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         </div>
       )}
 
-      {/* sheet header settings (institution/college/department) */}
+      {/* sheet header settings (institution/college/department) — tied to
+          the professor's account (useSheetHeaderSettings), not the device:
+          entered once, follows them to any device they sign into, and stays
+          until they change it again. */}
       <details className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <summary className="cursor-pointer text-xs font-bold text-muted-foreground">
           {ar ? "ترويسة ورقة الإجابة (المؤسسة / الكلية / القسم)" : "Sheet header (institution / college / dept)"}
@@ -481,19 +483,19 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <input
             value={institution}
-            onChange={(e) => { setInstitution(e.target.value); localStorage.setItem("gtp_institution", e.target.value); }}
+            onChange={(e) => updateSheetHeader({ institution: e.target.value })}
             placeholder={ar ? "المؤسسة التعليمية" : "Institution"}
             className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
           />
           <input
             value={college}
-            onChange={(e) => { setCollege(e.target.value); localStorage.setItem("gtp_college", e.target.value); }}
+            onChange={(e) => updateSheetHeader({ college: e.target.value })}
             placeholder={ar ? "الكلية" : "College"}
             className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
           />
           <input
             value={department}
-            onChange={(e) => { setDepartment(e.target.value); localStorage.setItem("gtp_department", e.target.value); }}
+            onChange={(e) => updateSheetHeader({ department: e.target.value })}
             placeholder={ar ? "القسم العلمي" : "Department"}
             className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
           />
@@ -508,7 +510,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
             <>
               <img src={logo} alt="logo" className="h-8 w-8 rounded object-contain ring-1 ring-border" />
               <button
-                onClick={() => { setLogo(""); localStorage.removeItem("gtp_logo"); }}
+                onClick={() => updateSheetHeader({ logo: "" })}
                 className="text-xs font-semibold text-destructive hover:underline"
               >
                 {ar ? "إزالة" : "Remove"}
@@ -517,7 +519,9 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           )}
         </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
-          {ar ? "تُحفظ هذه البيانات على جهازك وتظهر أعلى كل ورقة إجابة تطبعها. إن تُرك الشعار فارغاً تبقى مساحته خالية." : "Saved on this device and printed at the top of every sheet."}
+          {ar
+            ? "تُحفظ هذه البيانات في حسابك وتظهر أعلى كل ورقة إجابة تطبعها من أي جهاز تسجّل دخول منه — تبقى كما هي حتى تغيّرها أنت. إن تُرك الشعار فارغاً تبقى مساحته خالية."
+            : "Saved to your account and printed at the top of every sheet from any device you sign into — stays until you change it."}
         </p>
       </details>
 
