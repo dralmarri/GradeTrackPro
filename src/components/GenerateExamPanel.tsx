@@ -163,6 +163,25 @@ export default function GenerateExamPanel({
         ? pool.filter((q) => manualSelected.has(q.id)).map((q) => ({ ...q, points: manualPoints[q.id] ?? q.points ?? 1 }))
         : pickRandom(pool, genCount, seedBase)
             .map((q) => ({ ...q, points: genKindPoints[kindOf(q)] ?? q.points ?? 1 }));
+
+      // essay points are ADDITIVE on top of "الدرجة القصوى" (which only
+      // covers the bubble-graded portion — see the comment below on
+      // maxScore) rather than something the professor typed in that box.
+      // If they left the essay's per-type points on "تلقائي" — i.e. never
+      // told this screen what to use — the exam total silently drifts away
+      // from the number they entered. Ask first instead of surprising them.
+      if (genMode === "full" && genPickMode === "random") {
+        const essayPicked = picked.filter((q) => kindOf(q) === "essay");
+        const essayTotal = essayPicked.reduce((a, q) => a + (q.points ?? 1), 0);
+        if (essayTotal > 0 && genKindPoints.essay === undefined) {
+          const total = genMax + essayTotal;
+          const proceed = window.confirm(ar
+            ? `درجة السؤال المقالي مأخوذة من البنك (${essayPicked[0].points ?? 1} لكل سؤال) ولم تحددها هنا — تُضاف فوق "الدرجة القصوى" (${genMax})، فيصبح مجموع الاختبار ${total} وليس ${genMax}.\n\nموافقة = المتابعة بهذا المجموع (${total}).\nإلغاء = الرجوع لتحديد "درجة كل نوع" لسؤال المقالي أعلاه.`
+            : `The essay question's points come from the bank (${essayPicked[0].points ?? 1} each) and weren't set here — they're added on top of "Max score" (${genMax}), making the exam total ${total}, not ${genMax}.\n\nOK = proceed with this total (${total}).\nCancel = go back and set "Points per type" for essay above.`);
+          if (!proceed) { setGenerating(false); return; }
+        }
+      }
+
       const forms = generateForms(picked, genForms, seedBase + 17);
 
       if (genMode === "paper") {
