@@ -55,7 +55,7 @@ export function buildQuestionPaperHtml(
   const tfHtml = tf.map((it) => `
       <div class="tf-row">
         <div class="tf-text"><b>${it.qi + 1}.</b> ${esc(it.text)} <span class="qpts">${ptsLabel(it.points)}</span></div>
-        <div class="tf-opts"><span>أ) صح</span><span>ب) خطأ</span></div>
+        <div class="tf-opts"><span>ص) صح</span><span>خ) خطأ</span></div>
       </div>`).join("");
 
   // Essay questions never get bubbles — just the question text (the

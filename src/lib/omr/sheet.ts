@@ -39,12 +39,14 @@ function registrationMarks(): string {
     `<rect x="${ORIENT_MARK.x - ORIENT_MARK.size / 2}" y="${ORIENT_MARK.y - ORIENT_MARK.size / 2}" width="${ORIENT_MARK.size}" height="${ORIENT_MARK.size}" fill="#000"/>`;
 }
 
-function brand(header?: SheetHeader): string {
+function brand(): string {
   const titleBlock = svgText(30, 16, "ورقة إجابة نموذجية (OMR)", 3.8, `direction="rtl" text-anchor="end" font-weight="700"`) +
     svgText(30, 21, "يرجى استخدام قلم رصاص داكن أو قلم حبر أسود", 2.35, `direction="rtl" text-anchor="end" fill="${MUTED}"`);
-  const logo = header?.logoDataUrl
-    ? `<image href="${header.logoDataUrl}" x="136" y="10" width="13" height="13" preserveAspectRatio="xMidYMid meet"/>`
-    : `<rect x="136" y="10" width="13" height="13" rx="2.2" fill="${INDIGO}"/>${svgText(142.5, 18.1, "GTP", 3.6, `fill="#fff" direction="ltr" unicode-bidi="bidi-override" text-anchor="middle" font-weight="800"`)}`;
+  // Always GradeTrackPro's own "GTP" mark, never the institution logo —
+  // the answer sheet's header has no room for a letterhead (see the
+  // question paper for that), and mixing the two marks here read as
+  // cluttered/unbalanced.
+  const logo = `<rect x="136" y="10" width="13" height="13" rx="2.2" fill="${INDIGO}"/>${svgText(142.5, 18.1, "GTP", 3.6, `fill="#fff" direction="ltr" unicode-bidi="bidi-override" text-anchor="middle" font-weight="800"`)}`;
   // text-anchor="start"/"end" resolution for a pure-Latin run inside an
   // RTL-ancestor document proved to vary across real browsers even with
   // direction="ltr" + unicode-bidi="bidi-override" set explicitly (worked
@@ -53,11 +55,6 @@ function brand(header?: SheetHeader): string {
   // symmetric anchor point can't flip with direction in any implementation.
   // cx picked generously past the badge's right edge (149) for the widest
   // fallback-font measurement of "GradeTrackPro" at this size (~26.5mm).
-  // institution/college/department text doesn't fit legibly in this
-  // header's ~29mm height at any readable size (tried — came out too
-  // cramped/small to read once printed). The answer sheet keeps just the
-  // logo; the full letterhead (institution/college/department) lives only
-  // on the question paper, which has room for it.
   return titleBlock + logo +
     svgText(167, 15.8, "GradeTrackPro", 3.7, `fill="${INDIGO}" direction="ltr" unicode-bidi="bidi-override" text-anchor="middle" font-weight="800"`) +
     svgText(152, 20.1, "نظام التصحيح الآلي المعتمد", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="end"`) +
@@ -182,7 +179,7 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
   const totalPages = (exam.essayQuestions || []).length ? 2 : 1;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}" role="img" aria-label="ورقة إجابة OMR"><rect width="210" height="297" fill="#fff"/>` +
     registrationMarks() + `<text x="105" y="184" font-family="${FONT}" font-size="24" font-weight="800" fill="#111827" opacity="0.035" text-anchor="middle" letter-spacing="2" transform="rotate(-24 105 184)">GradeTrackPro</text>` +
-    brand(header) + identityAndMeta(exam, header) + legend() + machineCode(exam) + bubbledStudentId(exam) + questionGrid(exam) + footer(totalPages) + `</svg>`;
+    brand() + identityAndMeta(exam, header) + legend() + machineCode(exam) + bubbledStudentId(exam) + questionGrid(exam) + footer(totalPages) + `</svg>`;
 }
 
 // Essay answer lines don't fit the mm-exact bubble page — that page's every
@@ -204,9 +201,9 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
         <div class="elines">${linesHtml}</div>
       </div>`;
   }).join("");
-  const badge = header?.logoDataUrl
-    ? `<img src="${header.logoDataUrl}" class="ebadge-img" />`
-    : `<div class="ebadge">GTP</div>`;
+  // Always GradeTrackPro's own mark here too, matching page 1 (no
+  // institution logo on the answer sheet at all — see brand() above).
+  const badge = `<div class="ebadge">GTP</div>`;
   // Just the brand mark (matching page 1's header) plus a "الجزء الثالث"
   // section — same continuation style page 1 itself uses for its own
   // "الجزء الأول"/"الجزء الثاني" bubble sections — instead of a standalone
@@ -248,7 +245,6 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
     .ehead-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 0.65mm solid ${INK}; padding-bottom: 4mm; }
     .ebrand-wrap { display: flex; align-items: center; gap: 3mm; }
     .ebadge { width: 12mm; height: 12mm; border-radius: 2.5mm; background: ${INDIGO}; color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; }
-    .ebadge-img { width: 12mm; height: 12mm; object-fit: contain; }
     .ebrand-name { font-weight: 800; font-size: 13px; color: ${INDIGO}; }
     .ebrand-sub { font-size: 8px; color: ${MUTED}; }
 
