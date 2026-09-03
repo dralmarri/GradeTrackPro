@@ -193,16 +193,39 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
     const linesHtml = Array.from({ length: lines }, () => `<div class="eline"></div>`).join("");
     return `<div class="eq"><div class="etext"><b>${i + 1}.</b> ${escapeXml(q.text)} <span class="epts">(${q.points ?? 1} ${(q.points ?? 1) === 1 ? "درجة" : "درجات"})</span></div><div class="elines">${linesHtml}</div></div>`;
   }).join("");
+  const badge = header?.logoDataUrl
+    ? `<img src="${header.logoDataUrl}" class="ebadge-img" />`
+    : `<div class="ebadge">GTP</div>`;
+  // mirrors page 1's header/identity block (badge + brand, title block,
+  // name/ID box, course meta) so the essay page reads as the same document
+  // continuing, not a different sheet stapled on.
   return `
     <div class="essay-page">
-      <div class="ehead">
-        <div class="ebrand">GradeTrackPro — ${escapeXml(exam.title)}</div>
-        <div class="efields">
-          <span>الاسم: <span class="eblank"></span></span>
-          <span>الرقم الجامعي: <span class="eblank"></span></span>
+      <div class="ehead-top">
+        <div class="etitleblock">
+          <div class="etitle">ورقة إجابة نموذجية — الأسئلة المقالية</div>
+          <div class="esub">إجابتك يجب أن تكون في المساحة المخصصة أدناه فقط</div>
+        </div>
+        <div class="ebrand-wrap">
+          ${badge}
+          <div>
+            <div class="ebrand-name">GradeTrackPro</div>
+            <div class="ebrand-sub">نظام التصحيح الآلي المعتمد</div>
+          </div>
         </div>
       </div>
-      <h2 class="etitle">إجابات الأسئلة المقالية</h2>
+      <div class="eident">
+        <div class="ename-box">
+          <div class="elabel">اسم الطالب (بخط اليد):</div>
+          <div class="eblank-box"></div>
+        </div>
+        <div class="emeta-box">
+          <div class="emeta-cell"><span class="elabel">المقرر:</span><span class="eval">${escapeXml(header?.courseName || "—")}</span></div>
+          <div class="emeta-cell"><span class="elabel">الاختبار:</span><span class="eval">${escapeXml(exam.title)}</span></div>
+          <div class="emeta-cell"><span class="elabel">الرقم الجامعي:</span><span class="eblank-line"></span></div>
+        </div>
+      </div>
+      <div class="esec-head"><span class="epill">إجابات مقالية</span><h3>اكتب إجابتك بخط واضح داخل الأسطر</h3></div>
       ${rows}
       <div class="epage">2/2</div>
     </div>`;
@@ -211,13 +234,32 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
 export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): string {
   const essayPage = essayAnswerPageHtml(exam, header);
   const essayCss = essayPage ? `
-    .essay-page { position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 20mm; overflow: visible; page-break-before: always; font-family: ${FONT}; }
+    .essay-page { position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 20mm; overflow: visible; page-break-before: always; font-family: ${FONT}; color: ${INK}; }
     @media print { .essay-page { padding: 15mm 20mm; } }
-    .ehead { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${INDIGO}; padding-bottom: 4mm; margin-bottom: 6mm; }
-    .ebrand { font-weight: 800; font-size: 13px; color: ${INDIGO}; }
-    .efields { display: flex; gap: 8mm; font-size: 11px; font-weight: 700; color: ${INK}; }
-    .eblank { display: inline-block; width: 35mm; border-bottom: 1px solid ${MUTED}; margin-inline-start: 2mm; }
-    .etitle { font-size: 14px; margin: 0 0 6mm; color: ${INK}; }
+
+    .ehead-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 0.65mm solid ${INK}; padding-bottom: 4mm; }
+    .etitleblock { text-align: end; }
+    .etitle { font-size: 13px; font-weight: 700; }
+    .esub { font-size: 8.5px; color: ${MUTED}; margin-top: 1mm; }
+    .ebrand-wrap { display: flex; align-items: center; gap: 3mm; }
+    .ebadge { width: 12mm; height: 12mm; border-radius: 2.5mm; background: ${INDIGO}; color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+    .ebadge-img { width: 12mm; height: 12mm; object-fit: contain; }
+    .ebrand-name { font-weight: 800; font-size: 13px; color: ${INDIGO}; }
+    .ebrand-sub { font-size: 8px; color: ${MUTED}; }
+
+    .eident { display: flex; gap: 4mm; margin-top: 5mm; align-items: stretch; }
+    .ename-box { flex: 1.4; }
+    .emeta-box { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2mm; background: ${PALE}; border: 0.25mm solid #e5e7eb; border-radius: 2mm; padding: 2.5mm 3.5mm; }
+    .emeta-cell { display: flex; justify-content: space-between; gap: 2mm; font-size: 9px; }
+    .elabel { color: ${MUTED}; font-weight: 700; white-space: nowrap; }
+    .eval { font-weight: 800; }
+    .eblank-box { margin-top: 1.5mm; height: 14mm; border: 0.4mm solid ${MUTED}; border-radius: 1.5mm; background: #fff; }
+    .eblank-line { flex: 1; border-bottom: 0.35mm solid ${MUTED}; margin-inline-start: 2mm; }
+
+    .esec-head { display: flex; align-items: center; gap: 3mm; margin: 6mm 0 4mm; }
+    .epill { background: ${INDIGO}; color: #fff; border-radius: 1.6mm; padding: 1.2mm 3.5mm; font-weight: 800; font-size: 9px; white-space: nowrap; }
+    .esec-head h3 { margin: 0; font-size: 11px; font-weight: 600; color: ${MUTED}; border-bottom: 0.35mm solid ${INDIGO}; padding-bottom: 1.5mm; flex: 1; }
+
     .eq { margin-bottom: 6mm; }
     .etext { font-size: 12.5pt; font-weight: 700; margin-bottom: 2.5mm; }
     .etext b { color: ${INDIGO}; margin-inline-end: 1mm; }

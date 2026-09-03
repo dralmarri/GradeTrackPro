@@ -60,7 +60,8 @@ describe("essay questions", () => {
     };
     const html = buildAnswerSheetHtml(exam);
     expect(html).toContain("essay-page");
-    expect(html).toContain("إجابات الأسئلة المقالية");
+    expect(html).toContain("إجابات مقالية");
+    expect(html).toContain("GradeTrackPro"); // matches page 1's brand header
     expect(html).toContain("سؤال مقالي 1");
     expect(html).toContain("سؤال مقالي 2");
     // page numbers: bubble page is 1/2, essay page is 2/2
