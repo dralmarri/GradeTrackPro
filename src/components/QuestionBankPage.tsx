@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
 import {
-  Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste, Wand2,
+  Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste, Wand2, Pencil, X, Check,
 } from "lucide-react";
 
 // This is the single place questions are browsed AND selected for exam
@@ -38,7 +38,7 @@ export default function QuestionBankPage({
 }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { questions, loading, addQuestion, addQuestions, deleteQuestion, deleteQuestions } = useQuestionBank(course.id, bankCourseIds);
+  const { questions, loading, addQuestion, addQuestions, updateQuestion, deleteQuestion, deleteQuestions } = useQuestionBank(course.id, bankCourseIds);
   const [showBank, setShowBank] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -72,6 +72,62 @@ export default function QuestionBankPage({
   const [qDifficulty, setQDifficulty] = useState<Difficulty | "">("");
   const [qPoints, setQPoints] = useState(1);
   const [saving, setSaving] = useState(false);
+
+  // --- edit question form — same shape as "add", but pre-filled and
+  // opened inline under the question being edited instead of at the top ---
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [eText, setEText] = useState("");
+  const [eType, setEType] = useState<ChoiceCount | "essay">(4);
+  const [eChoices, setEChoices] = useState<string[]>(["", "", "", ""]);
+  const [eCorrect, setECorrect] = useState(0);
+  const [eChapter, setEChapter] = useState("");
+  const [eTopic, setETopic] = useState("");
+  const [eDifficulty, setEDifficulty] = useState<Difficulty | "">("");
+  const [ePoints, setEPoints] = useState(1);
+  const [eSaving, setESaving] = useState(false);
+
+  const startEdit = (q: (typeof questions)[number]) => {
+    setEditingId(q.id);
+    setEText(q.text);
+    const t: ChoiceCount | "essay" = q.kind === "essay" ? "essay" : (q.choices.length as ChoiceCount);
+    setEType(t);
+    setEChoices(t === "essay" || t === 2 ? [] : [...q.choices]);
+    setECorrect(q.correct);
+    setEChapter(q.chapter || "");
+    setETopic(q.topic || "");
+    setEDifficulty(q.difficulty || "");
+    setEPoints(q.points ?? 1);
+  };
+
+  const setEditType = (t: ChoiceCount | "essay") => {
+    setEType(t);
+    setECorrect(0);
+    setEChoices(t === "essay" ? [] : t === 2 ? ["صح", "خطأ"] : new Array(t).fill(""));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    if (!eText.trim()) { toast.error(ar ? "أدخل نص السؤال" : "Enter question text"); return; }
+    if (eType !== "essay" && eType !== 2 && eChoices.some((c) => !c.trim())) {
+      toast.error(ar ? "أكمل جميع الخيارات" : "Fill all choices"); return;
+    }
+    setESaving(true);
+    const ok = await updateQuestion(editingId, {
+      text: eText.trim(),
+      kind: eType === "essay" ? "essay" : "choice",
+      choices: eType === "essay" ? [] : eType === 2 ? ["صح", "خطأ"] : eChoices.map((c) => c.trim()),
+      correct: eType === "essay" ? -1 : eCorrect,
+      chapter: eChapter.trim() || undefined,
+      topic: eTopic.trim() || undefined,
+      difficulty: (eDifficulty || undefined) as Difficulty | undefined,
+      points: ePoints,
+    });
+    setESaving(false);
+    if (ok) {
+      toast.success(ar ? "تم حفظ التعديل ✓" : "Changes saved");
+      setEditingId(null);
+    }
+  };
 
   const topics = useMemo(
     () => Array.from(new Set(questions.map((q) => q.topic).filter(Boolean))) as string[],
@@ -769,6 +825,120 @@ export default function QuestionBankPage({
                         ...group.map((q) => {
                           const i = questions.indexOf(q);
                           const selected = selectedIds.has(q.id);
+                          if (editingId === q.id) {
+                            return (
+                              <div key={q.id} className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-3">
+                                <textarea
+                                  value={eText}
+                                  onChange={(e) => setEText(e.target.value)}
+                                  rows={2}
+                                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                                />
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                  <label className="space-y-1 text-xs text-muted-foreground">
+                                    {ar ? "النوع" : "Type"}
+                                    <select
+                                      value={eType}
+                                      onChange={(e) => setEditType(e.target.value === "essay" ? "essay" : (Number(e.target.value) as ChoiceCount))}
+                                      className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+                                    >
+                                      <option value={2}>{ar ? "صح / خطأ" : "True/False"}</option>
+                                      <option value={3}>A – C</option>
+                                      <option value={4}>A – D</option>
+                                      <option value={5}>A – E</option>
+                                      <option value="essay">{ar ? "مقالي (إجابة كتابية)" : "Essay (written answer)"}</option>
+                                    </select>
+                                  </label>
+                                  <label className="space-y-1 text-xs text-muted-foreground">
+                                    {ar ? "الفصل / الوحدة" : "Chapter"}
+                                    <input
+                                      value={eChapter}
+                                      onChange={(e) => setEChapter(e.target.value)}
+                                      list="gtp-chapters"
+                                      className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+                                    />
+                                  </label>
+                                  <label className="space-y-1 text-xs text-muted-foreground">
+                                    {ar ? "الموضوع (اختياري)" : "Topic"}
+                                    <input
+                                      value={eTopic}
+                                      onChange={(e) => setETopic(e.target.value)}
+                                      list="gtp-topics"
+                                      className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+                                    />
+                                  </label>
+                                  <label className="space-y-1 text-xs text-muted-foreground">
+                                    {ar ? "درجة السؤال" : "Points"}
+                                    <input
+                                      type="number" min={0.25} step={0.25} value={ePoints}
+                                      onChange={(e) => setEPoints(Number(e.target.value) || 1)}
+                                      className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+                                    />
+                                  </label>
+                                </div>
+                                <label className="block space-y-1 text-xs text-muted-foreground sm:w-1/4">
+                                  {ar ? "الصعوبة" : "Difficulty"}
+                                  <select
+                                    value={eDifficulty}
+                                    onChange={(e) => setEDifficulty(e.target.value as Difficulty | "")}
+                                    className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
+                                  >
+                                    <option value="">{ar ? "—" : "—"}</option>
+                                    <option value="easy">{DIFFICULTY_LABELS.easy}</option>
+                                    <option value="medium">{DIFFICULTY_LABELS.medium}</option>
+                                    <option value="hard">{DIFFICULTY_LABELS.hard}</option>
+                                  </select>
+                                </label>
+                                {eType === "essay" ? (
+                                  <p className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                                    {ar ? "سؤال مقالي — لا خيارات ولا إجابة صحيحة." : "Essay question — no choices or correct answer."}
+                                  </p>
+                                ) : (
+                                  <div className="space-y-1.5">
+                                    {(eType === 2 ? ["صح", "خطأ"] : eChoices).map((c, ci) => (
+                                      <div key={ci} className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => setECorrect(ci)}
+                                          className={cn(
+                                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all",
+                                            eCorrect === ci ? "border-success bg-success text-success-foreground" : "border-border text-muted-foreground hover:border-success/60",
+                                          )}
+                                        >
+                                          {choiceLabels(eType)[ci]}
+                                        </button>
+                                        {eType === 2 ? (
+                                          <span className="text-sm font-semibold text-foreground">{c}</span>
+                                        ) : (
+                                          <input
+                                            value={c}
+                                            onChange={(e) => setEChoices((prev) => prev.map((p, j) => (j === ci ? e.target.value : p)))}
+                                            className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                                          />
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={handleSaveEdit}
+                                    disabled={eSaving}
+                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+                                  >
+                                    {eSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                    {ar ? "حفظ التعديل" : "Save changes"}
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingId(null)}
+                                    className="flex items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-bold text-foreground hover:bg-muted"
+                                  >
+                                    <X size={14} />
+                                    {ar ? "إلغاء" : "Cancel"}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }
                           return (
                             <div key={q.id} className={cn("flex items-start gap-2 rounded-xl px-3 py-2", selected ? "bg-primary/5 ring-1 ring-primary/30" : "bg-muted/40")}>
                               <input
@@ -805,6 +975,13 @@ export default function QuestionBankPage({
                                   className="mt-0.5 w-14 shrink-0 rounded-lg border border-input bg-background px-1.5 py-1 text-center text-xs text-foreground outline-none focus:border-primary"
                                 />
                               )}
+                              <button
+                                onClick={() => startEdit(q)}
+                                title={ar ? "تعديل السؤال" : "Edit question"}
+                                className="shrink-0 rounded-lg p-1.5 text-primary hover:bg-primary/10"
+                              >
+                                <Pencil size={14} />
+                              </button>
                               <button
                                 onClick={async () => {
                                   if (!window.confirm(ar ? "حذف هذا السؤال من البنك؟" : "Delete this question?")) return;
