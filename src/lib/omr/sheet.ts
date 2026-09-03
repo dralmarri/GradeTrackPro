@@ -162,20 +162,22 @@ function questionGrid(exam: OmrExam): string {
   return out.join("");
 }
 
-function footer(): string {
+function footer(totalPages: number): string {
   return `<line x1="30" y1="278" x2="180" y2="278" stroke="${LINE}" stroke-width="0.35"/>` +
     `<line x1="32" y1="284" x2="65" y2="284" stroke="#9ca3af" stroke-width="0.4"/>` +
     svgText(48.5, 288, "توقيع المراقب", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="middle"`) +
     `<line x1="145" y1="284" x2="178" y2="284" stroke="#9ca3af" stroke-width="0.4"/>` +
     svgText(161.5, 288, "توقيع الطالب", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="middle"`) +
     svgText(105, 284.8, "تمنياتنا لكم بالتوفيق والنجاح", 3, `direction="rtl" text-anchor="middle" font-weight="700"`) +
-    svgText(105, 292, "GradeTrackPro — نظام التصحيح الآلي", 2.1, `fill="#9ca3af" direction="rtl" text-anchor="middle"`);
+    svgText(105, 292, "GradeTrackPro — نظام التصحيح الآلي", 2.1, `fill="#9ca3af" direction="rtl" text-anchor="middle"`) +
+    (totalPages > 1 ? svgText(178, 292, `1/${totalPages}`, 2.3, `fill="${MUTED}" direction="ltr" text-anchor="end" font-weight="700"`) : "");
 }
 
 export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string {
+  const totalPages = (exam.essayQuestions || []).length ? 2 : 1;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}" role="img" aria-label="ورقة إجابة OMR"><rect width="210" height="297" fill="#fff"/>` +
     registrationMarks() + `<text x="105" y="184" font-family="${FONT}" font-size="24" font-weight="800" fill="#111827" opacity="0.035" text-anchor="middle" letter-spacing="2" transform="rotate(-24 105 184)">GradeTrackPro</text>` +
-    brand(header) + identityAndMeta(exam, header) + legend() + machineCode(exam) + bubbledStudentId(exam) + questionGrid(exam) + footer() + `</svg>`;
+    brand(header) + identityAndMeta(exam, header) + legend() + machineCode(exam) + bubbledStudentId(exam) + questionGrid(exam) + footer(totalPages) + `</svg>`;
 }
 
 // Essay answer lines don't fit the mm-exact bubble page — that page's every
@@ -202,13 +204,14 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
       </div>
       <h2 class="etitle">إجابات الأسئلة المقالية</h2>
       ${rows}
+      <div class="epage">2/2</div>
     </div>`;
 }
 
 export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): string {
   const essayPage = essayAnswerPageHtml(exam, header);
   const essayCss = essayPage ? `
-    .essay-page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 20mm; overflow: visible; page-break-before: always; font-family: ${FONT}; }
+    .essay-page { position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 20mm; overflow: visible; page-break-before: always; font-family: ${FONT}; }
     @media print { .essay-page { padding: 15mm 20mm; } }
     .ehead { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${INDIGO}; padding-bottom: 4mm; margin-bottom: 6mm; }
     .ebrand { font-weight: 800; font-size: 13px; color: ${INDIGO}; }
@@ -220,7 +223,8 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
     .etext b { color: ${INDIGO}; margin-inline-end: 1mm; }
     .epts { font-size: 10px; font-weight: 600; color: ${MUTED}; }
     .elines { padding-inline-start: 6mm; }
-    .eline { height: 8mm; border-bottom: 1px solid #cbd5e1; }` : "";
+    .eline { height: 8mm; border-bottom: 1px solid #cbd5e1; }
+    .epage { position: absolute; bottom: 12mm; right: 20mm; font-size: 9px; font-weight: 700; color: ${MUTED}; direction: ltr; }` : "";
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><title>${escapeXml(exam.title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{width:210mm;margin:0;padding:0;background:#fff}.sheet-page{width:210mm;height:297mm;overflow:hidden}svg{display:block;width:210mm;height:297mm}${essayCss}</style></head><body><div class="sheet-page">${buildAnswerSheetSvg(exam, header)}</div>${essayPage}</body></html>`;
 }
 

@@ -63,6 +63,9 @@ describe("essay questions", () => {
     expect(html).toContain("إجابات الأسئلة المقالية");
     expect(html).toContain("سؤال مقالي 1");
     expect(html).toContain("سؤال مقالي 2");
+    // page numbers: bubble page is 1/2, essay page is 2/2
+    expect(html).toContain(">1/2<");
+    expect(html).toContain(">2/2<");
     // 4 points -> 8 lines, 1 point -> min 3 lines
     expect((html.match(/class="eline"/g) || []).length).toBe(11);
     // an exam with no essay questions gets no second page at all
