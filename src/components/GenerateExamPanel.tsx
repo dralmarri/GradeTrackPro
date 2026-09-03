@@ -433,41 +433,54 @@ export default function GenerateExamPanel({ course, bankCourseIds, sheetHeader, 
                     {ar ? "لا توجد أسئلة مطابقة لهذا التصفية" : "No questions match this filter"}
                   </p>
                 )}
-                {genPool.map((q) => (
-                  <div
-                    key={q.id}
-                    className={cn(
-                      "flex items-start gap-2 rounded-lg px-2 py-1.5",
-                      manualSelected.has(q.id) ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted/50",
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={manualSelected.has(q.id)}
-                      onChange={(e) => setManualSelected((s) => {
-                        const n = new Set(s);
-                        if (e.target.checked) n.add(q.id); else n.delete(q.id);
-                        return n;
-                      })}
-                      className="mt-1 h-4 w-4 shrink-0 accent-primary"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-foreground">{q.text}</p>
-                      <div className="mt-0.5 flex flex-wrap gap-1">
-                        {q.chapter && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{q.chapter}</span>}
-                        {q.topic && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{q.topic}</span>}
-                        {q.difficulty && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{DIFFICULTY_LABELS[q.difficulty]}</span>}
+                {([
+                  { key: "tf" as const, label: ar ? "صح وخطأ" : "True/False" },
+                  { key: "mcq" as const, label: ar ? "اختيار من متعدد" : "Multiple choice" },
+                  { key: "essay" as const, label: ar ? "مقالي" : "Essay" },
+                ]).flatMap(({ key, label }) => {
+                  const group = genPool.filter((q) => kindOf(q) === key);
+                  if (!group.length) return [];
+                  return [
+                    <p key={"t" + key} className="sticky top-0 -mx-1.5 -mt-1.5 bg-background px-2.5 py-1 text-[11px] font-bold text-muted-foreground first:mt-0">
+                      {label} <span className="text-muted-foreground/70">({group.length})</span>
+                    </p>,
+                    ...group.map((q) => (
+                      <div
+                        key={q.id}
+                        className={cn(
+                          "flex items-start gap-2 rounded-lg px-2 py-1.5",
+                          manualSelected.has(q.id) ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted/50",
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={manualSelected.has(q.id)}
+                          onChange={(e) => setManualSelected((s) => {
+                            const n = new Set(s);
+                            if (e.target.checked) n.add(q.id); else n.delete(q.id);
+                            return n;
+                          })}
+                          className="mt-1 h-4 w-4 shrink-0 accent-primary"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-foreground">{q.text}</p>
+                          <div className="mt-0.5 flex flex-wrap gap-1">
+                            {q.chapter && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{q.chapter}</span>}
+                            {q.topic && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{q.topic}</span>}
+                            {q.difficulty && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{DIFFICULTY_LABELS[q.difficulty]}</span>}
+                          </div>
+                        </div>
+                        <input
+                          type="number" min={0.25} step={0.25}
+                          value={manualPoints[q.id] ?? q.points ?? 1}
+                          onChange={(e) => setManualPoints((mp) => ({ ...mp, [q.id]: Number(e.target.value) || 1 }))}
+                          title={ar ? "درجة السؤال" : "Points"}
+                          className="mt-0.5 w-14 shrink-0 rounded-lg border border-input bg-background px-1.5 py-1 text-center text-xs text-foreground outline-none focus:border-primary"
+                        />
                       </div>
-                    </div>
-                    <input
-                      type="number" min={0.25} step={0.25}
-                      value={manualPoints[q.id] ?? q.points ?? 1}
-                      onChange={(e) => setManualPoints((mp) => ({ ...mp, [q.id]: Number(e.target.value) || 1 }))}
-                      title={ar ? "درجة السؤال" : "Points"}
-                      className="mt-0.5 w-14 shrink-0 rounded-lg border border-input bg-background px-1.5 py-1 text-center text-xs text-foreground outline-none focus:border-primary"
-                    />
-                  </div>
-                ))}
+                    )),
+                  ];
+                })}
               </div>
             </div>
           )}
