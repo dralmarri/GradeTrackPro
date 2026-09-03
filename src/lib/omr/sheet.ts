@@ -178,8 +178,50 @@ export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string
     brand(header) + identityAndMeta(exam, header) + legend() + machineCode(exam) + bubbledStudentId(exam) + questionGrid(exam) + footer() + `</svg>`;
 }
 
+// Essay answer lines don't fit the mm-exact bubble page — that page's every
+// coordinate is tied to scan.ts's read geometry, so nothing else can share
+// it. Essay writing space instead becomes its own extra page appended after
+// the bubble page, printed as part of the same "answer sheet" document but
+// never touched by the scanner (it only ever reads page 1's photo).
+function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
+  const essayQuestions = exam.essayQuestions || [];
+  if (!essayQuestions.length) return "";
+  const rows = essayQuestions.map((q, i) => {
+    const lines = Math.max(3, Math.min(10, Math.round(q.points ?? 1) * 2));
+    const linesHtml = Array.from({ length: lines }, () => `<div class="eline"></div>`).join("");
+    return `<div class="eq"><div class="etext"><b>${i + 1}.</b> ${escapeXml(q.text)} <span class="epts">(${q.points ?? 1} ${(q.points ?? 1) === 1 ? "درجة" : "درجات"})</span></div><div class="elines">${linesHtml}</div></div>`;
+  }).join("");
+  return `
+    <div class="essay-page">
+      <div class="ehead">
+        <div class="ebrand">GradeTrackPro — ${escapeXml(exam.title)}</div>
+        <div class="efields">
+          <span>الاسم: <span class="eblank"></span></span>
+          <span>الرقم الجامعي: <span class="eblank"></span></span>
+        </div>
+      </div>
+      <h2 class="etitle">إجابات الأسئلة المقالية</h2>
+      ${rows}
+    </div>`;
+}
+
 export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): string {
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><title>${escapeXml(exam.title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{width:210mm;height:297mm;margin:0;padding:0;background:#fff;overflow:hidden}svg{display:block;width:210mm;height:297mm}</style></head><body>${buildAnswerSheetSvg(exam, header)}</body></html>`;
+  const essayPage = essayAnswerPageHtml(exam, header);
+  const essayCss = essayPage ? `
+    .essay-page { width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 20mm; overflow: visible; page-break-before: always; font-family: ${FONT}; }
+    @media print { .essay-page { padding: 15mm 20mm; } }
+    .ehead { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${INDIGO}; padding-bottom: 4mm; margin-bottom: 6mm; }
+    .ebrand { font-weight: 800; font-size: 13px; color: ${INDIGO}; }
+    .efields { display: flex; gap: 8mm; font-size: 11px; font-weight: 700; color: ${INK}; }
+    .eblank { display: inline-block; width: 35mm; border-bottom: 1px solid ${MUTED}; margin-inline-start: 2mm; }
+    .etitle { font-size: 14px; margin: 0 0 6mm; color: ${INK}; }
+    .eq { margin-bottom: 6mm; }
+    .etext { font-size: 12.5pt; font-weight: 700; margin-bottom: 2.5mm; }
+    .etext b { color: ${INDIGO}; margin-inline-end: 1mm; }
+    .epts { font-size: 10px; font-weight: 600; color: ${MUTED}; }
+    .elines { padding-inline-start: 6mm; }
+    .eline { height: 8mm; border-bottom: 1px solid #cbd5e1; }` : "";
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><title>${escapeXml(exam.title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{width:210mm;margin:0;padding:0;background:#fff}.sheet-page{width:210mm;height:297mm;overflow:hidden}svg{display:block;width:210mm;height:297mm}${essayCss}</style></head><body><div class="sheet-page">${buildAnswerSheetSvg(exam, header)}</div>${essayPage}</body></html>`;
 }
 
 export function printAnswerSheet(exam: OmrExam, header?: SheetHeader): boolean {

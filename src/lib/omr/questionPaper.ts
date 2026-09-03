@@ -52,17 +52,15 @@ export function buildQuestionPaperHtml(
         <div class="tf-opts"><span>أ) صح</span><span>ب) خطأ</span></div>
       </div>`).join("");
 
-  // Essay questions never get bubbles — just the question text and a blank
-  // ruled writing area sized roughly to its point weight, since they're
-  // graded manually after scanning (see OmrScanDialog).
+  // Essay questions never get bubbles — just the question text and its
+  // point weight. The writing space itself lives on the answer sheet
+  // (see sheet.ts's essay page), not here, so the paper stays purely the
+  // question text students read from.
   const essayHtml = form.essayQuestions.map((q, ei) => {
     const points = q.points ?? 1;
-    const lines = Math.max(3, Math.min(10, Math.round(points) * 2));
-    const linesHtml = Array.from({ length: lines }, () => `<div class="essay-line"></div>`).join("");
     return `
       <div class="q">
         <div class="qtext"><b>${mcq.length + tf.length + ei + 1}.</b> ${esc(q.text)} <span class="essay-pts">(${points} ${points === 1 ? "درجة" : "درجات"})</span></div>
-        <div class="essay-lines">${linesHtml}</div>
       </div>`;
   }).join("");
 
@@ -156,8 +154,6 @@ export function buildQuestionPaperHtml(
   .tf-opts { display: flex; gap: 4mm; font-size: 10.5px; font-weight: 700; color: #6b7280; white-space: nowrap; }
 
   .essay-pts { font-size: 10px; font-weight: 700; color: #6b7280; }
-  .essay-lines { padding-inline-start: 6mm; }
-  .essay-line { height: 8mm; border-bottom: 1px solid #cbd5e1; }
 
   .foot { display: flex; justify-content: space-between; color: #9ca3af; font-weight: 600; font-size: 9.5px; margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #e5e7eb; break-inside: avoid; }
   .foot .mid { color: var(--navy); font-weight: 700; }
