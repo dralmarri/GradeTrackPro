@@ -202,9 +202,10 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
   const badge = header?.logoDataUrl
     ? `<img src="${header.logoDataUrl}" class="ebadge-img" />`
     : `<div class="ebadge">GTP</div>`;
-  // mirrors page 1's header/identity block (badge + brand, title block,
-  // name/ID box, course meta) so the essay page reads as the same document
-  // continuing, not a different sheet stapled on.
+  // mirrors page 1's header (badge + brand, title block) so the essay page
+  // reads as the same document continuing, not a different sheet stapled
+  // on — but WITHOUT repeating page 1's own name/student-number fields,
+  // since this is still the same physical answer sheet, not a separate one.
   return `
     <div class="essay-page">
       <div class="ehead-top">
@@ -221,14 +222,9 @@ function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
         </div>
       </div>
       <div class="eident">
-        <div class="ename-box">
-          <div class="elabel">اسم الطالب (بخط اليد):</div>
-          <div class="eblank-box"></div>
-        </div>
         <div class="emeta-box">
           <div class="emeta-cell"><span class="elabel">المقرر:</span><span class="eval">${escapeXml(header?.courseName || "—")}</span></div>
           <div class="emeta-cell"><span class="elabel">الاختبار:</span><span class="eval">${escapeXml(exam.title)}</span></div>
-          <div class="emeta-cell"><span class="elabel">الرقم الجامعي:</span><span class="eblank-line"></span></div>
         </div>
       </div>
       <div class="esec-head"><span class="epill">إجابات مقالية</span><h3>اكتب إجابتك بخط واضح داخل الأسطر</h3></div>
@@ -260,14 +256,11 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
     .ebrand-name { font-weight: 800; font-size: 13px; color: ${INDIGO}; }
     .ebrand-sub { font-size: 8px; color: ${MUTED}; }
 
-    .eident { display: flex; gap: 4mm; margin-top: 5mm; align-items: stretch; }
-    .ename-box { flex: 1.4; }
-    .emeta-box { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2mm; background: ${PALE}; border: 0.25mm solid #e5e7eb; border-radius: 2mm; padding: 2.5mm 3.5mm; }
-    .emeta-cell { display: flex; justify-content: space-between; gap: 2mm; font-size: 9px; }
+    .eident { margin-top: 5mm; }
+    .emeta-box { display: flex; gap: 8mm; background: ${PALE}; border: 0.25mm solid #e5e7eb; border-radius: 2mm; padding: 2.5mm 4mm; }
+    .emeta-cell { display: flex; gap: 1.5mm; font-size: 9.5px; }
     .elabel { color: ${MUTED}; font-weight: 700; white-space: nowrap; }
     .eval { font-weight: 800; }
-    .eblank-box { margin-top: 1.5mm; height: 14mm; border: 0.4mm solid ${MUTED}; border-radius: 1.5mm; background: #fff; }
-    .eblank-line { flex: 1; border-bottom: 0.35mm solid ${MUTED}; margin-inline-start: 2mm; }
 
     .esec-head { display: flex; align-items: center; gap: 3mm; margin: 6mm 0 4mm; }
     .epill { background: ${INDIGO}; color: #fff; border-radius: 1.6mm; padding: 1.2mm 3.5mm; font-weight: 800; font-size: 9px; white-space: nowrap; }
