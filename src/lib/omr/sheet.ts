@@ -274,7 +274,12 @@ export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): strin
     .esec-head h3 { margin: 0; font-size: 11px; font-weight: 600; color: ${MUTED}; border-bottom: 0.35mm solid ${INDIGO}; padding-bottom: 1.5mm; flex: 1; }
 
     .eq { margin-bottom: 6mm; }
-    .etext-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 4mm; margin-bottom: 2.5mm; }
+    /* No margin-bottom here on purpose: each .eline is a full 8mm box (its
+       ruled line sits at the box's own bottom edge), so the gap from the
+       question text down to the FIRST line already matches the gap between
+       every later pair of lines — adding margin here would only make that
+       first gap visibly larger than the rest. */
+    .etext-row { display: flex; align-items: center; justify-content: space-between; gap: 4mm; }
     .etext { flex: 1; font-size: 12.5pt; font-weight: 700; }
     .etext b { color: ${INDIGO}; margin-inline-end: 1mm; }
     .epts { font-size: 10px; font-weight: 600; color: ${MUTED}; }
