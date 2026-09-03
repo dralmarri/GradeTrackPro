@@ -52,6 +52,16 @@ export function buildQuestionPaperHtml(
         <div class="tf-opts"><span>أ) صح</span><span>ب) خطأ</span></div>
       </div>`).join("");
 
+  // Essay questions never get bubbles — just the question text. No grades
+  // are shown anywhere on this paper (MCQ/T-F never showed points either);
+  // the writing space AND the grade box both live on the answer sheet (see
+  // sheet.ts's essay page), so this paper stays purely the question text
+  // students read from.
+  const essayHtml = form.essayQuestions.map((q, ei) => `
+      <div class="q">
+        <div class="qtext"><b>${mcq.length + tf.length + ei + 1}.</b> ${esc(q.text)}</div>
+      </div>`).join("");
+
   const sections = [
     mcq.length ? `
       <section class="sec">
@@ -62,6 +72,11 @@ export function buildQuestionPaperHtml(
       <section class="sec">
         <div class="sec-head"><span class="pill pill-muted">الجزء الثاني</span><h3>صح أم خطأ</h3></div>
         ${tfHtml}
+      </section>` : "",
+    form.essayQuestions.length ? `
+      <section class="sec">
+        <div class="sec-head"><span class="pill pill-essay">الجزء الثالث</span><h3>أسئلة مقالية</h3></div>
+        ${essayHtml}
       </section>` : "",
   ].join("");
 
@@ -119,6 +134,7 @@ export function buildQuestionPaperHtml(
   .sec-head { display: flex; align-items: center; gap: 3mm; margin-bottom: 4mm; }
   .pill { background: var(--navy2); color: #fff; border-radius: 1.6mm; padding: 1.2mm 3.5mm; font-weight: 800; font-size: 11px; }
   .pill-muted { background: #99a3ad; }
+  .pill-essay { background: #b45309; }
   .sec-head h3 { margin: 0; font-size: 13.5px; color: #222; border-bottom: 2px solid var(--navy2); padding-bottom: 1.5mm; }
 
   .q { margin-bottom: 5mm; padding-bottom: 3.5mm; border-bottom: 1px dashed var(--line); page-break-inside: avoid; }
@@ -134,6 +150,7 @@ export function buildQuestionPaperHtml(
   .tf-text { font-size: 11.5pt; font-weight: 600; flex: 1; }
   .tf-text b { color: var(--navy2); margin-inline-end: 1mm; }
   .tf-opts { display: flex; gap: 4mm; font-size: 10.5px; font-weight: 700; color: #6b7280; white-space: nowrap; }
+
 
   .foot { display: flex; justify-content: space-between; color: #9ca3af; font-weight: 600; font-size: 9.5px; margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #e5e7eb; break-inside: avoid; }
   .foot .mid { color: var(--navy); font-weight: 700; }
@@ -155,7 +172,7 @@ export function buildQuestionPaperHtml(
       ${metaCells.map((c) => `<div class="cell${c.model ? " model" : ""}"><span class="lbl">${esc(c.label)}</span><span class="val">${esc(c.value)}</span></div>`).join("")}
     </div>
     <div class="icon-row">
-      <span>عدد الأسئلة: ${form.questions.length}</span>
+      <span>عدد الأسئلة: ${form.questions.length + form.essayQuestions.length}</span>
       ${maxScore != null ? `<span>الدرجة الكلية: ${maxScore}</span>` : ""}
     </div>
   </div>

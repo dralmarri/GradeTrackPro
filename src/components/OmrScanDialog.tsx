@@ -51,9 +51,14 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [wrongExamMatch, setWrongExamMatch] = useState<OmrExam | null>(null);
   // which question's choice-picker is expanded in the answer-details list
   const [editingQ, setEditingQ] = useState<number | null>(null);
+  // manually-entered points per essay question (not OMR-read) — added on
+  // top of the auto-graded score before the final grade is applied
+  const [essayScores, setEssayScores] = useState<number[]>(() => (exam.essayQuestions || []).map(() => 0));
   const { addScan } = useOmrScans(null); // used for recording only
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
+  const essayTotal = (exam.essayQuestions || []).reduce((a, q) => a + (q.points ?? 1), 0);
+  const essayEarned = essayScores.reduce((a, s) => a + (s || 0), 0);
 
   // Shared by the initial photo upload AND by re-analysing the same photo
   // after switching to the exam the sheet's printed code actually matches —
@@ -180,7 +185,8 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
     }
     setApplying(true);
     try {
-      await onApplyScore(selectedStudentId, exam.targetComponent, result.score);
+      const finalScore = Math.round((result.score + essayEarned) * 100) / 100;
+      await onApplyScore(selectedStudentId, exam.targetComponent, finalScore);
       const s = course.students.find((st) => st.id === selectedStudentId);
       // learn: bind the clean bubbled number to this student for future auto-match
       const cleanNum = result.studentNumber && !result.studentNumber.includes("؟") ? result.studentNumber : "";
@@ -193,9 +199,10 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         studentId: selectedStudentId,
         studentName: s?.name || "",
         studentNumber: cleanNum,
-        score: result.score,
+        score: finalScore,
         rawCorrect: result.rawCorrect,
         answers: result.answers,
+        essayScores: (exam.essayQuestions || []).length ? essayScores : undefined,
         photo,
         needsReview: unresolvedCount > 0,
         reviewCount: unresolvedCount,
@@ -220,8 +227,8 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       } else {
         toast.success(
           ar
-            ? `رُصدت الدرجة ${result.score}/${exam.maxScore} للطالب ${s?.name ?? ""}`
-            : `Scored ${result.score}/${exam.maxScore} for ${s?.name ?? ""}`,
+            ? `رُصدت الدرجة ${finalScore}/${exam.maxScore + essayTotal} للطالب ${s?.name ?? ""}`
+            : `Scored ${finalScore}/${exam.maxScore + essayTotal} for ${s?.name ?? ""}`,
         );
       }
       reset(); // ready to scan the next sheet
@@ -326,13 +333,13 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
             {/* score summary */}
             <div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
               <p className="font-display text-4xl font-extrabold text-primary">
-                {result.score}
-                <span className="text-lg text-muted-foreground"> / {exam.maxScore}</span>
+                {essayTotal > 0 ? Math.round((result.score + essayEarned) * 100) / 100 : result.score}
+                <span className="text-lg text-muted-foreground"> / {exam.maxScore + essayTotal}</span>
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {ar
-                  ? `${result.rawCorrect} إجابة صحيحة من ${exam.questionCount}`
-                  : `${result.rawCorrect} correct out of ${exam.questionCount}`}
+                  ? `${result.rawCorrect} إجابة صحيحة من ${exam.questionCount}${essayTotal > 0 ? ` · تصحيح آلي: ${result.score}/${exam.maxScore}` : ""}`
+                  : `${result.rawCorrect} correct out of ${exam.questionCount}${essayTotal > 0 ? ` · auto-graded: ${result.score}/${exam.maxScore}` : ""}`}
               </p>
               {(blanks > 0 || ambiguous > 0) && (
                 <p className="mt-2 flex items-center justify-center gap-1 text-xs font-semibold text-amber-600">
@@ -343,6 +350,35 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                 </p>
               )}
             </div>
+
+            {/* manual essay grading — not read by the scanner, entered by hand */}
+            {(exam.essayQuestions || []).length > 0 && (
+              <div className="space-y-2.5 rounded-2xl border border-amber-400/50 bg-amber-500/5 p-4 shadow-sm">
+                <p className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                  {ar ? "الأسئلة المقالية — أدخل الدرجة يدوياً بعد قراءة إجابة الطالب:" : "Essay questions — enter the score manually after reading the student's answer:"}
+                </p>
+                {(exam.essayQuestions || []).map((q, ei) => (
+                  <div key={ei} className="flex items-center gap-2 rounded-xl bg-background p-2.5">
+                    <p className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground" title={q.text}>
+                      {ei + 1}. {q.text}
+                    </p>
+                    <input
+                      type="number"
+                      min={0}
+                      max={q.points ?? 1}
+                      step={0.25}
+                      value={essayScores[ei] ?? 0}
+                      onChange={(e) => {
+                        const v = Math.max(0, Math.min(q.points ?? 1, Number(e.target.value) || 0));
+                        setEssayScores((prev) => prev.map((s, i) => (i === ei ? v : s)));
+                      }}
+                      className="w-16 shrink-0 rounded-lg border border-input bg-background px-2 py-1.5 text-center text-sm font-bold outline-none focus:border-primary"
+                    />
+                    <span className="shrink-0 text-[11px] text-muted-foreground">/ {q.points ?? 1}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* flagged questions review */}
             {reviewItems.length > 0 && (

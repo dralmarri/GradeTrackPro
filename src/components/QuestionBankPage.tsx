@@ -53,7 +53,7 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
   // --- add question form ---
   const [showAdd, setShowAdd] = useState(false);
   const [qText, setQText] = useState("");
-  const [qType, setQType] = useState<ChoiceCount>(4);
+  const [qType, setQType] = useState<ChoiceCount | "essay">(4);
   const [qChoices, setQChoices] = useState<string[]>(["", "", "", ""]);
   const [qCorrect, setQCorrect] = useState(0);
   const [qChapter, setQChapter] = useState("");
@@ -100,22 +100,23 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
     </div>
 );
 
-  const setType = (t: ChoiceCount) => {
+  const setType = (t: ChoiceCount | "essay") => {
     setQType(t);
     setQCorrect(0);
-    setQChoices(t === 2 ? ["صح", "خطأ"] : new Array(t).fill(""));
+    setQChoices(t === "essay" ? [] : t === 2 ? ["صح", "خطأ"] : new Array(t).fill(""));
   };
 
   const handleAdd = async () => {
     if (!qText.trim()) { toast.error(ar ? "أدخل نص السؤال" : "Enter question text"); return; }
-    if (qType !== 2 && qChoices.some((c) => !c.trim())) {
+    if (qType !== "essay" && qType !== 2 && qChoices.some((c) => !c.trim())) {
       toast.error(ar ? "أكمل جميع الخيارات" : "Fill all choices"); return;
     }
     setSaving(true);
     const ok = await addQuestion({
       text: qText.trim(),
-      choices: qType === 2 ? ["صح", "خطأ"] : qChoices.map((c) => c.trim()),
-      correct: qCorrect,
+      kind: qType === "essay" ? "essay" : "choice",
+      choices: qType === "essay" ? [] : qType === 2 ? ["صح", "خطأ"] : qChoices.map((c) => c.trim()),
+      correct: qType === "essay" ? -1 : qCorrect,
       chapter: qChapter.trim() || undefined,
       topic: qTopic.trim() || undefined,
       difficulty: (qDifficulty || undefined) as Difficulty | undefined,
@@ -125,7 +126,7 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
     if (ok) {
       toast.success(ar ? "أُضيف السؤال إلى البنك ✓" : "Question added");
       setQText(""); setQCorrect(0);
-      if (qType !== 2) setQChoices(new Array(qType).fill(""));
+      if (qType !== "essay" && qType !== 2) setQChoices(new Array(qType).fill(""));
       setShowAdd(false);
     }
   };
@@ -538,13 +539,14 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
               {ar ? "النوع" : "Type"}
               <select
                 value={qType}
-                onChange={(e) => setType(Number(e.target.value) as ChoiceCount)}
+                onChange={(e) => setType(e.target.value === "essay" ? "essay" : (Number(e.target.value) as ChoiceCount))}
                 className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
               >
                 <option value={2}>{ar ? "صح / خطأ" : "True/False"}</option>
                 <option value={3}>A – C</option>
                 <option value={4}>A – D</option>
                 <option value={5}>A – E</option>
+                <option value="essay">{ar ? "مقالي (إجابة كتابية)" : "Essay (written answer)"}</option>
               </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
@@ -596,37 +598,46 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
             </label>
           </div>
 
-          {/* choices + correct pick */}
-          <div className="space-y-2">
-            <p className="text-xs font-bold text-muted-foreground">
-              {ar ? "الخيارات — اضغط الدائرة لتحديد الإجابة الصحيحة:" : "Choices — tap the circle to mark the correct one:"}
+          {/* choices + correct pick — essay questions have neither, they
+              print with a blank writing area and are graded manually */}
+          {qType === "essay" ? (
+            <p className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+              {ar
+                ? "سيُطبع مربع كتابة فارغ للطالب أسفل هذا السؤال في ورقة الأسئلة، ويُصحَّح يدوياً بعد المسح."
+                : "A blank writing area prints under this question on the paper; it's graded manually after scanning."}
             </p>
-            {(qType === 2 ? ["صح", "خطأ"] : qChoices).map((c, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <button
-                  onClick={() => setQCorrect(i)}
-                  className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all",
-                    qCorrect === i
-                      ? "border-success bg-success text-success-foreground"
-                      : "border-border text-muted-foreground hover:border-success/60",
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-muted-foreground">
+                {ar ? "الخيارات — اضغط الدائرة لتحديد الإجابة الصحيحة:" : "Choices — tap the circle to mark the correct one:"}
+              </p>
+              {(qType === 2 ? ["صح", "خطأ"] : qChoices).map((c, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <button
+                    onClick={() => setQCorrect(i)}
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all",
+                      qCorrect === i
+                        ? "border-success bg-success text-success-foreground"
+                        : "border-border text-muted-foreground hover:border-success/60",
+                    )}
+                  >
+                    {choiceLabels(qType)[i]}
+                  </button>
+                  {qType === 2 ? (
+                    <span className="text-sm font-semibold text-foreground">{c}</span>
+                  ) : (
+                    <input
+                      value={c}
+                      onChange={(e) => setQChoices((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))}
+                      placeholder={`${ar ? "الخيار" : "Choice"} ${choiceLabels(qType)[i]}`}
+                      className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                    />
                   )}
-                >
-                  {choiceLabels(qType)[i]}
-                </button>
-                {qType === 2 ? (
-                  <span className="text-sm font-semibold text-foreground">{c}</span>
-                ) : (
-                  <input
-                    value={c}
-                    onChange={(e) => setQChoices((prev) => prev.map((p, j) => (j === i ? e.target.value : p)))}
-                    placeholder={`${ar ? "الخيار" : "Choice"} ${choiceLabels(qType)[i]}`}
-                    className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <button
             onClick={handleAdd}
@@ -724,8 +735,12 @@ export default function QuestionBankPage({ course, bankCourseIds }: Props) {
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold text-foreground">{q.text}</p>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              {q.choices.length === 2 ? (ar ? "صح/خطأ" : "T/F") : `${q.choices.length} ${ar ? "خيارات" : "choices"}`}
-                              {" · "}{ar ? "الإجابة:" : "Answer:"} <b className="text-success">{q.choices.length === 2 ? q.choices[q.correct] : choiceLabels(q.choices.length as ChoiceCount)[q.correct]}</b>
+                              {q.kind === "essay"
+                                ? (ar ? "مقالي" : "Essay")
+                                : <>
+                                    {q.choices.length === 2 ? (ar ? "صح/خطأ" : "T/F") : `${q.choices.length} ${ar ? "خيارات" : "choices"}`}
+                                    {" · "}{ar ? "الإجابة:" : "Answer:"} <b className="text-success">{q.choices.length === 2 ? q.choices[q.correct] : choiceLabels(q.choices.length as ChoiceCount)[q.correct]}</b>
+                                  </>}
                               {" · "}{ar ? "الدرجة:" : "Pts:"} <b>{q.points ?? 1}</b>
                               {q.topic ? ` · ${q.topic}` : ""}
                               {q.difficulty ? ` · ${DIFFICULTY_LABELS[q.difficulty]}` : ""}
