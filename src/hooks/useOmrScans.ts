@@ -13,6 +13,7 @@ export interface OmrScanRecord {
   score: number;
   rawCorrect: number;
   answers: number[];
+  essayScores: number[] | null;
   imagePath: string | null;
   createdAt: string;
   needsReview: boolean;
@@ -29,6 +30,7 @@ function rowToScan(row: any): OmrScanRecord {
     score: Number(row.score) || 0,
     rawCorrect: Number(row.raw_correct) || 0,
     answers: (row.answers || []) as number[],
+    essayScores: Array.isArray(row.essay_scores) ? (row.essay_scores as number[]) : null,
     imagePath: row.image_path,
     createdAt: row.created_at,
     needsReview: Boolean(row.needs_review),
@@ -83,6 +85,7 @@ export function useOmrScans(examId: string | null) {
     score: number;
     rawCorrect: number;
     answers: number[];
+    essayScores?: number[];
     photo: Blob | null;
     needsReview?: boolean;
     reviewCount?: number;
@@ -103,7 +106,7 @@ export function useOmrScans(examId: string | null) {
         imageFailed = true;
       }
     }
-    const { error } = await db.from("omr_scans").insert({
+    const row: any = {
       user_id: user.id,
       exam_id: input.examId,
       student_id: input.studentId || null,
@@ -112,10 +115,18 @@ export function useOmrScans(examId: string | null) {
       score: input.score,
       raw_correct: input.rawCorrect,
       answers: input.answers,
+      essay_scores: input.essayScores && input.essayScores.length ? input.essayScores : null,
       image_path: imagePath,
       needs_review: input.needsReview ?? false,
       review_count: input.reviewCount ?? 0,
-    });
+    };
+    let { error } = await db.from("omr_scans").insert(row);
+    // schema catch-up: an older database may not have the essay_scores
+    // column yet — drop it and retry instead of losing the whole scan.
+    if (error && /essay_scores/.test(error.message || "")) {
+      delete row.essay_scores;
+      ({ error } = await db.from("omr_scans").insert(row));
+    }
     if (error) { console.error("Error recording scan:", error); return { ok: false, error: error.message }; }
     await fetchScans();
     return { ok: true, imageFailed };

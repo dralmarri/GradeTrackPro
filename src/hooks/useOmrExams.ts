@@ -21,6 +21,7 @@ function rowToExam(row: any): OmrExam {
     version: row.version || undefined,
     idMode: row.id_mode === "written" ? "written" : "bubbles",
     questionWeights: Array.isArray(row.question_weights) && row.question_weights.length ? (row.question_weights as number[]) : undefined,
+    essayQuestions: Array.isArray(row.essay_questions) && row.essay_questions.length ? (row.essay_questions as { text: string; points: number }[]) : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -54,9 +55,10 @@ export function useOmrExams(courseId: string | null) {
     sections?: OmrSection[];
     version?: string;
     idMode?: "bubbles" | "written";
+    essayQuestions?: { text: string; points: number }[];
   }): Promise<string> => {
     if (!user || !courseId) return "";
-    const { data, error } = await db.from("omr_exams").insert({
+    const row: any = {
       user_id: user.id,
       course_id: courseId,
       title: input.title,
@@ -69,7 +71,15 @@ export function useOmrExams(courseId: string | null) {
       sections: input.sections && input.sections.length > 1 ? input.sections : null,
       version: input.version || null,
       id_mode: input.idMode || "written",
-    }).select().single();
+      essay_questions: input.essayQuestions && input.essayQuestions.length ? input.essayQuestions : null,
+    };
+    let { data, error } = await db.from("omr_exams").insert(row).select().single();
+    // schema catch-up: an older database may not have the essay_questions
+    // column yet — drop it and retry instead of failing to create the exam.
+    if (error && /essay_questions/.test(error.message || "")) {
+      delete row.essay_questions;
+      ({ data, error } = await db.from("omr_exams").insert(row).select().single());
+    }
     if (error || !data) { console.error("Error adding omr exam:", error); return ""; }
     await fetchExams();
     return data.id;

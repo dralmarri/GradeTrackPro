@@ -49,6 +49,10 @@ export interface OmrExam {
   version?: string;            // exam form letter/number (نموذج أ/ب…) printed on the sheet
   idMode?: "bubbles" | "written"; // student number: bubble grid (auto-read) or handwritten civil-ID box
   questionWeights?: number[];  // per-question points; when set, maxScore = sum(weights)
+  // Essay questions never get bubbles or an answerKey entry — they print
+  // with a blank writing area and are scored manually after scanning (see
+  // OmrScanDialog). Their points are on top of maxScore, not part of it.
+  essayQuestions?: { text: string; points: number }[];
   createdAt: string;
   updatedAt: string;
 }

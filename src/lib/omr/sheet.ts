@@ -162,24 +162,135 @@ function questionGrid(exam: OmrExam): string {
   return out.join("");
 }
 
-function footer(): string {
+function footer(totalPages: number): string {
   return `<line x1="30" y1="278" x2="180" y2="278" stroke="${LINE}" stroke-width="0.35"/>` +
     `<line x1="32" y1="284" x2="65" y2="284" stroke="#9ca3af" stroke-width="0.4"/>` +
     svgText(48.5, 288, "توقيع المراقب", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="middle"`) +
     `<line x1="145" y1="284" x2="178" y2="284" stroke="#9ca3af" stroke-width="0.4"/>` +
     svgText(161.5, 288, "توقيع الطالب", 2.2, `fill="${MUTED}" direction="rtl" text-anchor="middle"`) +
     svgText(105, 284.8, "تمنياتنا لكم بالتوفيق والنجاح", 3, `direction="rtl" text-anchor="middle" font-weight="700"`) +
-    svgText(105, 292, "GradeTrackPro — نظام التصحيح الآلي", 2.1, `fill="#9ca3af" direction="rtl" text-anchor="middle"`);
+    svgText(105, 292, "GradeTrackPro — نظام التصحيح الآلي", 2.1, `fill="#9ca3af" direction="rtl" text-anchor="middle"`) +
+    (totalPages > 1 ? svgText(178, 292, `1/${totalPages}`, 2.3, `fill="${MUTED}" direction="ltr" text-anchor="end" font-weight="700"`) : "");
 }
 
 export function buildAnswerSheetSvg(exam: OmrExam, header?: SheetHeader): string {
+  const totalPages = (exam.essayQuestions || []).length ? 2 : 1;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_W}mm" height="${PAGE_H}mm" viewBox="0 0 ${PAGE_W} ${PAGE_H}" role="img" aria-label="ورقة إجابة OMR"><rect width="210" height="297" fill="#fff"/>` +
     registrationMarks() + `<text x="105" y="184" font-family="${FONT}" font-size="24" font-weight="800" fill="#111827" opacity="0.035" text-anchor="middle" letter-spacing="2" transform="rotate(-24 105 184)">GradeTrackPro</text>` +
-    brand(header) + identityAndMeta(exam, header) + legend() + machineCode(exam) + bubbledStudentId(exam) + questionGrid(exam) + footer() + `</svg>`;
+    brand(header) + identityAndMeta(exam, header) + legend() + machineCode(exam) + bubbledStudentId(exam) + questionGrid(exam) + footer(totalPages) + `</svg>`;
+}
+
+// Essay answer lines don't fit the mm-exact bubble page — that page's every
+// coordinate is tied to scan.ts's read geometry, so nothing else can share
+// it. Essay writing space instead becomes its own extra page appended after
+// the bubble page, printed as part of the same "answer sheet" document but
+// never touched by the scanner (it only ever reads page 1's photo).
+function essayAnswerPageHtml(exam: OmrExam, header?: SheetHeader): string {
+  const essayQuestions = exam.essayQuestions || [];
+  if (!essayQuestions.length) return "";
+  const rows = essayQuestions.map((q, i) => {
+    const lines = Math.max(3, Math.min(10, Math.round(q.points ?? 1) * 2));
+    const linesHtml = Array.from({ length: lines }, () => `<div class="eline"></div>`).join("");
+    return `<div class="eq">
+        <div class="etext-row">
+          <div class="etext"><b>${i + 1}.</b> ${escapeXml(q.text)} <span class="epts">(${q.points ?? 1} ${(q.points ?? 1) === 1 ? "درجة" : "درجات"})</span></div>
+          <div class="egrade"><span class="elabel">الدرجة:</span><div class="egrade-box"></div><span class="egrade-max">/ ${q.points ?? 1}</span></div>
+        </div>
+        <div class="elines">${linesHtml}</div>
+      </div>`;
+  }).join("");
+  const badge = header?.logoDataUrl
+    ? `<img src="${header.logoDataUrl}" class="ebadge-img" />`
+    : `<div class="ebadge">GTP</div>`;
+  // mirrors page 1's header/identity block (badge + brand, title block,
+  // name/ID box, course meta) so the essay page reads as the same document
+  // continuing, not a different sheet stapled on.
+  return `
+    <div class="essay-page">
+      <div class="ehead-top">
+        <div class="etitleblock">
+          <div class="etitle">ورقة إجابة نموذجية — الأسئلة المقالية</div>
+          <div class="esub">إجابتك يجب أن تكون في المساحة المخصصة أدناه فقط</div>
+        </div>
+        <div class="ebrand-wrap">
+          ${badge}
+          <div>
+            <div class="ebrand-name">GradeTrackPro</div>
+            <div class="ebrand-sub">نظام التصحيح الآلي المعتمد</div>
+          </div>
+        </div>
+      </div>
+      <div class="eident">
+        <div class="ename-box">
+          <div class="elabel">اسم الطالب (بخط اليد):</div>
+          <div class="eblank-box"></div>
+        </div>
+        <div class="emeta-box">
+          <div class="emeta-cell"><span class="elabel">المقرر:</span><span class="eval">${escapeXml(header?.courseName || "—")}</span></div>
+          <div class="emeta-cell"><span class="elabel">الاختبار:</span><span class="eval">${escapeXml(exam.title)}</span></div>
+          <div class="emeta-cell"><span class="elabel">الرقم الجامعي:</span><span class="eblank-line"></span></div>
+        </div>
+      </div>
+      <div class="esec-head"><span class="epill">إجابات مقالية</span><h3>اكتب إجابتك بخط واضح داخل الأسطر</h3></div>
+      ${rows}
+      <div class="epage">2/2</div>
+    </div>`;
 }
 
 export function buildAnswerSheetHtml(exam: OmrExam, header?: SheetHeader): string {
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><title>${escapeXml(exam.title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{width:210mm;height:297mm;margin:0;padding:0;background:#fff;overflow:hidden}svg{display:block;width:210mm;height:297mm}</style></head><body>${buildAnswerSheetSvg(exam, header)}</body></html>`;
+  const essayPage = essayAnswerPageHtml(exam, header);
+  const essayCss = essayPage ? `
+    /* The bubble page above is always a fixed, mm-exact 297mm page (its
+       geometry is tied to scan.ts's read positions, so it can never share
+       space with anything else) — there is genuinely never room left on
+       it. A forced break is required: real native print pipelines (tested
+       on-device) don't reliably split exactly at that height on their own,
+       and without it the essay page's content overlapped the bubble page's
+       footer instead of starting cleanly on its own page. */
+    .essay-page { position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 20mm; overflow: visible; page-break-before: always; break-before: page; font-family: ${FONT}; color: ${INK}; }
+    @media print { .essay-page { padding: 15mm 20mm; } }
+
+    .ehead-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 0.65mm solid ${INK}; padding-bottom: 4mm; }
+    .etitleblock { text-align: end; }
+    .etitle { font-size: 13px; font-weight: 700; }
+    .esub { font-size: 8.5px; color: ${MUTED}; margin-top: 1mm; }
+    .ebrand-wrap { display: flex; align-items: center; gap: 3mm; }
+    .ebadge { width: 12mm; height: 12mm; border-radius: 2.5mm; background: ${INDIGO}; color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+    .ebadge-img { width: 12mm; height: 12mm; object-fit: contain; }
+    .ebrand-name { font-weight: 800; font-size: 13px; color: ${INDIGO}; }
+    .ebrand-sub { font-size: 8px; color: ${MUTED}; }
+
+    .eident { display: flex; gap: 4mm; margin-top: 5mm; align-items: stretch; }
+    .ename-box { flex: 1.4; }
+    .emeta-box { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2mm; background: ${PALE}; border: 0.25mm solid #e5e7eb; border-radius: 2mm; padding: 2.5mm 3.5mm; }
+    .emeta-cell { display: flex; justify-content: space-between; gap: 2mm; font-size: 9px; }
+    .elabel { color: ${MUTED}; font-weight: 700; white-space: nowrap; }
+    .eval { font-weight: 800; }
+    .eblank-box { margin-top: 1.5mm; height: 14mm; border: 0.4mm solid ${MUTED}; border-radius: 1.5mm; background: #fff; }
+    .eblank-line { flex: 1; border-bottom: 0.35mm solid ${MUTED}; margin-inline-start: 2mm; }
+
+    .esec-head { display: flex; align-items: center; gap: 3mm; margin: 6mm 0 4mm; }
+    .epill { background: ${INDIGO}; color: #fff; border-radius: 1.6mm; padding: 1.2mm 3.5mm; font-weight: 800; font-size: 9px; white-space: nowrap; }
+    .esec-head h3 { margin: 0; font-size: 11px; font-weight: 600; color: ${MUTED}; border-bottom: 0.35mm solid ${INDIGO}; padding-bottom: 1.5mm; flex: 1; }
+
+    .eq { margin-bottom: 6mm; }
+    /* No margin-bottom here on purpose: each .eline is a full 8mm box (its
+       ruled line sits at the box's own bottom edge), so the gap from the
+       question text down to the FIRST line already matches the gap between
+       every later pair of lines — adding margin here would only make that
+       first gap visibly larger than the rest. */
+    .etext-row { display: flex; align-items: center; justify-content: space-between; gap: 4mm; }
+    .etext { flex: 1; font-size: 12.5pt; font-weight: 700; }
+    .etext b { color: ${INDIGO}; margin-inline-end: 1mm; }
+    .epts { font-size: 10px; font-weight: 600; color: ${MUTED}; }
+    .egrade { display: flex; align-items: center; gap: 1.5mm; flex-shrink: 0; }
+    .egrade .elabel { font-size: 9px; font-weight: 700; color: ${MUTED}; white-space: nowrap; }
+    .egrade-box { width: 14mm; height: 8mm; border: 0.4mm solid ${INK}; border-radius: 1.5mm; background: #fff; }
+    .egrade-max { font-size: 9px; font-weight: 600; color: ${MUTED}; white-space: nowrap; }
+    .elines { padding-inline-start: 6mm; }
+    .eline { height: 8mm; border-bottom: 1px solid #cbd5e1; }
+    .epage { position: absolute; bottom: 12mm; right: 20mm; font-size: 9px; font-weight: 700; color: ${MUTED}; direction: ltr; }` : "";
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><title>${escapeXml(exam.title)}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{width:210mm;margin:0;padding:0;background:#fff}.sheet-page{width:210mm;height:297mm;overflow:hidden}svg{display:block;width:210mm;height:297mm}${essayCss}</style></head><body><div class="sheet-page">${buildAnswerSheetSvg(exam, header)}</div>${essayPage}</body></html>`;
 }
 
 export function printAnswerSheet(exam: OmrExam, header?: SheetHeader): boolean {
