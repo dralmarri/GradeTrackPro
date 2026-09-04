@@ -40,11 +40,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   // become OmrSection entries + answer-key bubbles), essay ones become
   // essayQuestions entries instead (no bubbles, graded manually, points
   // additive on top of maxScore — same model as the bank-generated flow).
-  const [sections, setSections] = useState<{ questionCount: number; choiceCount: ChoiceCount | "essay"; essayPoints: number }[]>(
-    [{ questionCount: 20, choiceCount: 4, essayPoints: 1 }],
+  // Every section — bubble or essay — carries its own per-question points,
+  // same as essay always did; "الدرجة القصوى" below is computed from the
+  // bubble sections' points instead of being typed in separately.
+  const [sections, setSections] = useState<{ questionCount: number; choiceCount: ChoiceCount | "essay"; points: number }[]>(
+    [{ questionCount: 20, choiceCount: 4, points: 1 }],
   );
   const [targetComponent, setTargetComponent] = useState("exam1");
-  const [maxScore, setMaxScore] = useState(20);
   const [creating, setCreating] = useState(false);
   const [openKeyExamId, setOpenKeyExamId] = useState<string | null>(null);
   const [draftKey, setDraftKey] = useState<number[]>([]);
@@ -194,6 +196,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const essaySections = sections.filter((s) => s.choiceCount === "essay");
   const totalQuestions = bubbleSections.reduce((a, s) => a + (Number(s.questionCount) || 0), 0);
   const totalEssayQuestions = essaySections.reduce((a, s) => a + (Number(s.questionCount) || 0), 0);
+  // per-question weights, expanded from each bubble section's own points —
+  // "الدرجة القصوى" is their sum, not a separately-typed number, same as
+  // how the bank-generated flow always worked.
+  const bubbleWeights = bubbleSections.flatMap((s) =>
+    new Array(Number(s.questionCount) || 0).fill(Number(s.points) || 1));
+  const computedMaxScore = Math.round(bubbleWeights.reduce((a, b) => a + b, 0) * 100) / 100;
+  const totalEssayPoints = essaySections.reduce((a, s) => a + (Number(s.questionCount) || 0) * (Number(s.points) || 1), 0);
 
   const handleCreate = async () => {
     if (!title.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
@@ -208,7 +217,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
     // text since the professor's own paper exam has it, just a slot with
     // its point value for the answer sheet's grade box.
     const essayQuestions = essaySections.flatMap((s) =>
-      new Array(Number(s.questionCount) || 0).fill(null).map(() => ({ text: "", points: s.essayPoints || 1 })));
+      new Array(Number(s.questionCount) || 0).fill(null).map(() => ({ text: "", points: s.points || 1 })));
     // one exam per requested form (نموذج أ/ب/ج/د) — each gets its own answer key
     const letters = ["أ", "ب", "ج", "د"];
     let firstId: string | null = null;
@@ -218,7 +227,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         questionCount: totalQuestions,
         // an essay-only sheet has no bubbled section at all
         choiceCount: (bubbleSections[0]?.choiceCount as ChoiceCount) ?? 4,
-        targetComponent, maxScore, studentIdDigits: 10,
+        targetComponent, maxScore: computedMaxScore || 1, studentIdDigits: 10,
         sections: bubbleSections.length > 1
           ? bubbleSections.map((s) => ({ questionCount: s.questionCount, choiceCount: s.choiceCount as ChoiceCount }))
           : undefined,
@@ -229,6 +238,10 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       });
       if (!id) break;
       if (!firstId) firstId = id;
+      // per-question weights straight from each section's own points, not
+      // an equal split — the answer-key editor (opened right after) then
+      // already reflects what was chosen here instead of a flat default.
+      if (bubbleWeights.length) await updateAnswerKey(id, new Array(totalQuestions).fill(-1), bubbleWeights);
     }
     setCreating(false);
     if (firstId) {
@@ -238,12 +251,12 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           : (ar ? "تم إنشاء الاختبار" : "Exam created"),
         { duration: 6000 },
       );
-      setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4, essayPoints: 1 }]); setMaxScore(20); setFormsCount(1);
+      setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4, points: 1 }]); setFormsCount(1);
       setFormsOpen(true);
       if (totalQuestions > 0) {
         setOpenKeyExamId(firstId);
         setDraftKey(new Array(totalQuestions).fill(-1));
-        setDraftWeights(new Array(totalQuestions).fill(Math.round((maxScore / totalQuestions) * 100) / 100));
+        setDraftWeights(bubbleWeights.length ? bubbleWeights : new Array(totalQuestions).fill(1));
       }
     }
   };
@@ -455,14 +468,12 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                   className="w-20 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm text-foreground outline-none focus:border-primary"
                   title={ar ? "عدد الأسئلة" : "Questions"}
                 />
-                {sec.choiceCount === "essay" && (
-                  <input
-                    type="number" min={0.25} step={0.25} value={sec.essayPoints}
-                    onChange={(e) => setSections((prev) => prev.map((s, j) => j === i ? { ...s, essayPoints: Number(e.target.value) || 1 } : s))}
-                    className="w-16 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm text-foreground outline-none focus:border-primary"
-                    title={ar ? "درجة كل سؤال مقالي" : "Points per essay question"}
-                  />
-                )}
+                <input
+                  type="number" min={0.25} step={0.25} value={sec.points}
+                  onChange={(e) => setSections((prev) => prev.map((s, j) => j === i ? { ...s, points: Number(e.target.value) || 1 } : s))}
+                  className="w-16 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm text-foreground outline-none focus:border-primary"
+                  title={sec.choiceCount === "essay" ? (ar ? "درجة كل سؤال مقالي" : "Points per essay question") : (ar ? "درجة كل سؤال" : "Points per question")}
+                />
                 {sections.length > 1 && (
                   <button
                     onClick={() => setSections((prev) => prev.filter((_, j) => j !== i))}
@@ -475,7 +486,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
             ))}
             <div className="flex items-center justify-between">
               <button
-                onClick={() => setSections((prev) => [...prev, { questionCount: 5, choiceCount: 2, essayPoints: 1 }])}
+                onClick={() => setSections((prev) => [...prev, { questionCount: 5, choiceCount: 2, points: 1 }])}
                 className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
               >
                 <Plus size={13} />
@@ -491,12 +502,17 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
 
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "الدرجة القصوى" : "Max score"}
+              {ar ? "الدرجة القصوى (مجموع درجات الأسئلة أعلاه)" : "Max score (sum of the questions' points above)"}
               <input
-                type="number" min={1} value={maxScore}
-                onChange={(e) => setMaxScore(Number(e.target.value) || 1)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                type="number" value={computedMaxScore || 0} readOnly disabled
+                title={ar ? "غيّرها بتعديل درجة كل قسم أعلاه" : "Change it by editing each section's points above"}
+                className="w-full rounded-lg border border-input bg-muted px-3 py-2 text-sm font-bold text-foreground outline-none"
               />
+              {totalEssayPoints > 0 && (
+                <span className="block text-[10px] text-muted-foreground">
+                  {ar ? `+ ${totalEssayPoints} للمقالي (تُضاف فوق هذا المجموع)` : `+ ${totalEssayPoints} for essay (added on top)`}
+                </span>
+              )}
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "عدد النماذج" : "Forms count"}
