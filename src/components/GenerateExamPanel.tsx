@@ -281,7 +281,7 @@ export default function GenerateExamPanel({
               ? (ar ? "جارٍ التحميل…" : "Loading…")
               : questions.length === 0
               ? (ar ? "أضف أسئلة للبنك أولاً" : "Add questions to the bank first")
-              : (ar ? `أسئلتك جاهزة في بنك المقرر — نماذج أ/ب، ${questions.length} سؤالاً متاحاً` : `Uses questions from the course bank — Forms A/B, ${questions.length} question(s) available`)}
+              : (ar ? "توليد الأسئلة وورقة الإجابة من هنا" : "Generate the questions and the answer sheet from here")}
           </span>
         </span>
         <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", open ? "-rotate-90" : ar ? "rotate-180" : "")} />
