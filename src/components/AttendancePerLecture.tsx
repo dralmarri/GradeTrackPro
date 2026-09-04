@@ -309,29 +309,36 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
       </div>
 
       {/* Import / Export attendance */}
-      <div className="flex gap-2 rounded-[32px] border border-border bg-card p-3 shadow-sm">
-        <button
-          onClick={() => exportAttendanceTemplate(course)}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-border bg-background px-3 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-        >
-          <Download size={14} />
-          {lang === "ar" ? "تصدير قالب الحضور" : "Export Template"}
-        </button>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={importing}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
-        >
-          {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-          {lang === "ar" ? "استيراد الحضور (Excel / نظام الكلية)" : "Import (Excel / College system)"}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          className="hidden"
-          onChange={handleImport}
-        />
+      <div className="rounded-[32px] border border-border bg-card p-3 shadow-sm">
+        <div className="flex gap-2">
+          <button
+            onClick={() => exportAttendanceTemplate(course)}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-border bg-background px-3 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+          >
+            <Download size={14} />
+            {lang === "ar" ? "تصدير قالب الحضور" : "Export Template"}
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+          >
+            {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            {lang === "ar" ? "استيراد الحضور (Excel / نظام الكلية)" : "Import (Excel / College system)"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleImport}
+          />
+        </div>
+        <p className="mt-2 px-1 text-[10px] leading-relaxed text-muted-foreground">
+          {lang === "ar"
+            ? "تصدير: نزّل قالباً فارغاً لتعبئته. استيراد: إن كنت تستخدم تطبيقاً آخر (نظام الكلية) لرصد حضور الطلاب، ارفع ملفه من هنا مباشرة بدل التعبئة اليدوية."
+            : "Export: download a blank template to fill in. Import: if you already track attendance in another app (the college system), upload its file here directly instead of filling one in by hand."}
+        </p>
       </div>
 
       {/* Search + sort */}
