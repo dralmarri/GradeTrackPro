@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Course, getLabel } from "@/types/student";
-import { OmrExam, ChoiceCount, OmrSection, choiceLabels, choiceCountFor, choiceLabelsFor } from "@/types/exam";
+import { OmrExam, ChoiceCount, choiceLabels, choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import { useOmrExams } from "@/hooks/useOmrExams";
 import { useSheetHeaderSettings } from "@/hooks/useSheetHeaderSettings";
 import { printAnswerSheet } from "@/lib/omr/sheet";
@@ -36,7 +36,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
 
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
-  const [sections, setSections] = useState<OmrSection[]>([{ questionCount: 20, choiceCount: 4 }]);
+  // a section here can also be "essay" — unlike bubble sections (which
+  // become OmrSection entries + answer-key bubbles), essay ones become
+  // essayQuestions entries instead (no bubbles, graded manually, points
+  // additive on top of maxScore — same model as the bank-generated flow).
+  const [sections, setSections] = useState<{ questionCount: number; choiceCount: ChoiceCount | "essay"; essayPoints: number }[]>(
+    [{ questionCount: 20, choiceCount: 4, essayPoints: 1 }],
+  );
   const [targetComponent, setTargetComponent] = useState("exam1");
   const [maxScore, setMaxScore] = useState(20);
   const [creating, setCreating] = useState(false);
@@ -54,7 +60,9 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [statsExam, setStatsExam] = useState<OmrExam | null>(null);
   const [formsCount, setFormsCount] = useState(1);
   const [editVersion, setEditVersion] = useState("");
-  const [idMode, setIdMode] = useState<"bubbles" | "written">("written");
+  // handwritten name/ID matched manually from the roster — always the
+  // mode for the manual answer-sheet-only flow (no picker for it here).
+  const idMode: "bubbles" | "written" = "written";
   const { institution, college, department, logo, update: updateSheetHeader } = useSheetHeaderSettings();
   // The page is organized into 3 collapsible sections — question bank,
   // exam forms, and grading — each closed by default so only one thing at
@@ -180,14 +188,27 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
     ...(course.customComponents || []).map((c) => ({ key: c.key, label: c.label })),
   ];
 
-  const totalQuestions = sections.reduce((a, s) => a + (Number(s.questionCount) || 0), 0);
+  // essay sections don't have bubbles/answer-key slots — they become
+  // essayQuestions instead, so keep them out of the bubble question count.
+  const bubbleSections = sections.filter((s) => s.choiceCount !== "essay");
+  const essaySections = sections.filter((s) => s.choiceCount === "essay");
+  const totalQuestions = bubbleSections.reduce((a, s) => a + (Number(s.questionCount) || 0), 0);
+  const totalEssayQuestions = essaySections.reduce((a, s) => a + (Number(s.questionCount) || 0), 0);
 
   const handleCreate = async () => {
     if (!title.trim()) { toast.error(ar ? "أدخل عنوان الاختبار" : "Enter exam title"); return; }
-    if (totalQuestions < 1 || totalQuestions > MAX_QUESTIONS) {
-      toast.error(ar ? `عدد الأسئلة بين 1 و ${MAX_QUESTIONS}` : `Questions must be 1–${MAX_QUESTIONS}`); return;
+    if (totalQuestions === 0 && totalEssayQuestions === 0) {
+      toast.error(ar ? "أضف سؤالاً واحداً على الأقل" : "Add at least one question"); return;
+    }
+    if (totalQuestions > MAX_QUESTIONS) {
+      toast.error(ar ? `أسئلة الاختيار/الصح والخطأ حتى ${MAX_QUESTIONS} سؤالاً` : `Choice/T-F questions up to ${MAX_QUESTIONS}`); return;
     }
     setCreating(true);
+    // one entry per essay question, matching the bank flow's shape — no
+    // text since the professor's own paper exam has it, just a slot with
+    // its point value for the answer sheet's grade box.
+    const essayQuestions = essaySections.flatMap((s) =>
+      new Array(Number(s.questionCount) || 0).fill(null).map(() => ({ text: "", points: s.essayPoints || 1 })));
     // one exam per requested form (نموذج أ/ب/ج/د) — each gets its own answer key
     const letters = ["أ", "ب", "ج", "د"];
     let firstId: string | null = null;
@@ -195,11 +216,15 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       const id = await addExam({
         title: title.trim(),
         questionCount: totalQuestions,
-        choiceCount: sections[0].choiceCount,
+        // an essay-only sheet has no bubbled section at all
+        choiceCount: (bubbleSections[0]?.choiceCount as ChoiceCount) ?? 4,
         targetComponent, maxScore, studentIdDigits: 10,
-        sections: sections.length > 1 ? sections : undefined,
+        sections: bubbleSections.length > 1
+          ? bubbleSections.map((s) => ({ questionCount: s.questionCount, choiceCount: s.choiceCount as ChoiceCount }))
+          : undefined,
         version: formsCount > 1 ? letters[v] : undefined,
         idMode,
+        essayQuestions: essayQuestions.length ? essayQuestions : undefined,
         source: "manual",
       });
       if (!id) break;
@@ -213,11 +238,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           : (ar ? "تم إنشاء الاختبار" : "Exam created"),
         { duration: 6000 },
       );
-      setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4 }]); setMaxScore(20); setFormsCount(1);
+      setShowCreate(false); setTitle(""); setSections([{ questionCount: 20, choiceCount: 4, essayPoints: 1 }]); setMaxScore(20); setFormsCount(1);
       setFormsOpen(true);
-      setOpenKeyExamId(firstId);
-      setDraftKey(new Array(totalQuestions).fill(-1));
-      setDraftWeights(new Array(totalQuestions).fill(Math.round((maxScore / totalQuestions) * 100) / 100));
+      if (totalQuestions > 0) {
+        setOpenKeyExamId(firstId);
+        setDraftKey(new Array(totalQuestions).fill(-1));
+        setDraftWeights(new Array(totalQuestions).fill(Math.round((maxScore / totalQuestions) * 100) / 100));
+      }
     }
   };
 
@@ -413,13 +440,14 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                 <span className="w-5 text-center text-xs font-bold text-muted-foreground">{i + 1}</span>
                 <select
                   value={sec.choiceCount}
-                  onChange={(e) => setSections((prev) => prev.map((s, j) => j === i ? { ...s, choiceCount: Number(e.target.value) as ChoiceCount } : s))}
+                  onChange={(e) => setSections((prev) => prev.map((s, j) => j === i ? { ...s, choiceCount: e.target.value === "essay" ? "essay" : Number(e.target.value) as ChoiceCount } : s))}
                   className="flex-1 rounded-lg border border-input bg-background px-2 py-2 text-sm text-foreground outline-none focus:border-primary"
                 >
                   <option value={2}>{ar ? "صح / خطأ" : "True / False"}</option>
                   <option value={3}>A – C</option>
                   <option value={4}>A – D</option>
                   <option value={5}>A – E</option>
+                  <option value="essay">{ar ? "سؤال مقالي" : "Essay"}</option>
                 </select>
                 <input
                   type="number" min={1} max={MAX_QUESTIONS} value={sec.questionCount}
@@ -427,6 +455,14 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                   className="w-20 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm text-foreground outline-none focus:border-primary"
                   title={ar ? "عدد الأسئلة" : "Questions"}
                 />
+                {sec.choiceCount === "essay" && (
+                  <input
+                    type="number" min={0.25} step={0.25} value={sec.essayPoints}
+                    onChange={(e) => setSections((prev) => prev.map((s, j) => j === i ? { ...s, essayPoints: Number(e.target.value) || 1 } : s))}
+                    className="w-16 rounded-lg border border-input bg-background px-2 py-2 text-center text-sm text-foreground outline-none focus:border-primary"
+                    title={ar ? "درجة كل سؤال مقالي" : "Points per essay question"}
+                  />
+                )}
                 {sections.length > 1 && (
                   <button
                     onClick={() => setSections((prev) => prev.filter((_, j) => j !== i))}
@@ -439,14 +475,16 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
             ))}
             <div className="flex items-center justify-between">
               <button
-                onClick={() => setSections((prev) => [...prev, { questionCount: 5, choiceCount: 2 }])}
+                onClick={() => setSections((prev) => [...prev, { questionCount: 5, choiceCount: 2, essayPoints: 1 }])}
                 className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
               >
                 <Plus size={13} />
                 {ar ? "إضافة قسم (نوع آخر)" : "Add section"}
               </button>
               <span className="text-xs text-muted-foreground">
-                {ar ? `المجموع: ${totalQuestions} سؤالاً` : `Total: ${totalQuestions} questions`}
+                {ar
+                  ? `المجموع: ${totalQuestions} سؤالاً${totalEssayQuestions ? ` + ${totalEssayQuestions} مقالي` : ""}`
+                  : `Total: ${totalQuestions} question(s)${totalEssayQuestions ? ` + ${totalEssayQuestions} essay` : ""}`}
               </span>
             </div>
           </div>
@@ -459,17 +497,6 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                 onChange={(e) => setMaxScore(Number(e.target.value) || 1)}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
-            </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {ar ? "رقم الطالب في الورقة" : "Student ID on sheet"}
-              <select
-                value={idMode}
-                onChange={(e) => setIdMode(e.target.value as "bubbles" | "written")}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              >
-                <option value="written">{ar ? "الاسم والرقم كتابة يدوية (يُطابق يدوياً من قائمة الطلاب)" : "Handwritten name & ID (matched manually from roster)"}</option>
-                <option value="bubbles">{ar ? "فقاعات الرقم المدني (تُقرأ آلياً)" : "Civil-ID bubbles (auto-read)"}</option>
-              </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "عدد النماذج" : "Forms count"}
