@@ -37,6 +37,7 @@ interface Props {
     sections?: { questionCount: number; choiceCount: ChoiceCount }[];
     version?: string; idMode?: "bubbles" | "written";
     essayQuestions?: { text: string; points: number }[];
+    source?: "bank" | "manual";
   }) => Promise<string>;
   onSetAnswerKey: (examId: string, key: number[], weights?: number[]) => Promise<void>;
   buildExam: (
@@ -238,6 +239,7 @@ export default function GenerateExamPanel({
           version: genForms > 1 ? form.version : undefined,
           idMode: "written",
           essayQuestions: essayQuestions.length ? essayQuestions : undefined,
+          source: "bank",
         });
         if (!id) throw new Error(ar ? "فشل إنشاء الاختبار" : "Failed to create exam");
         await onSetAnswerKey(id, form.answerKey, weights.length ? weights : undefined);
