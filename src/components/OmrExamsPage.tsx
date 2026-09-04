@@ -62,6 +62,12 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
   const [bankOpen, setBankOpen] = useState(false);
   const [formsOpen, setFormsOpen] = useState(false);
   const [gradingOpen, setGradingOpen] = useState(false);
+  // "الاختبارات" is split into 4 sub-sections: generate a full exam from
+  // the bank, generate an answer sheet only (for a paper exam already
+  // outside the bank), and the two "previous" lists matching each —
+  // instead of one combined section mixing generation tools with a single
+  // undifferentiated list of everything ever created.
+  const [examsTab, setExamsTab] = useState<"genFull" | "genSheet" | "prevFull" | "prevSheet">("genFull");
   // Question selection lives here, not inside either section, so the SAME
   // pick made while browsing the bank (QuestionBankPage) is what
   // GenerateExamPanel builds an exam from — one list instead of two.
@@ -106,6 +112,13 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exams.map((e) => e.id).join(","), exams.map((e) => e.questionCount).join(",")]);
+
+  // Split the exams list to match the two generation flows: "bank" =
+  // generated from the question bank (full exam, questions + key).
+  // Anything else (including exams saved before this field existed) is
+  // treated as "manual" — the answer-sheet-only flow, which predates it.
+  const prevFullExams = exams.filter((e) => e.source === "bank");
+  const prevSheetExams = exams.filter((e) => e.source !== "bank");
 
   // Every exam that actually has a saved key — these are the ones
   // "Start scanning" can offer, most-recently-updated first.
@@ -181,6 +194,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         sections: sections.length > 1 ? sections : undefined,
         version: formsCount > 1 ? letters[v] : undefined,
         idMode,
+        source: "manual",
       });
       if (!id) break;
       if (!firstId) firstId = id;
@@ -278,8 +292,9 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         />
       )}
 
-      {/* Section 2: Exam forms — create/print/edit/key per exam, plus
-          generating exams from the question bank, all under one toggle. */}
+      {/* Section 2: Exams — generating (full exam from the bank, or an
+          answer sheet only) and browsing previously created ones, split
+          into 4 sub-sections instead of one mixed list. */}
       <button
         type="button"
         onClick={() => setFormsOpen((v) => !v)}
@@ -289,14 +304,37 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           <Wand2 size={22} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold text-foreground">{ar ? `نماذج الاختبارات (${exams.length})` : `Exam forms (${exams.length})`}</span>
-          <span className="block text-xs text-muted-foreground">{ar ? "إنشاء، توليد من البنك، طباعة، تعديل، مفاتيح الإجابة" : "Create, generate from bank, print, edit, answer keys"}</span>
+          <span className="block truncate font-bold text-foreground">{ar ? `الاختبارات (${exams.length})` : `Exams (${exams.length})`}</span>
+          <span className="block text-xs text-muted-foreground">{ar ? "توليد اختبارات، توليد أوراق إجابة، والنماذج السابقة" : "Generate exams, generate answer sheets, and previous forms"}</span>
         </span>
         <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", formsOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
       </button>
 
       {formsOpen && (
       <>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {([
+          { key: "genFull" as const, label: ar ? "توليد اختبارات كاملة" : "Generate full exams" },
+          { key: "genSheet" as const, label: ar ? "توليد أوراق إجابة فقط" : "Generate answer sheets only" },
+          { key: "prevFull" as const, label: ar ? `نماذج اختبارات سابقة (${prevFullExams.length})` : `Previous exams (${prevFullExams.length})` },
+          { key: "prevSheet" as const, label: ar ? `نماذج أوراق إجابة سابقة (${prevSheetExams.length})` : `Previous answer sheets (${prevSheetExams.length})` },
+        ]).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setExamsTab(t.key)}
+            className={cn(
+              "rounded-xl border px-2.5 py-2 text-[11px] font-bold transition-colors",
+              examsTab === t.key
+                ? "border-success bg-success/10 text-success"
+                : "border-border text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {examsTab === "genFull" && (
       <GenerateExamPanel
         course={course}
         bankCourseIds={bankCourseIds}
@@ -328,6 +366,10 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           updatedAt: "",
         })}
       />
+      )}
+
+      {examsTab === "genSheet" && (
+      <>
       <div className="flex items-start justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2.5">
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           {ar
@@ -455,6 +497,8 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           </button>
         </div>
       )}
+      </>
+      )}
 
       {/* sheet header settings (institution/college/department) — tied to
           the professor's account (useSheetHeaderSettings), not the device:
@@ -509,15 +553,25 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         </p>
       </details>
 
-      {exams.length === 0 && !showCreate && (
+      {(examsTab === "prevFull" || examsTab === "prevSheet") && (
+      <>
+      {(examsTab === "prevFull" ? prevFullExams : prevSheetExams).length === 0 && !showCreate && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center text-muted-foreground">
           <ScanLine size={32} className="mb-2 opacity-50" />
-          <p className="text-sm font-semibold">{ar ? "لا توجد اختبارات تصحيح آلي بعد" : "No auto-graded exams yet"}</p>
-          <p className="mt-1 text-xs">{ar ? "أنشئ اختباراً، اطبع ورقة الإجابة، ثم صحّح بالكاميرا" : "Create an exam, print the sheet, then scan"}</p>
+          <p className="text-sm font-semibold">
+            {examsTab === "prevFull"
+              ? (ar ? "لا توجد اختبارات كاملة مولّدة بعد" : "No generated exams yet")
+              : (ar ? "لا توجد أوراق إجابة منشأة بعد" : "No answer sheets created yet")}
+          </p>
+          <p className="mt-1 text-xs">
+            {examsTab === "prevFull"
+              ? (ar ? "ولّد اختباراً من بنك الأسئلة، اطبع، ثم صحّح بالكاميرا" : "Generate an exam from the bank, print, then scan")
+              : (ar ? "أنشئ ورقة إجابة، اطبعها، ثم صحّح بالكاميرا" : "Create an answer sheet, print it, then scan")}
+          </p>
         </div>
       )}
 
-      {exams.map((exam) => {
+      {(examsTab === "prevFull" ? prevFullExams : prevSheetExams).map((exam) => {
         const keyDone = exam.answerKey.filter((k) => k >= 0).length;
         const keyOpen = openKeyExamId === exam.id;
         return (
@@ -725,6 +779,8 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           </div>
         );
       })}
+      </>
+      )}
       </>
       )}
 
