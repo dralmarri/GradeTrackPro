@@ -272,13 +272,13 @@ export default function GenerateExamPanel({
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={loading || questions.length === 0}
-        className="flex w-full items-center gap-4 rounded-2xl border border-success/40 bg-success/5 p-4 text-start shadow-sm transition-colors hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center gap-4 rounded-2xl border border-primary/40 bg-primary/5 p-4 text-start shadow-sm transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-success/15 text-success">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
           <Wand2 size={20} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold text-success">{ar ? "توليد اختبار من البنك" : "Generate exam from bank"}</span>
+          <span className="block truncate font-bold text-primary">{ar ? "توليد اختبار من البنك" : "Generate exam from bank"}</span>
           <span className="block text-xs text-muted-foreground">
             {loading
               ? (ar ? "جارٍ التحميل…" : "Loading…")
@@ -291,7 +291,7 @@ export default function GenerateExamPanel({
       </button>
 
       {open && (
-        <div className="space-y-3 rounded-2xl border border-success/40 bg-success/5 p-4 shadow-sm">
+        <div className="space-y-3 rounded-2xl border border-primary/40 bg-primary/5 p-4 shadow-sm">
           <input
             value={genTitle}
             onChange={(e) => setGenTitle(e.target.value)}
@@ -309,7 +309,7 @@ export default function GenerateExamPanel({
                 className={cn(
                   "flex-1 rounded-xl border px-3 py-2 text-xs font-bold transition-colors",
                   genMode === m.key
-                    ? "border-success bg-success/15 text-success"
+                    ? "border-primary bg-primary/15 text-primary"
                     : "border-border text-muted-foreground hover:bg-muted",
                 )}
               >
@@ -536,7 +536,7 @@ export default function GenerateExamPanel({
           <button
             onClick={handleGenerate}
             disabled={generating || (genPickMode === "manual" && manualSelected.size === 0)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-success py-2.5 text-sm font-bold text-success-foreground disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
             {generating ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
             {genMode === "paper"
@@ -597,7 +597,7 @@ export default function GenerateExamPanel({
                 <button
                   onClick={() => { const g = pendingGen; setPendingGen(null); if (g) finishGenerate(g.picked, g.seedBase); }}
                   disabled={generating}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-success py-2 text-xs font-bold text-success-foreground disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
                 >
                   {generating ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
                   {ar ? "توليد بهذه الدرجات" : "Generate with these points"}
@@ -613,8 +613,8 @@ export default function GenerateExamPanel({
           )}
 
           {generated.length > 0 && (
-            <div className="space-y-2 border-t border-success/30 pt-3">
-              <p className="text-xs font-bold text-success">
+            <div className="space-y-2 border-t border-primary/30 pt-3">
+              <p className="text-xs font-bold text-primary">
                 {generated[0]?.exam
                   ? (ar ? "جاهزة — اطبع لكل نموذج ورقة الأسئلة وورقة الإجابة:" : "Ready — print each form's papers:")
                   : (ar ? "جاهزة — اطبع ورقة الأسئلة لكل نموذج:" : "Ready — print each form's question paper:")}
