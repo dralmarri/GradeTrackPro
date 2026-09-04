@@ -12,7 +12,7 @@
 import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { Course } from "@/types/student";
 import { OmrExam, ChoiceCount } from "@/types/exam";
-import { GeneratedForm, generateForms, seededShuffle } from "@/types/questionBank";
+import { BankQuestion, GeneratedForm, generateForms, seededShuffle } from "@/types/questionBank";
 import { useQuestionBank } from "@/hooks/useQuestionBank";
 import { printQuestionPaper } from "@/lib/omr/questionPaper";
 import { printAnswerSheet, SheetHeader } from "@/lib/omr/sheet";
@@ -80,6 +80,11 @@ export default function GenerateExamPanel({
   const [autoDistribute, setAutoDistribute] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{ exam: OmrExam | null; form: GeneratedForm }[]>([]);
+  // set instead of generating immediately when the picked questions'
+  // points don't match "الدرجة القصوى" — lets the professor preview and
+  // fix each question's points right here before actually generating,
+  // instead of a plain yes/no confirmation with no way to fix anything.
+  const [pendingGen, setPendingGen] = useState<{ picked: BankQuestion[]; seedBase: number } | null>(null);
 
   const kindOf = (q: { kind?: "choice" | "essay"; choices: string[] }): "tf" | "mcq" | "essay" =>
     q.kind === "essay" ? "essay" : q.choices.length === 2 ? "tf" : "mcq";
@@ -160,47 +165,45 @@ export default function GenerateExamPanel({
         return;
       }
     }
+    const seedBase = (genTitle.trim().length * 2654435761) ^ pool.length;
+    const picked = genPickMode === "manual"
+      ? pool.filter((q) => manualSelected.has(q.id)).map((q) => ({ ...q, points: manualPoints[q.id] ?? q.points ?? 1 }))
+      : pickRandom(pool, genCount, seedBase)
+          .map((q) => ({ ...q, points: genKindPoints[kindOf(q)] ?? q.points ?? 1 }));
+
+    // "وزّع الدرجات تلقائياً": override the bubble-graded questions'
+    // points to split "الدرجة القصوى" evenly across them, instead of
+    // using each question's own bank/per-type points — guarantees the
+    // total always matches what was typed, so no mismatch is possible.
+    if (genMode === "full" && genPickMode === "random" && autoDistribute) {
+      const bubbleIdx = picked.map((_, i) => i).filter((i) => kindOf(picked[i]) !== "essay");
+      const dist = distributeEvenly(bubbleIdx.length, genMax);
+      bubbleIdx.forEach((idx, j) => { picked[idx] = { ...picked[idx], points: dist[j] }; });
+    }
+
+    // Bank points are always the real weights now — a question saved as
+    // "1 درجة" is worth exactly 1 point when graded, never silently
+    // redistributed to match "الدرجة القصوى" just because every picked
+    // question happened to share the same value. So "الدرجة القصوى" is
+    // only a target — if the actual total doesn't match, don't generate
+    // yet: show an editable preview instead (pendingGen below) so the
+    // professor can fix the points right there, rather than a plain
+    // yes/no with no way to act on the mismatch. Skipped when "توزيع
+    // تلقائي" is on, since the total is then guaranteed to match already.
+    if (genMode === "full" && genPickMode === "random" && !autoDistribute) {
+      const bubbleTotal = picked.filter((q) => kindOf(q) !== "essay").reduce((a, q) => a + (q.points ?? 1), 0);
+      if (bubbleTotal !== genMax) {
+        setPendingGen({ picked, seedBase });
+        return;
+      }
+    }
+
+    await finishGenerate(picked, seedBase);
+  };
+
+  const finishGenerate = async (picked: BankQuestion[], seedBase: number) => {
     setGenerating(true);
     try {
-      const seedBase = (genTitle.trim().length * 2654435761) ^ pool.length;
-      const picked = genPickMode === "manual"
-        ? pool.filter((q) => manualSelected.has(q.id)).map((q) => ({ ...q, points: manualPoints[q.id] ?? q.points ?? 1 }))
-        : pickRandom(pool, genCount, seedBase)
-            .map((q) => ({ ...q, points: genKindPoints[kindOf(q)] ?? q.points ?? 1 }));
-
-      // "وزّع الدرجات تلقائياً": override the bubble-graded questions'
-      // points to split "الدرجة القصوى" evenly across them, instead of
-      // using each question's own bank/per-type points — guarantees the
-      // total always matches what was typed, so no mismatch is possible.
-      if (genMode === "full" && genPickMode === "random" && autoDistribute) {
-        const bubbleIdx = picked.map((_, i) => i).filter((i) => kindOf(picked[i]) !== "essay");
-        const dist = distributeEvenly(bubbleIdx.length, genMax);
-        bubbleIdx.forEach((idx, j) => { picked[idx] = { ...picked[idx], points: dist[j] }; });
-      }
-
-      // Bank points are always the real weights now — a question saved as
-      // "1 درجة" is worth exactly 1 point when graded, never silently
-      // redistributed to match "الدرجة القصوى" just because every picked
-      // question happened to share the same value (that used to make an
-      // exam of ten 1-point T/F questions grade as 2 points each, to force
-      // the total up to "الدرجة القصوى"). So "الدرجة القصوى" is now only a
-      // target the professor is aiming for — if the actual total (bank
-      // points, or essay points added on top) doesn't match what they
-      // typed, confirm with them before generating instead of overriding
-      // their bank silently. Skipped entirely when "توزيع تلقائي" is on,
-      // since the total is then guaranteed to match by construction.
-      if (genMode === "full" && genPickMode === "random" && !autoDistribute) {
-        const bubbleTotal = picked.filter((q) => kindOf(q) !== "essay").reduce((a, q) => a + (q.points ?? 1), 0);
-        const essayTotal = picked.filter((q) => kindOf(q) === "essay").reduce((a, q) => a + (q.points ?? 1), 0);
-        if (bubbleTotal !== genMax) {
-          const total = bubbleTotal + essayTotal;
-          const proceed = window.confirm(ar
-            ? `درجات الأسئلة المختارة (من البنك، أو كما حددتها هنا لكل نوع) مجموعها ${bubbleTotal}${essayTotal ? ` + ${essayTotal} للمقالي` : ""} — وليس ${genMax} التي كتبتها في "الدرجة القصوى".\n\nموافقة = توليد الاختبار بمجموع ${total} فعلياً.\nإلغاء = الرجوع لتعديل درجات الأسئلة أو "الدرجة القصوى".`
-            : `The selected questions' points (from the bank, or what you set per type here) total ${bubbleTotal}${essayTotal ? ` + ${essayTotal} for essay` : ""} — not the ${genMax} you typed in "Max score".\n\nOK = generate with the actual total ${total}.\nCancel = go back and adjust the points or "Max score".`);
-          if (!proceed) { setGenerating(false); return; }
-        }
-      }
-
       const forms = generateForms(picked, genForms, seedBase + 17);
 
       if (genMode === "paper") {
@@ -269,13 +272,13 @@ export default function GenerateExamPanel({
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={loading || questions.length === 0}
-        className="flex w-full items-center gap-4 rounded-2xl border border-success/40 bg-success/5 p-4 text-start shadow-sm transition-colors hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center gap-4 rounded-2xl border border-primary/40 bg-primary/5 p-4 text-start shadow-sm transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-success/15 text-success">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
           <Wand2 size={20} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold text-success">{ar ? "توليد اختبار من البنك" : "Generate exam from bank"}</span>
+          <span className="block truncate font-bold text-primary">{ar ? "توليد اختبار من البنك" : "Generate exam from bank"}</span>
           <span className="block text-xs text-muted-foreground">
             {loading
               ? (ar ? "جارٍ التحميل…" : "Loading…")
@@ -288,7 +291,7 @@ export default function GenerateExamPanel({
       </button>
 
       {open && (
-        <div className="space-y-3 rounded-2xl border border-success/40 bg-success/5 p-4 shadow-sm">
+        <div className="space-y-3 rounded-2xl border border-primary/40 bg-primary/5 p-4 shadow-sm">
           <input
             value={genTitle}
             onChange={(e) => setGenTitle(e.target.value)}
@@ -306,7 +309,7 @@ export default function GenerateExamPanel({
                 className={cn(
                   "flex-1 rounded-xl border px-3 py-2 text-xs font-bold transition-colors",
                   genMode === m.key
-                    ? "border-success bg-success/15 text-success"
+                    ? "border-primary bg-primary/15 text-primary"
                     : "border-border text-muted-foreground hover:bg-muted",
                 )}
               >
@@ -533,7 +536,7 @@ export default function GenerateExamPanel({
           <button
             onClick={handleGenerate}
             disabled={generating || (genPickMode === "manual" && manualSelected.size === 0)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-success py-2.5 text-sm font-bold text-success-foreground disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
           >
             {generating ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
             {genMode === "paper"
@@ -541,9 +544,77 @@ export default function GenerateExamPanel({
               : (ar ? "ولّد النماذج والمفاتيح تلقائياً" : "Generate forms + keys")}
           </button>
 
+          {/* points don't match "الدرجة القصوى" — preview the exam's
+              questions here (grouped by type) with an editable points
+              field for each one, instead of a plain yes/no with no way to
+              fix the mismatch on the spot. */}
+          {pendingGen && (
+            <div className="space-y-2 rounded-xl border border-warning/50 bg-warning/5 p-3">
+              <p className="text-xs font-bold text-foreground">
+                {ar
+                  ? `معاينة الاختبار — عدّل درجة أي سؤال إن أردت`
+                  : "Exam preview — edit any question's points if you'd like"}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {ar
+                  ? `المجموع الحالي: ${pendingGen.picked.filter((q) => kindOf(q) !== "essay").reduce((a, q) => a + (q.points ?? 1), 0)} — الهدف («الدرجة القصوى»): ${genMax}`
+                  : `Current total: ${pendingGen.picked.filter((q) => kindOf(q) !== "essay").reduce((a, q) => a + (q.points ?? 1), 0)} — target ("Max score"): ${genMax}`}
+              </p>
+              <div className="max-h-72 space-y-1.5 overflow-y-auto rounded-lg border border-border bg-background p-1.5">
+                {([
+                  { key: "tf" as const, label: ar ? "صح وخطأ" : "True/False" },
+                  { key: "mcq" as const, label: ar ? "اختيار من متعدد" : "Multiple choice" },
+                  { key: "essay" as const, label: ar ? "مقالي" : "Essay" },
+                ]).flatMap(({ key, label }) => {
+                  const group = pendingGen.picked.filter((q) => kindOf(q) === key);
+                  if (!group.length) return [];
+                  return [
+                    <p key={"t" + key} className="sticky top-0 -mx-1.5 -mt-1.5 bg-background px-2.5 py-1 text-[11px] font-bold text-muted-foreground first:mt-0">
+                      {label} <span className="text-muted-foreground/70">({group.length})</span>
+                    </p>,
+                    ...group.map((q) => (
+                      <div key={q.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50">
+                        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{q.text}</p>
+                        <input
+                          type="number" min={0.25} step={0.25}
+                          value={q.points ?? 1}
+                          onChange={(e) => {
+                            const v = Number(e.target.value) || 1;
+                            setPendingGen((prev) => prev && {
+                              ...prev,
+                              picked: prev.picked.map((x) => (x.id === q.id ? { ...x, points: v } : x)),
+                            });
+                          }}
+                          title={ar ? "درجة السؤال" : "Points"}
+                          className="w-14 shrink-0 rounded-lg border border-input bg-background px-1.5 py-1 text-center text-xs text-foreground outline-none focus:border-primary"
+                        />
+                      </div>
+                    )),
+                  ];
+                })}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { const g = pendingGen; setPendingGen(null); if (g) finishGenerate(g.picked, g.seedBase); }}
+                  disabled={generating}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+                >
+                  {generating ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                  {ar ? "توليد بهذه الدرجات" : "Generate with these points"}
+                </button>
+                <button
+                  onClick={() => setPendingGen(null)}
+                  className="rounded-lg border border-border px-3 py-2 text-xs font-bold text-foreground hover:bg-muted"
+                >
+                  {ar ? "إلغاء" : "Cancel"}
+                </button>
+              </div>
+            </div>
+          )}
+
           {generated.length > 0 && (
-            <div className="space-y-2 border-t border-success/30 pt-3">
-              <p className="text-xs font-bold text-success">
+            <div className="space-y-2 border-t border-primary/30 pt-3">
+              <p className="text-xs font-bold text-primary">
                 {generated[0]?.exam
                   ? (ar ? "جاهزة — اطبع لكل نموذج ورقة الأسئلة وورقة الإجابة:" : "Ready — print each form's papers:")
                   : (ar ? "جاهزة — اطبع ورقة الأسئلة لكل نموذج:" : "Ready — print each form's question paper:")}
