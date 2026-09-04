@@ -120,6 +120,7 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
   const safeLectures = lectures || [];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [showImportHint, setShowImportHint] = useState(false);
 
   const [selectedLecture, setSelectedLecture] = useState(() => {
     if (safeLectures.length === 0) return 0;
@@ -319,7 +320,7 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
             {lang === "ar" ? "تصدير قالب الحضور" : "Export Template"}
           </button>
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => { setShowImportHint(true); fileInputRef.current?.click(); }}
             disabled={importing}
             className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
           >
@@ -334,11 +335,13 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
             onChange={handleImport}
           />
         </div>
-        <p className="mt-2 px-1 text-[10px] leading-relaxed text-muted-foreground">
-          {lang === "ar"
-            ? "تصدير: نزّل قالباً فارغاً لتعبئته يدوياً. استيراد: إن كانت مؤسستك تستخدم تطبيقاً خارجياً منفصلاً لرصد حضور الطلاب — نزّل منه ملف الحضور (يُحفظ عادة في مجلد التنزيلات Downloads بجهازك) ثم اضغط هنا واخترْه، ليُسجَّل الحضور تلقائياً في هذا التطبيق دون إدخاله يدوياً."
-            : "Export: download a blank template to fill in by hand. Import: if your institution uses a separate external app to track attendance — download the attendance file from it (usually saved to your device's Downloads folder), then tap here and pick it, and attendance is recorded here automatically instead of entering it by hand."}
-        </p>
+        {showImportHint && (
+          <p className="mt-2 px-1 text-[10px] leading-relaxed text-muted-foreground">
+            {lang === "ar"
+              ? "إن كانت مؤسستك تستخدم تطبيقاً خارجياً منفصلاً لرصد حضور الطلاب — نزّل منه ملف الحضور (يُحفظ عادة في مجلد التنزيلات Downloads بجهازك) ثم اضغط هنا واخترْه، ليُسجَّل الحضور تلقائياً في هذا التطبيق دون إدخاله يدوياً."
+              : "If your institution uses a separate external app to track attendance — download the attendance file from it (usually saved to your device's Downloads folder), then tap here and pick it, and attendance is recorded here automatically instead of entering it by hand."}
+          </p>
+        )}
       </div>
 
       {/* Search + sort */}
