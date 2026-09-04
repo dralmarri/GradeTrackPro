@@ -306,7 +306,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
         onClick={() => setFormsOpen((v) => !v)}
         className="flex w-full items-center gap-4 rounded-[28px] border border-border bg-card p-4 text-start shadow-sm transition-colors hover:bg-muted/40 sm:gap-5 sm:p-5"
       >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-success/10 text-success sm:h-14 sm:w-14">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:h-14 sm:w-14">
           <Wand2 size={22} />
         </span>
         <span className="min-w-0 flex-1">
@@ -331,7 +331,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
             className={cn(
               "rounded-xl border px-2.5 py-2 text-[11px] font-bold transition-colors",
               examsTab === t.key
-                ? "border-success bg-success/10 text-success"
+                ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:bg-muted",
             )}
           >
@@ -775,7 +775,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
                 }
                 setScanExam(exam);
               }}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-success/10 py-2.5 text-xs font-bold text-success transition-colors hover:bg-success/20"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary/10 py-2.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
             >
               <ScanLine size={14} />
               {ar ? "تصحيح بالكاميرا" : "Scan & grade"}
