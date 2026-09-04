@@ -388,7 +388,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           <span className="block truncate font-bold text-primary">{ar ? "توليد ورقة إجابة فقط" : "Generate answer sheet only"}</span>
           <span className="block text-xs text-muted-foreground">
             {ar
-              ? "لأسئلة عندك خارج بنك الأسئلة — بدون سحب أي شيء من البنك"
+              ? "للأسئلة التي عندك خارج بنك الأسئلة — بدون سحب أي شيء من البنك"
               : "For questions you already have outside the question bank — nothing pulled from the bank"}
           </span>
         </span>
