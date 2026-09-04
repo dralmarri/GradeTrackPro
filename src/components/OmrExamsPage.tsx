@@ -379,7 +379,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       <button
         type="button"
         onClick={() => setShowCreate((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2.5 text-start transition-colors hover:bg-muted/40"
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/5 px-3 py-2.5 text-start shadow-sm transition-colors hover:bg-primary/10"
       >
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           {ar
