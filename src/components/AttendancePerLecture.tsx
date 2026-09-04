@@ -336,8 +336,8 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
         </div>
         <p className="mt-2 px-1 text-[10px] leading-relaxed text-muted-foreground">
           {lang === "ar"
-            ? "تصدير: نزّل قالباً فارغاً لتعبئته. استيراد: إن كنت تستخدم تطبيقاً آخر (نظام الكلية) لرصد حضور الطلاب، ارفع ملفه من هنا مباشرة بدل التعبئة اليدوية."
-            : "Export: download a blank template to fill in. Import: if you already track attendance in another app (the college system), upload its file here directly instead of filling one in by hand."}
+            ? "تصدير: نزّل قالباً فارغاً لتعبئته يدوياً. استيراد: إن كانت مؤسستك تستخدم تطبيقاً خارجياً منفصلاً لرصد حضور الطلاب — نزّل منه ملف الحضور (يُحفظ عادة في مجلد التنزيلات Downloads بجهازك) ثم اضغط هنا واخترْه، ليُسجَّل الحضور تلقائياً في هذا التطبيق دون إدخاله يدوياً."
+            : "Export: download a blank template to fill in by hand. Import: if your institution uses a separate external app to track attendance — download the attendance file from it (usually saved to your device's Downloads folder), then tap here and pick it, and attendance is recorded here automatically instead of entering it by hand."}
         </p>
       </div>
 
