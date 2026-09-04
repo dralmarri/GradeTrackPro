@@ -379,14 +379,20 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       <button
         type="button"
         onClick={() => setShowCreate((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/5 px-3 py-2.5 text-start shadow-sm transition-colors hover:bg-primary/10"
+        className="flex w-full items-center gap-4 rounded-2xl border border-primary/40 bg-primary/5 p-4 text-start shadow-sm transition-colors hover:bg-primary/10"
       >
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          {ar
-            ? "لأسئلة عندك خارج بنك الأسئلة (اختبار ورقي جاهز مسبقاً) — يُنشئ ورقة إجابة فقط، بدون سحب أي شيء من البنك."
-            : "For a paper exam you already have outside the question bank — creates an answer sheet only, without pulling anything from the bank."}
-        </p>
-        <ChevronRight size={16} className={cn("shrink-0 text-muted-foreground/50 transition-transform", showCreate ? "-rotate-90" : ar ? "rotate-180" : "")} />
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+          <Plus size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold text-primary">{ar ? "توليد ورقة إجابة فقط" : "Generate answer sheet only"}</span>
+          <span className="block text-xs text-muted-foreground">
+            {ar
+              ? "لأسئلة عندك خارج بنك الأسئلة — بدون سحب أي شيء من البنك"
+              : "For questions you already have outside the question bank — nothing pulled from the bank"}
+          </span>
+        </span>
+        <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", showCreate ? "-rotate-90" : ar ? "rotate-180" : "")} />
       </button>
 
       {showCreate && (
