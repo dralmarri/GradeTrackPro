@@ -86,10 +86,16 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
     const examIds = exams.map((e) => e.id);
     if (examIds.length === 0) { setBatchStats(null); return; }
     (async () => {
+      // "today's scans" — not all-time, so the numbers actually reflect
+      // what was just scanned in the current sitting instead of an
+      // unlabeled all-time total that read as unclear ("أي دفعة؟").
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
       const { data, error } = await (supabase as any)
         .from("omr_scans")
         .select("exam_id, raw_correct, needs_review, created_at, image_path")
-        .in("exam_id", examIds);
+        .in("exam_id", examIds)
+        .gte("created_at", startOfToday.toISOString());
       if (cancelled) return;
       if (error || !data) { setBatchStats(null); return; }
       const qcById = new Map(exams.map((e) => [e.id, e.questionCount]));
@@ -260,7 +266,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
     <div className="space-y-4">
       {/* header */}
       <h3 className="font-display text-lg font-bold text-foreground">
-        {ar ? "التصحيح الآلي" : "Auto Grading"}
+        {ar ? "التصحيح الآلي والاختبارات" : "Auto Grading & Exams"}
       </h3>
 
       {/* Section 1: Question bank — purely about managing the bank's own
@@ -304,7 +310,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
           <Wand2 size={22} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold text-foreground">{ar ? `الاختبارات (${exams.length})` : `Exams (${exams.length})`}</span>
+          <span className="block truncate font-bold text-foreground">{ar ? "الاختبارات" : "Exams"}</span>
           <span className="block text-xs text-muted-foreground">{ar ? "توليد اختبارات، توليد أوراق إجابة، والنماذج السابقة" : "Generate exams, generate answer sheets, and previous forms"}</span>
         </span>
         <ChevronRight size={18} className={cn("shrink-0 text-muted-foreground/50 transition-transform", formsOpen ? "-rotate-90" : ar ? "rotate-180" : "")} />
@@ -370,20 +376,18 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
 
       {examsTab === "genSheet" && (
       <>
-      <div className="flex items-start justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2.5">
+      <button
+        type="button"
+        onClick={() => setShowCreate((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2.5 text-start transition-colors hover:bg-muted/40"
+      >
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           {ar
             ? "لأسئلة عندك خارج بنك الأسئلة (اختبار ورقي جاهز مسبقاً) — يُنشئ ورقة إجابة فقط، بدون سحب أي شيء من البنك."
             : "For a paper exam you already have outside the question bank — creates an answer sheet only, without pulling anything from the bank."}
         </p>
-        <button
-          onClick={() => setShowCreate((v) => !v)}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          <Plus size={14} />
-          {ar ? "اختبار جديد" : "New exam"}
-        </button>
-      </div>
+        <ChevronRight size={16} className={cn("shrink-0 text-muted-foreground/50 transition-transform", showCreate ? "-rotate-90" : ar ? "rotate-180" : "")} />
+      </button>
 
       {showCreate && (
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -834,7 +838,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       {batchStats && batchStats.scanned > 0 && (
         <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className="font-bold text-foreground">{ar ? "إحصائيات الدفعة الحالية" : "Current batch statistics"}</h4>
+            <h4 className="font-bold text-foreground">{ar ? "إحصائيات اليوم" : "Today's statistics"}</h4>
             {historyExam === null && exams.length > 0 && (
               <button
                 onClick={() => setHistoryExam(quickScanExam ?? exams[0])}
