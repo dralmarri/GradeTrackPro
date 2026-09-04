@@ -55,6 +55,13 @@ export interface OmrExam {
   // with a blank writing area and are scored manually after scanning (see
   // OmrScanDialog). Their points are on top of maxScore, not part of it.
   essayQuestions?: { text: string; points: number }[];
+  // "bank" = generated from the question bank (GenerateExamPanel, full
+  // exam with questions + auto answer key). "manual" = the answer-sheet-
+  // only flow, for a paper exam the professor already has outside the
+  // bank. Lets the exams list be split into "نماذج اختبارات سابقة" vs
+  // "نماذج أوراق اجابة سابقة". Absent on rows saved before this existed —
+  // treated as "manual" by callers, since that flow predates it.
+  source?: "bank" | "manual";
   createdAt: string;
   updatedAt: string;
 }
