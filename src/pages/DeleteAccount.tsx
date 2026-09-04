@@ -34,12 +34,23 @@ export default function DeleteAccount() {
           h: "طلب الحذف عبر البريد الإلكتروني",
           body: (
             <p>
-              إذا تعذّر عليك الدخول إلى حسابك، يمكنك طلب حذف الحساب عبر{" "}
-              <Link to="/contact" className="font-medium text-primary hover:underline">
-                صفحة تواصل معنا
-              </Link>{" "}
-              أو بمراسلتنا على البريد <strong>dralmarri@gmail.com</strong> من العنوان البريدي المسجّل في
-              حسابك. سنعالج طلبك خلال مدة أقصاها 30 يوماً.
+              إذا تعذّر عليك الدخول إلى حسابك، يمكنك طلب حذف الحساب مباشرةً بالضغط على الزر أدناه، وسيُفتح
+              بريد إلكتروني جاهز للإرسال من عنوانك المسجّل. سنعالج طلبك خلال مدة أقصاها 30 يوماً.
+              <div className="pt-3">
+                <a
+                  href="mailto:dralmarri@gmail.com?subject=%D8%B7%D9%84%D8%A8%20%D8%AD%D8%B0%D9%81%20%D8%AD%D8%B3%D8%A7%D8%A8%20GradeTrackPro&body=%D8%A7%D9%84%D8%B1%D8%AC%D8%A7%D8%A1%20%D8%AD%D8%B0%D9%81%20%D8%AD%D8%B3%D8%A7%D8%A8%D9%8A%20%D9%88%D8%AC%D9%85%D9%8A%D8%B9%20%D8%A8%D9%8A%D8%A7%D9%86%D8%A7%D8%AA%D9%8A%20%D9%86%D9%87%D8%A7%D8%A6%D9%8A%D8%A7%D9%8B%20%D9%85%D9%86%20GradeTrackPro.%0A%0A%D8%A7%D9%84%D8%A8%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D9%85%D8%B3%D8%AC%D9%84%20%D9%81%D9%8A%20%D8%AD%D8%B3%D8%A7%D8%A8%D9%8A:%20"
+                  className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  طلب حذف الحساب عبر البريد الإلكتروني
+                </a>
+              </div>
+              <p className="pt-2 text-xs text-muted-foreground">
+                أو راسلنا مباشرة على <strong>dralmarri@gmail.com</strong>، أو عبر{" "}
+                <Link to="/contact" className="font-medium text-primary hover:underline">
+                  صفحة تواصل معنا
+                </Link>
+                .
+              </p>
             </p>
           ),
         },
@@ -90,12 +101,24 @@ export default function DeleteAccount() {
           h: "Request deletion by email",
           body: (
             <p>
-              If you cannot sign in, you can request account deletion via our{" "}
-              <Link to="/contact" className="font-medium text-primary hover:underline">
-                contact page
-              </Link>{" "}
-              or by emailing <strong>dralmarri@gmail.com</strong> from the email address registered to your
-              account. We will process your request within 30 days at most.
+              If you cannot sign in, you can request account deletion right away by tapping the button
+              below — it will open a pre-filled email from your registered address. We will process your
+              request within 30 days at most.
+              <div className="pt-3">
+                <a
+                  href="mailto:dralmarri@gmail.com?subject=GradeTrackPro%20Account%20Deletion%20Request&body=I%20would%20like%20to%20permanently%20delete%20my%20GradeTrackPro%20account%20and%20all%20associated%20data.%0A%0AAccount%20email%3A%20"
+                  className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  Request account deletion by email
+                </a>
+              </div>
+              <p className="pt-2 text-xs text-muted-foreground">
+                Or email us directly at <strong>dralmarri@gmail.com</strong>, or via our{" "}
+                <Link to="/contact" className="font-medium text-primary hover:underline">
+                  contact page
+                </Link>
+                .
+              </p>
             </p>
           ),
         },
