@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="دليل استخدام GradeTrackPro — منصّة إدارة المقررات والتصحيح الآلي للأساتذة وإدارة الأقسام الأكاديمية.">
+<title>دليل GradeTrackPro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Markazi+Text:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f6f2ea;
+    --paper-raised:#ffffff;
+    --ink:#1d2333;
+    --ink-soft:#565f74;
+    --line:#e3dcc9;
+    --accent:#2454c7;
+    --accent-deep:#153a8f;
+    --accent-soft:#dfe7fb;
+    --gold:#a97427;
+    --gold-soft:#f2e2c4;
+    --good:#2c7a4b;
+    --good-soft:#dcefe1;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#11151f;
+      --paper-raised:#171d2c;
+      --ink:#e8e4d9;
+      --ink-soft:#9aa1b4;
+      --line:#2b3245;
+      --accent:#87a6ff;
+      --accent-deep:#b7c9ff;
+      --accent-soft:#1e2740;
+      --gold:#dda75a;
+      --gold-soft:#39301c;
+      --good:#5fbd88;
+      --good-soft:#173427;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#11151f;
+    --paper-raised:#171d2c;
+    --ink:#e8e4d9;
+    --ink-soft:#9aa1b4;
+    --line:#2b3245;
+    --accent:#87a6ff;
+    --accent-deep:#b7c9ff;
+    --accent-soft:#1e2740;
+    --gold:#dda75a;
+    --gold-soft:#39301c;
+    --good:#5fbd88;
+    --good-soft:#173427;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+    direction:rtl;
+    text-align:right;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{
+    max-width:920px;
+    margin:0 auto;
+    padding:0 24px 90px;
+  }
+  h1,h2,h3{
+    font-family:'Markazi Text','Segoe UI',sans-serif;
+    font-weight:700;
+    text-wrap:balance;
+    margin:0;
+    color:var(--ink);
+  }
+  .mono{
+    font-family:'IBM Plex Mono', monospace;
+    direction:ltr;
+    display:inline-block;
+  }
+
+  /* ---------- Cover ---------- */
+  .cover{
+    padding:64px 0 40px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  .mark{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .mark-badge{
+    width:52px;height:52px;border-radius:14px;
+    object-fit:cover;
+    flex:none;
+    box-shadow:0 6px 16px -8px rgba(20,30,60,.45);
+  }
+  .mark-name{font-size:1.05rem;font-weight:700;letter-spacing:.02em;}
+  .mark-name b{color:var(--accent);}
+  .mark-tag{font-size:.85rem;color:var(--ink-soft);}
+  .cover h1{font-size:clamp(2.1rem,5vw,3.1rem);line-height:1.15;}
+  .cover .kicker{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:.72rem;
+    letter-spacing:.14em;
+    color:var(--accent-deep);
+    background:var(--accent-soft);
+    display:inline-flex;
+    width:fit-content;
+    padding:6px 12px;
+    border-radius:999px;
+  }
+  .cover p.lede{
+    max-width:62ch;
+    font-size:1.06rem;
+    line-height:1.85;
+    color:var(--ink-soft);
+    margin:0;
+  }
+  .cover .meta{
+    display:flex;gap:28px;flex-wrap:wrap;
+    font-size:.85rem;color:var(--ink-soft);
+    padding-top:6px;
+  }
+  .cover .meta strong{color:var(--ink);font-weight:600;}
+
+  /* ---------- Section shell ---------- */
+  section{padding:56px 0;border-bottom:1px solid var(--line);}
+  section:last-of-type{border-bottom:none;}
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    margin-bottom:8px;
+  }
+  .section-head .mono{
+    font-size:.78rem;color:var(--accent-deep);
+    background:var(--accent-soft);
+    padding:3px 9px;border-radius:6px;
+  }
+  section h2{font-size:1.7rem;}
+  section > p.intro{
+    max-width:64ch;color:var(--ink-soft);line-height:1.8;
+    margin:14px 0 0;font-size:.98rem;
+  }
+
+  /* ---------- Capability grid ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:16px;
+    margin-top:30px;
+  }
+  .card{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:22px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .card .icon{
+    width:38px;height:38px;
+    border-radius:10px;
+    background:var(--accent-soft);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .card .icon svg{width:20px;height:20px;stroke:var(--accent-deep);}
+  .card h3{font-size:1.15rem;font-weight:600;font-family:'IBM Plex Sans Arabic';}
+  .card p{margin:0;color:var(--ink-soft);font-size:.92rem;line-height:1.75;}
+
+  /* ---------- Workflow ---------- */
+  .steps{
+    margin-top:34px;
+    display:flex;
+    flex-direction:column;
+  }
+  .step{
+    display:grid;
+    grid-template-columns:64px 1fr;
+    gap:20px;
+    padding:22px 0;
+    border-top:1px solid var(--line);
+    position:relative;
+  }
+  .step:first-child{border-top:none;}
+  .step .num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:1.5rem;font-weight:600;
+    color:var(--line);
+    direction:ltr;
+    line-height:1;
+    padding-top:2px;
+  }
+  .step.active .num{color:var(--accent);}
+  .step h3{font-size:1.1rem;font-weight:600;font-family:'IBM Plex Sans Arabic';margin-bottom:6px;}
+  .step p{margin:0;color:var(--ink-soft);font-size:.92rem;line-height:1.75;max-width:60ch;}
+  .step .tag{
+    display:inline-block;margin-top:10px;
+    font-size:.74rem;font-family:'IBM Plex Mono',monospace;
+    background:var(--gold-soft);color:var(--gold);
+    padding:2px 9px;border-radius:6px;direction:rtl;
+  }
+
+  /* ---------- Feature deep-dive ---------- */
+  .feature{
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    gap:34px;
+    align-items:center;
+    padding:30px 0;
+    border-top:1px solid var(--line);
+  }
+  .feature:first-of-type{border-top:none;padding-top:0;}
+  .feature .txt h3{font-size:1.3rem;margin-bottom:10px;}
+  .feature .txt p{color:var(--ink-soft);line-height:1.8;font-size:.95rem;margin:0 0 12px;}
+  .feature .txt ul{margin:0;padding-inline-start:20px;color:var(--ink-soft);font-size:.9rem;line-height:1.9;}
+  .mockup{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 18px 40px -28px rgba(20,30,60,.35);
+  }
+  .mockup .bar{display:flex;gap:6px;margin-bottom:14px;}
+  .mockup .bar span{width:8px;height:8px;border-radius:50%;background:var(--line);}
+  .mockup .row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 12px;border-radius:10px;background:var(--paper);
+    margin-bottom:8px;font-size:.82rem;
+  }
+  .mockup .row:last-child{margin-bottom:0;}
+  .mockup .row .pill{
+    font-family:'IBM Plex Mono',monospace;font-size:.72rem;
+    background:var(--good-soft);color:var(--good);
+    padding:2px 8px;border-radius:6px;direction:ltr;
+  }
+  .mockup .row .pill.gold{background:var(--gold-soft);color:var(--gold);}
+
+  /* ---------- Closing ---------- */
+  .closing{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    gap:24px;flex-wrap:wrap;
+    padding-top:56px;
+  }
+  .closing h2{font-size:1.6rem;max-width:20ch;}
+  .closing p{color:var(--ink-soft);max-width:44ch;line-height:1.8;font-size:.95rem;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--accent);color:#fff;
+    padding:12px 22px;border-radius:12px;
+    font-weight:600;font-size:.95rem;text-decoration:none;
+    white-space:nowrap;
+  }
+  footer{
+    display:flex;justify-content:space-between;align-items:center;
+    padding-top:34px;color:var(--ink-soft);font-size:.8rem;
+    flex-wrap:wrap;gap:10px;
+  }
+  footer .mono{color:var(--ink-soft);}
+
+  @media (max-width:720px){
+    .feature{grid-template-columns:1fr;}
+    .cover{padding-top:44px;}
+  }
+  @media print{
+    body{background:#fff;}
+    section{break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+
+
+<div class="page">
+
+  <div class="cover">
+    <div class="mark">
+      <img class="mark-badge" src="/app-icon-1024.png" alt="GradeTrackPro">
+      <div>
+        <div class="mark-name">Grade<b>Track</b>Pro</div>
+        <div class="mark-tag">منصّة إدارة المقررات والتصحيح الآلي</div>
+      </div>
+    </div>
+    <span class="kicker">دليل الاستخدام — الإصدار <span class="mono">2.1.1</span></span>
+    <h1>مقرراتك، حضورك، ودرجاتك<br>في مكان واحد</h1>
+    <p class="lede">
+      دليل مختصر يعرّفك بأهم ما يقدّمه GradeTrackPro: من إنشاء المقرر وتسجيل الطلاب، إلى بناء بنك
+      الأسئلة، وتوليد الاختبارات وتصحيحها بالكاميرا، وحتى متابعة النتائج والحضور — كل ذلك من هاتفك
+      أو حاسوبك.
+    </p>
+    <div class="meta">
+      <span>موجّه لـ<strong> الأساتذة وإدارة الأقسام الأكاديمية</strong></span>
+      <span>متوفر على <strong>الويب، آيفون، وأندرويد</strong></span>
+    </div>
+  </div>
+
+  <section>
+    <div class="section-head">
+      <span class="mono">01</span>
+      <h2>ماذا يقدّم لك التطبيق؟</h2>
+    </div>
+    <p class="intro">ست وظائف أساسية تغطي دورة الفصل الدراسي كاملة، من أول محاضرة إلى إعلان النتيجة النهائية.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v3M16 4v3"/></svg></div>
+        <h3>إدارة المقررات والشُعب</h3>
+        <p>أنشئ مقرراتك وشُعبها بأوقاتها، وأضف طلابك يدوياً أو دفعة واحدة عبر استيراد ملف إكسل.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h3>الحضور والغياب</h3>
+        <p>رصد سريع لكل محاضرة، مع إمكانية استيراد سجلات الحضور من نظام الكلية مباشرة إن وُجد.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M9 3v18"/></svg></div>
+        <h3>بنك الأسئلة</h3>
+        <p>اجمع أسئلتك (اختيار من متعدد، صح وخطأ، مقالية) في بنك واحد، مصنّفة وقابلة لإعادة الاستخدام كل فصل.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M4 8h2M18 8h2M4 16h2M18 16h2"/></svg></div>
+        <h3>توليد الاختبارات</h3>
+        <p>ولّد اختباراً كاملاً من البنك بنسخ عشوائية، أو جهّز ورقة إجابة فقط لاختبار ورقي جاهز عندك.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <h3>التصحيح الآلي بالكاميرا</h3>
+        <p>صوّر ورقة الإجابة بكاميرا الجوال ليصحّحها التطبيق فورياً ويرصد الدرجة تلقائياً في كشف الطالب.</p>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></div>
+        <h3>النتائج والتقارير</h3>
+        <p>كشوف درجات جاهزة لكل طالب ولكل شعبة، تتحدّث فور تصحيح أي اختبار جديد.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="mono">02</span>
+      <h2>خطوات البدء</h2>
+    </div>
+    <p class="intro">من أول استخدام إلى إعلان النتيجة — سبع خطوات بالترتيب الذي ستمر به فعلياً.</p>
+    <div class="steps">
+      <div class="step active">
+        <div class="num">01</div>
+        <div>
+          <h3>أنشئ مقررك الدراسي</h3>
+          <p>من الصفحة الرئيسية اضغط «مادة جديدة»، وحدّد اسم المقرر وشُعبه وأوقات محاضراته.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">02</div>
+        <div>
+          <h3>أضف طلابك</h3>
+          <p>أضفهم يدوياً واحداً واحداً، أو استورد قائمة الطلاب دفعة واحدة من ملف إكسل جاهز عندك.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">03</div>
+        <div>
+          <h3>سجّل الحضور أولاً بأول</h3>
+          <p>افتح المحاضرة الحالية وسجّل الحضور والغياب بضغطة واحدة لكل طالب.</p>
+          <span class="tag">يدعم الاستيراد من أنظمة الكليات</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">04</div>
+        <div>
+          <h3>ابنِ بنك أسئلتك</h3>
+          <p>أضف أسئلة الاختيار من متعدد والصح والخطأ والمقالية إلى بنك أسئلة المقرر، مع درجة كل سؤال.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">05</div>
+        <div>
+          <h3>ولّد الاختبار</h3>
+          <p>اختر عدد الأسئلة ونوعها من البنك، وعاين درجات الاختبار قبل التوليد النهائي وعدّلها إن أردت.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">06</div>
+        <div>
+          <h3>صحّح بالكاميرا</h3>
+          <p>بعد الاختبار، صوّر كل ورقة إجابة بكاميرا جوالك، وسيصحّحها التطبيق ويسجّل الدرجة فوراً.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">07</div>
+        <div>
+          <h3>راجع النتائج</h3>
+          <p>افتح كشف الدرجات لترى نتيجة كل طالب فوراً، جاهزة للمراجعة أو التصدير.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="mono">03</span>
+      <h2>ميزات تستحق وقتك</h2>
+    </div>
+    <p class="intro">أربع ميزات صُممت خصيصاً لتوفير وقت التصحيح والمتابعة.</p>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>📷 التصحيح الآلي بالكاميرا (OMR)</h3>
+        <p>لا حاجة لماسح ضوئي. وجّه كاميرا جوالك نحو ورقة الإجابة، ويتعرّف التطبيق على إجابات
+        الاختيار من متعدد والصح والخطأ فوراً، ويحسب الدرجة حسب وزن كل سؤال الفعلي.</p>
+        <ul>
+          <li>يدعم حتى 5 اختيارات لكل سؤال</li>
+          <li>يعرض إحصائيات دفعة التصحيح لحظياً</li>
+        </ul>
+      </div>
+      <div class="mockup">
+        <div class="bar"><span></span><span></span><span></span></div>
+        <div class="row"><span>سؤال 1 — ب</span><span class="pill">صحيحة</span></div>
+        <div class="row"><span>سؤال 2 — أ</span><span class="pill gold">1.5 / 2</span></div>
+        <div class="row"><span>الدرجة الكلية</span><span class="pill">17 / 20</span></div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>✍️ الأسئلة المقالية جنباً إلى جنب</h3>
+        <p>أضف أسئلة مقالية إلى نفس ورقة الاختبار، مع درجة مستقلة لكل سؤال تُضاف فوق درجة الأسئلة
+        الموضوعية — تُصحَّح يدوياً وتُدخل درجتها ببساطة بعد التصحيح الآلي.</p>
+      </div>
+      <div class="mockup">
+        <div class="bar"><span></span><span></span><span></span></div>
+        <div class="row"><span>الأسئلة الموضوعية</span><span class="pill">20</span></div>
+        <div class="row"><span>سؤال مقالي</span><span class="pill gold">+ 10</span></div>
+        <div class="row"><span>المجموع النهائي</span><span class="pill">30</span></div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>🎯 معاينة الدرجات قبل التوليد</h3>
+        <p>قبل توليد أي اختبار من بنك الأسئلة، تظهر لك معاينة كاملة بكل الأسئلة المختارة ودرجة كل
+        سؤال — يمكنك تعديلها يدوياً، أو تفعيل التوزيع التلقائي ليصل المجموع للدرجة المطلوبة تلقائياً.</p>
+      </div>
+      <div class="mockup">
+        <div class="bar"><span></span><span></span><span></span></div>
+        <div class="row"><span>اختيار من متعدد ×10</span><span class="pill gold">1 لكل سؤال</span></div>
+        <div class="row"><span>صح وخطأ ×5</span><span class="pill gold">1 لكل سؤال</span></div>
+        <div class="row"><span>المجموع المستهدف</span><span class="pill">15 / 15 ✓</span></div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>📥 استيراد الحضور من نظام كليتك</h3>
+        <p>إذا كانت مؤسستك تستخدم نظاماً خارجياً منفصلاً لرصد الحضور، يمكنك استيراد ملفه مباشرة داخل
+        GradeTrackPro بدلاً من إعادة إدخال الحضور يدوياً.</p>
+      </div>
+      <div class="mockup">
+        <div class="bar"><span></span><span></span><span></span></div>
+        <div class="row"><span>attendance_sec9.xlsx</span><span class="pill">تم الاستيراد</span></div>
+        <div class="row"><span>28 طالباً</span><span class="pill">مطابقة كاملة</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="border-bottom:none;">
+    <div class="closing">
+      <div>
+        <h2>جاهز تبدأ؟</h2>
+        <p>حمّل التطبيق على جوالك أو افتحه من متصفحك، وابدأ بإنشاء مقررك الأول في أقل من دقيقتين.</p>
+      </div>
+      <a class="btn" href="https://gradetrackpro.com" target="_blank" rel="noopener">
+        gradetrackpro.com
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg>
+      </a>
+    </div>
+    <footer>
+      <span>لديك سؤال أو اقتراح؟ راسلنا على <span class="mono">dralmarri@gmail.com</span></span>
+      <span>تطوير <b>Prof. Ayedh Almarri</b> · <span class="mono">GradeTrackPro v2.1.1</span></span>
+    </footer>
+  </section>
+
+</div>
+
+</body>
+</html>
