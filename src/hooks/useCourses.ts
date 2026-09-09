@@ -28,6 +28,7 @@ function dbRowToCourse(row: any): Omit<Course, "students"> {
     bonusEnabled: row.bonus_enabled !== false,
     customComponents: (row.custom_components || []) as CustomComponent[],
     hiddenComponents: (row.hidden_components || []) as any,
+    bankId: row.bank_id || null,
   };
 }
 
@@ -79,17 +80,25 @@ export function useCourses() {
 
   const addCourse = useCallback(async (
     name: string, lectures: LectureInfo[], section?: string,
-    schedule?: { lectureDays: number[]; lectureTime: string; semesterStart: string; semesterEnd: string }
+    schedule?: { lectureDays: number[]; lectureTime: string; semesterStart: string; semesterEnd: string },
+    bankId?: string | null
   ): Promise<string> => {
     if (!user) return "";
-    const { data, error } = await db.from("courses").insert({
+    const row: any = {
       user_id: user.id, name, section: section || "",
       lecture_count: lectures.length, lectures,
       max_bonus: 3, max_exam1: 20, max_exam2: 20, max_final: 40, max_participation: 10, max_homework: 10,
       bonus_enabled: true, custom_components: [],
       lecture_days: schedule?.lectureDays || [], lecture_time: schedule?.lectureTime || "",
       semester_start: schedule?.semesterStart || "", semester_end: schedule?.semesterEnd || "",
-    }).select().single();
+      bank_id: bankId || null,
+    };
+    let { data, error } = await db.from("courses").insert(row).select().single();
+    // schema catch-up: an older database may not have the bank_id column yet
+    if (error && /bank_id/.test(error.message || "")) {
+      delete row.bank_id;
+      ({ data, error } = await db.from("courses").insert(row).select().single());
+    }
     if (error || !data) { console.error("Error adding course:", error); return ""; }
     await fetchCourses();
     return data.id;
@@ -115,6 +124,7 @@ export function useCourses() {
     if ((updates as any).bonusEnabled !== undefined) u.bonus_enabled = (updates as any).bonusEnabled;
     if ((updates as any).customComponents !== undefined) u.custom_components = (updates as any).customComponents;
     if ((updates as any).hiddenComponents !== undefined) u.hidden_components = (updates as any).hiddenComponents;
+    if (updates.bankId !== undefined) u.bank_id = updates.bankId;
 
     // Auto-regenerate lectures if schedule changed
     const course = courses.find((c) => c.id === courseId);
@@ -137,7 +147,12 @@ export function useCourses() {
       }
     }
 
-    const { error } = await db.from("courses").update(u).eq("id", courseId);
+    let { error } = await db.from("courses").update(u).eq("id", courseId);
+    // schema catch-up: an older database may not have the bank_id column yet
+    if (error && /bank_id/.test(error.message || "")) {
+      delete u.bank_id;
+      ({ error } = await db.from("courses").update(u).eq("id", courseId));
+    }
     if (error) { console.error("Error updating course:", error); return; }
 
     // Resize student arrays if lecture_count changed

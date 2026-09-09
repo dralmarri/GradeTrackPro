@@ -25,7 +25,8 @@ import {
 // its own duplicate question list.
 interface Props {
   course: Course;
-  bankCourseIds: string[];
+  bankId: string | null;
+  bankName?: string;
   selectedIds: Set<string>;
   setSelectedIds: Dispatch<SetStateAction<Set<string>>>;
   examPoints: Record<string, number>;
@@ -33,11 +34,11 @@ interface Props {
 }
 
 export default function QuestionBankPage({
-  course, bankCourseIds, selectedIds, setSelectedIds, examPoints, setExamPoints,
+  bankId, bankName, selectedIds, setSelectedIds, examPoints, setExamPoints,
 }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { questions, loading, addQuestion, addQuestions, updateQuestion, deleteQuestion, deleteQuestions } = useQuestionBank(course.id, bankCourseIds);
+  const { questions, loading, addQuestion, addQuestions, updateQuestion, deleteQuestion, deleteQuestions } = useQuestionBank(bankId);
   const [showBank, setShowBank] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -302,6 +303,22 @@ export default function QuestionBankPage({
     );
   }
 
+  if (!bankId) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-[28px] border border-dashed border-border bg-card p-8 text-center">
+        <Library size={28} className="mb-1 text-muted-foreground opacity-50" />
+        <p className="font-display text-base font-bold text-foreground">
+          {ar ? "لا يوجد بنك أسئلة مرتبط بهذا المقرر" : "No question bank linked to this course"}
+        </p>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {ar
+            ? "اربط هذا المقرر ببنك أسئلة جديد أو موجود من صفحة إدارة المقرر في الإعدادات، ليصبح متاحاً هنا."
+            : "Link this course to a new or existing bank from the course settings page to use it here."}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* header */}
@@ -317,9 +334,9 @@ export default function QuestionBankPage({
             <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
               {questions.length} {ar ? "سؤالاً" : "questions"}
             </span>
-            {bankCourseIds.length > 1 && (
+            {bankName && (
               <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                {ar ? "مشترك بين الشعب" : "Shared across sections"}
+                {ar ? `البنك: ${bankName}` : `Bank: ${bankName}`}
               </span>
             )}
           </div>

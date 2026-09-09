@@ -23,7 +23,7 @@ import { Wand2, Loader2, FileText, Printer, ChevronRight, Library } from "lucide
 
 interface Props {
   course: Course;
-  bankCourseIds: string[];
+  bankId: string | null;
   sheetHeader: () => SheetHeader;
   componentOptions: { key: string; label: string }[];
   manualSelected: Set<string>;
@@ -47,14 +47,14 @@ interface Props {
 }
 
 export default function GenerateExamPanel({
-  course, bankCourseIds, sheetHeader, componentOptions,
+  bankId, sheetHeader, componentOptions,
   manualSelected, setManualSelected, manualPoints, setManualPoints,
   onOpenBank,
   onCreateExam, onSetAnswerKey, buildExam,
 }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { questions, loading } = useQuestionBank(course.id, bankCourseIds);
+  const { questions, loading } = useQuestionBank(bankId);
 
   const [open, setOpen] = useState(false);
   const [genTitle, setGenTitle] = useState("");

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { useCourses } from "@/hooks/useCourses";
+import { useQuestionBanks } from "@/hooks/useQuestionBanks";
 import { exportToExcel, ImportedStudent } from "@/lib/excel";
 import { generateLectureDates, WEEKDAYS } from "@/lib/lectures";
 import { LectureInfo } from "@/types/student";
@@ -57,11 +58,15 @@ export default function Index() {
     deleteCourse,
     deleteStudent,
   } = useCourses();
+  const { banks, createBank } = useQuestionBanks();
 
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [showNewCourse, setShowNewCourse] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
   const [newSection, setNewSection] = useState("");
+  // "new" = create a bank named after the course, "" = no bank, otherwise
+  // an existing bank's id — lets a new semester's course reuse a past bank.
+  const [newCourseBankChoice, setNewCourseBankChoice] = useState<string>("new");
   const [semesterStart, setSemesterStart] = useState<Date | undefined>();
   const [semesterEnd, setSemesterEnd] = useState<Date | undefined>();
   const [startOpen, setStartOpen] = useState(false);
@@ -99,12 +104,21 @@ export default function Index() {
       label: l.label,
     }));
 
+    // resolve the bank choice into an actual bank_id before creating the
+    // course, so it's linked from the moment it's created
+    let bankId: string | null = null;
+    if (newCourseBankChoice === "new") {
+      bankId = (await createBank(newCourseName.trim())) || null;
+    } else if (newCourseBankChoice) {
+      bankId = newCourseBankChoice;
+    }
+
     const id = await addCourse(newCourseName.trim(), lectures, newSection.trim(), {
       lectureDays: selectedDays,
       lectureTime,
       semesterStart: semesterStart.toISOString(),
       semesterEnd: semesterEnd.toISOString(),
-    });
+    }, bankId);
     if (id && pendingStudents.length > 0) {
       await addStudentsToCourse(id, pendingStudents);
     }
@@ -122,6 +136,7 @@ export default function Index() {
     setSelectedDays([]);
     setLectureTime("");
     setPendingStudents([]);
+    setNewCourseBankChoice("new");
   };
 
   if (loading) {
@@ -266,6 +281,34 @@ export default function Index() {
                           className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
+                        {lang === "ar" ? "بنك الأسئلة" : "Question bank"}
+                      </label>
+                      <select
+                        value={newCourseBankChoice}
+                        onChange={(e) => setNewCourseBankChoice(e.target.value)}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      >
+                        <option value="new">
+                          {lang === "ar" ? "بنك جديد باسم المقرر" : "New bank named after the course"}
+                        </option>
+                        {banks.map((b) => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                        <option value="">
+                          {lang === "ar" ? "بدون بنك أسئلة" : "No question bank"}
+                        </option>
+                      </select>
+                      {newCourseBankChoice && newCourseBankChoice !== "new" && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {lang === "ar"
+                            ? "سيُعاد استخدام هذا البنك بأسئلته الحالية لهذا المقرر."
+                            : "This bank's existing questions will be reused for this course."}
+                        </p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -511,7 +554,8 @@ export default function Index() {
         {courseTab === "omr" && (
           <OmrExamsPage
             course={activeCourse}
-            bankCourseIds={courses.filter((c) => c.name.trim() === activeCourse.name.trim()).map((c) => c.id)}
+            bankId={activeCourse.bankId || null}
+            bankName={banks.find((b) => b.id === activeCourse.bankId)?.name}
             onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
             onApplyScore={async (studentId, targetComponent, score) => {
               const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
