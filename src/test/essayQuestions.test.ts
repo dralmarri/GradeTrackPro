@@ -7,14 +7,14 @@ import type { OmrExam } from "@/types/exam";
 
 function mcq(id: string, points = 1): BankQuestion {
   return {
-    id, courseId: "c", text: `سؤال اختيار ${id}`, choices: ["أ", "ب", "ج", "د"], correct: 0,
+    id, bankId: "b", text: `سؤال اختيار ${id}`, choices: ["أ", "ب", "ج", "د"], correct: 0,
     points, createdAt: "2026-01-01T00:00:00.000Z",
   };
 }
 
 function essay(id: string, points = 5): BankQuestion {
   return {
-    id, courseId: "c", text: `سؤال مقالي ${id}`, kind: "essay", choices: [], correct: -1,
+    id, bankId: "b", text: `سؤال مقالي ${id}`, kind: "essay", choices: [], correct: -1,
     points, createdAt: "2026-01-01T00:00:00.000Z",
   };
 }

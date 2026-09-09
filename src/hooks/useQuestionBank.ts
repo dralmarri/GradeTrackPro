@@ -9,7 +9,7 @@ const db = supabase as any;
 function rowToQuestion(row: any): BankQuestion {
   return {
     id: row.id,
-    courseId: row.course_id,
+    bankId: row.bank_id,
     text: row.text,
     kind: row.kind === "essay" ? "essay" : "choice",
     choices: (row.choices || []) as string[],
@@ -22,42 +22,39 @@ function rowToQuestion(row: any): BankQuestion {
   };
 }
 
-// courseIds: the current course + its sibling sections (same course name),
-// so the bank is shared across sections of the same course.
-export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
+// bankId: the named question bank (see useQuestionBanks) linked to the
+// current course — null means the course has no bank linked yet.
+export function useQuestionBank(bankId: string | null) {
   const { user } = useAuth();
   const [questions, setQuestions] = useState<BankQuestion[]>([]);
   const [loading, setLoading] = useState(true);
-  // stable key — a fresh array identity per render must NOT retrigger fetching
-  const idsKey = (courseIds && courseIds.length ? courseIds : courseId ? [courseId] : []).slice().sort().join(",");
 
   const fetchQuestions = useCallback(async () => {
-    if (!user || !courseId) { setQuestions([]); setLoading(false); return; }
-    const ids = idsKey.split(",").filter(Boolean);
+    if (!user || !bankId) { setQuestions([]); setLoading(false); return; }
     const { data, error } = await db
       .from("omr_questions").select("*")
-      .in("course_id", ids)
+      .eq("bank_id", bankId)
       .order("created_at", { ascending: true });
     if (error) {
       console.error("Error fetching questions:", error);
       const { toast } = await import("sonner");
       toast.error(`تعذّر تحميل بنك الأسئلة: ${error.message || error.code || "خطأ غير معروف"}`, { duration: 9000 });
-      setQuestions([]); // never show another course's stale questions
+      setQuestions([]); // never show another bank's stale questions
       setLoading(false);
       return;
     }
     setQuestions((data || []).map(rowToQuestion));
     setLoading(false);
-  }, [user, courseId, idsKey]);
+  }, [user, bankId]);
 
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 
   const addQuestion = useCallback(async (input: {
     text: string; kind?: "choice" | "essay"; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty; points?: number;
   }): Promise<boolean> => {
-    if (!user || !courseId) return false;
+    if (!user || !bankId) return false;
     const baseRow: any = {
-      user_id: user.id, course_id: courseId, text: input.text, kind: input.kind || "choice",
+      user_id: user.id, bank_id: bankId, text: input.text, kind: input.kind || "choice",
       choices: input.choices, correct: input.correct, chapter: input.chapter || null,
       topic: input.topic || null, difficulty: input.difficulty || null, points: input.points ?? 1,
     };
@@ -78,15 +75,15 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
     }
     await fetchQuestions();
     return true;
-  }, [user, courseId, fetchQuestions]);
+  }, [user, bankId, fetchQuestions]);
 
   const addQuestions = useCallback(async (items: {
     text: string; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty; points?: number;
   }[]): Promise<number> => {
-    if (!user || !courseId || !items.length) return 0;
+    if (!user || !bankId || !items.length) return 0;
     const rows = items.map((q) => ({
       user_id: user.id,
-      course_id: courseId,
+      bank_id: bankId,
       text: q.text,
       choices: q.choices,
       correct: q.correct,
@@ -108,7 +105,7 @@ export function useQuestionBank(courseId: string | null, courseIds?: string[]) {
     }
     await fetchQuestions();
     return rows.length;
-  }, [user, courseId, fetchQuestions]);
+  }, [user, bankId, fetchQuestions]);
 
   const updateQuestion = useCallback(async (id: string, input: {
     text: string; kind?: "choice" | "essay"; choices: string[]; correct: number; chapter?: string; topic?: string; difficulty?: Difficulty; points?: number;
