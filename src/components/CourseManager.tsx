@@ -62,7 +62,9 @@ export default function CourseManager({
 }: CourseManagerProps) {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
-  const { banks, createBank } = useQuestionBanks();
+  const { banks, createBank, renameBank } = useQuestionBanks();
+  const [renamingBank, setRenamingBank] = useState(false);
+  const [bankRenameValue, setBankRenameValue] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   // "" = no bank, "new" = create a bank named after editName, otherwise an
@@ -281,17 +283,55 @@ export default function CourseManager({
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   {lang === "ar" ? "بنك الأسئلة" : "Question bank"}
                 </label>
-                <select
-                  value={editBankChoice}
-                  onChange={(e) => setEditBankChoice(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">{lang === "ar" ? "بدون بنك أسئلة" : "No question bank"}</option>
-                  <option value="new">{lang === "ar" ? "بنك جديد باسم المقرر" : "New bank named after the course"}</option>
-                  {banks.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={editBankChoice}
+                    onChange={(e) => { setEditBankChoice(e.target.value); setRenamingBank(false); }}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="">{lang === "ar" ? "بدون بنك أسئلة" : "No question bank"}</option>
+                    <option value="new">{lang === "ar" ? "بنك جديد باسم المقرر" : "New bank named after the course"}</option>
+                    {banks.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                  {editBankChoice && editBankChoice !== "new" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = banks.find((b) => b.id === editBankChoice);
+                        setBankRenameValue(current?.name || "");
+                        setRenamingBank((v) => !v);
+                      }}
+                      title={lang === "ar" ? "إعادة تسمية البنك" : "Rename bank"}
+                      className="flex shrink-0 items-center justify-center rounded-lg border border-input bg-background px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                  )}
+                </div>
+                {renamingBank && editBankChoice && editBankChoice !== "new" && (
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      value={bankRenameValue}
+                      onChange={(e) => setBankRenameValue(e.target.value)}
+                      autoFocus
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!bankRenameValue.trim()) return;
+                        await renameBank(editBankChoice, bankRenameValue.trim());
+                        setRenamingBank(false);
+                        toast.success(lang === "ar" ? "تم تحديث اسم البنك" : "Bank renamed");
+                      }}
+                      className="shrink-0 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+                    >
+                      <Check size={16} />
+                    </button>
+                  </div>
+                )}
                 <p className="mt-1 text-xs text-muted-foreground">
                   {lang === "ar"
                     ? "اربط مقرراً بنفس بنك أسئلة مقرر فصل سابق لإعادة استخدامه دون بنائه من جديد."
