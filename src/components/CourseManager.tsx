@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuestionBanks } from "@/hooks/useQuestionBanks";
 import { tf } from "@/lib/translations";
 import appIcon from "@/assets/app-icon.png";
 
@@ -61,8 +62,12 @@ export default function CourseManager({
 }: CourseManagerProps) {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
+  const { banks, createBank } = useQuestionBanks();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  // "" = no bank, "new" = create a bank named after editName, otherwise an
+  // existing bank's id
+  const [editBankChoice, setEditBankChoice] = useState<string>("");
   const [editSection, setEditSection] = useState("");
   const [editMaxExam1, setEditMaxExam1] = useState(20);
   const [editMaxExam2, setEditMaxExam2] = useState(20);
@@ -103,6 +108,7 @@ export default function CourseManager({
     setEditBonusEnabled(course.bonusEnabled !== false);
     setEditCustomComponents(course.customComponents || []);
     setEditHiddenComponents(course.hiddenComponents || []);
+    setEditBankChoice(course.bankId || "");
   };
 
   const MAX_CUSTOM = 5;
@@ -138,9 +144,14 @@ export default function CourseManager({
     );
   };
 
-  const saveEdit = (courseId: string) => {
+  const saveEdit = async (courseId: string) => {
+    let bankId: string | null = editBankChoice ? editBankChoice : null;
+    if (editBankChoice === "new") {
+      bankId = (await createBank(editName.trim() || t("courseName"))) || null;
+    }
     onUpdateCourse(courseId, {
       name: editName,
+      bankId,
       section: editSection,
       maxExam1: editMaxExam1,
       maxExam2: editMaxExam2,
@@ -264,6 +275,28 @@ export default function CourseManager({
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
+              </div>
+              {/* Question bank link */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {lang === "ar" ? "بنك الأسئلة" : "Question bank"}
+                </label>
+                <select
+                  value={editBankChoice}
+                  onChange={(e) => setEditBankChoice(e.target.value)}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="">{lang === "ar" ? "بدون بنك أسئلة" : "No question bank"}</option>
+                  <option value="new">{lang === "ar" ? "بنك جديد باسم المقرر" : "New bank named after the course"}</option>
+                  {banks.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {lang === "ar"
+                    ? "اربط مقرراً بنفس بنك أسئلة مقرر فصل سابق لإعادة استخدامه دون بنائه من جديد."
+                    : "Link to a past semester's bank to reuse it instead of rebuilding it."}
+                </p>
               </div>
               {/* Bonus toggle */}
               <div className="rounded-lg border border-border bg-background/50 p-3">

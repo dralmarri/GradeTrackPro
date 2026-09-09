@@ -24,12 +24,13 @@ import {
 
 interface Props {
   course: Course;
-  bankCourseIds: string[];
+  bankId: string | null;
+  bankName?: string;
   onApplyScore: (studentId: string, targetComponent: string, score: number) => Promise<void>;
   onLearnNumber: (studentId: string, studentNumber: string) => Promise<void>;
 }
 
-export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLearnNumber }: Props) {
+export default function OmrExamsPage({ course, bankId, bankName, onApplyScore, onLearnNumber }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const { exams, loading, addExam, updateExam, updateAnswerKey, deleteExam } = useOmrExams(course.id);
@@ -330,7 +331,8 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       {bankOpen && (
         <QuestionBankPage
           course={course}
-          bankCourseIds={bankCourseIds}
+          bankId={bankId}
+          bankName={bankName}
           selectedIds={examSelected}
           setSelectedIds={setExamSelected}
           examPoints={examPoints}
@@ -383,7 +385,7 @@ export default function OmrExamsPage({ course, bankCourseIds, onApplyScore, onLe
       {examsTab === "genFull" && (
       <GenerateExamPanel
         course={course}
-        bankCourseIds={bankCourseIds}
+        bankId={bankId}
         sheetHeader={sheetHeader}
         componentOptions={componentOptions}
         manualSelected={examSelected}

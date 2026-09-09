@@ -69,4 +69,8 @@ export interface Course {
   bonusEnabled?: boolean;
   customComponents?: CustomComponent[];
   hiddenComponents?: StandardComponentKey[];
+  // Links this course instance to a persistent, named question bank (see
+  // QuestionBank in questionBank.ts) that survives past this semester —
+  // null/undefined means no bank has been linked yet.
+  bankId?: string | null;
 }

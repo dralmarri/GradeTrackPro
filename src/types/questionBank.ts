@@ -4,9 +4,21 @@
 
 export type Difficulty = "easy" | "medium" | "hard";
 
+// A named, account-owned bank of questions — independent of any single
+// course *instance*, so it survives a course being re-created next
+// semester. The user links a course to a bank explicitly (see Course.bankId
+// in src/types/student.ts) instead of the bank being implicitly tied to one
+// course row.
+export interface QuestionBank {
+  id: string;
+  userId: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface BankQuestion {
   id: string;
-  courseId: string;
+  bankId: string;
   text: string;
   // "essay" questions have no choices/correct answer — they print with a
   // blank writing area and are graded manually (see gradeOmr's essay path
