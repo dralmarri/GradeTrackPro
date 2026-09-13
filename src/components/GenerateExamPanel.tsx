@@ -237,7 +237,7 @@ export default function GenerateExamPanel({
           choiceCount: form.sections[0]?.choiceCount ?? 4,
           targetComponent: genTarget,
           maxScore,
-          studentIdDigits: 10,
+          studentIdDigits: 12,
           sections: form.sections.length > 1 ? form.sections : undefined,
           version: genForms > 1 ? form.version : undefined,
           idMode: "written",
