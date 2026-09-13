@@ -228,7 +228,7 @@ export default function OmrExamsPage({ course, bankId, bankName, onApplyScore, o
         questionCount: totalQuestions,
         // an essay-only sheet has no bubbled section at all
         choiceCount: (bubbleSections[0]?.choiceCount as ChoiceCount) ?? 4,
-        targetComponent, maxScore: computedMaxScore || 1, studentIdDigits: 10,
+        targetComponent, maxScore: computedMaxScore || 1, studentIdDigits: 12,
         sections: bubbleSections.length > 1
           ? bubbleSections.map((s) => ({ questionCount: s.questionCount, choiceCount: s.choiceCount as ChoiceCount }))
           : undefined,
@@ -405,7 +405,7 @@ export default function OmrExamsPage({ course, bankId, bankName, onApplyScore, o
           targetComponent: target,
           maxScore: max,
           answerKey: form.answerKey,
-          studentIdDigits: 10,
+          studentIdDigits: 12,
           sections: form.sections.length > 1 ? form.sections : undefined,
           version: form.version,
           idMode: mode,
