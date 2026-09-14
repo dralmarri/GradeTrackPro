@@ -249,28 +249,39 @@ export function useCourses() {
     return { ok: true };
   }, [courses, fetchCourses]);
 
+  // Applies a single lecture's attendance (from the college system's
+  // per-session report) — merges present/absent into that one lecture
+  // index only, exactly like a manual attendance toggle, instead of
+  // touching any other day's record.
   const importPaaetAttendance = useCallback(async (
     courseId: string,
-    matched: { studentId: string; attendance: boolean[] }[],
-    newStudents: { name: string; attendance: boolean[] }[],
+    lectureIndex: number,
+    matched: { studentId: string; present: boolean }[],
+    newStudents: { name: string; present: boolean }[],
   ) => {
     if (!user) return;
     const course = courses.find((c) => c.id === courseId);
     if (!course) return;
     const lc = course.lectureCount || 0;
     for (const m of matched) {
-      const attendance = m.attendance.length ? m.attendance : new Array(lc).fill(true);
-      const { error } = await db.from("students").update({ attendance }).eq("id", m.studentId);
+      const student = course.students.find((s) => s.id === m.studentId);
+      const newAtt = [...(student?.attendance || new Array(lc).fill(true))];
+      if (lectureIndex >= 0 && lectureIndex < newAtt.length) newAtt[lectureIndex] = m.present;
+      const { error } = await db.from("students").update({ attendance: newAtt }).eq("id", m.studentId);
       if (error) console.error("Error updating attendance:", error);
     }
     if (newStudents.length) {
-      const rows = newStudents.map((s) => ({
-        course_id: courseId, user_id: user.id, name: s.name,
-        lecture_bonus: new Array(lc).fill(0),
-        attendance: s.attendance.length ? s.attendance : new Array(lc).fill(true),
-        lecture_notes: new Array(lc).fill(""),
-        exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
-      }));
+      const rows = newStudents.map((s) => {
+        const attendance = new Array(lc).fill(true);
+        if (lectureIndex >= 0 && lectureIndex < lc) attendance[lectureIndex] = s.present;
+        return {
+          course_id: courseId, user_id: user.id, name: s.name,
+          lecture_bonus: new Array(lc).fill(0),
+          attendance,
+          lecture_notes: new Array(lc).fill(""),
+          exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
+        };
+      });
       const { error } = await db.from("students").insert(rows);
       if (error) console.error("Error adding students:", error);
     }

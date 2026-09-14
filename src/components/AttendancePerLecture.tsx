@@ -15,8 +15,9 @@ interface Props {
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
   onUpdateNote: (studentId: string, lectureIndex: number, note: string) => Promise<{ ok: boolean; error?: string }> | void;
   onImportPaaet: (
-    matched: { studentId: string; attendance: boolean[] }[],
-    newStudents: { name: string; attendance: boolean[] }[],
+    lectureIndex: number,
+    matched: { studentId: string; present: boolean }[],
+    newStudents: { name: string; present: boolean }[],
   ) => Promise<void>;
 }
 
@@ -205,10 +206,12 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
     try {
       const paaet = await parsePaaetAttendanceFile(file, course);
       if (paaet.matchedCount > 0 || paaet.newCount > 0) {
-        await onImportPaaet(paaet.matched, paaet.newStudents);
+        // applies to the one lecture currently open (matches the file's own
+        // single-session report), same as a manual attendance toggle
+        await onImportPaaet(selectedLecture, paaet.matched, paaet.newStudents);
         const msg = lang === "ar"
-          ? `تم استيراد الحضور: ${paaet.matchedCount} طالب${paaet.newCount > 0 ? ` · ${paaet.newCount} طالب جديد أُضيف` : ""}`
-          : `Attendance imported: ${paaet.matchedCount} students${paaet.newCount > 0 ? ` · ${paaet.newCount} new added` : ""}`;
+          ? `تم استيراد حضور «${title}»: ${paaet.matchedCount} طالب${paaet.newCount > 0 ? ` · ${paaet.newCount} طالب جديد أُضيف` : ""}`
+          : `Imported attendance for "${title}": ${paaet.matchedCount} students${paaet.newCount > 0 ? ` · ${paaet.newCount} new added` : ""}`;
         toast.success(msg, { duration: 5000 });
         return;
       }
