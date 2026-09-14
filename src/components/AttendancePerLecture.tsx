@@ -16,8 +16,8 @@ interface Props {
   onUpdateNote: (studentId: string, lectureIndex: number, note: string) => Promise<{ ok: boolean; error?: string }> | void;
   onImportPaaet: (
     lectureIndex: number,
-    matched: { studentId: string; present: boolean }[],
-    newStudents: { name: string; present: boolean }[],
+    matched: { studentId: string; absentCount: number }[],
+    newStudents: { name: string; absentCount: number }[],
   ) => Promise<void>;
 }
 

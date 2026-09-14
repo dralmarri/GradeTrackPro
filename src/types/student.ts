@@ -17,6 +17,12 @@ export interface Student {
   participation: number;
   homework: number;
   customScores?: Record<string, number>;
+  // Running absence count last reported by the college system (PAAET) for
+  // this course — used to detect a NEW absence on the next import by
+  // comparing against the file's latest total, since the file itself only
+  // ever reports a cumulative count with no per-lecture date. See
+  // importPaaetAttendance in useCourses.ts.
+  paaetAbsenceCount?: number;
 }
 
 export interface LectureInfo {
