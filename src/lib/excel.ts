@@ -331,20 +331,22 @@ export function parseAttendanceFile(
   });
 }
 
-// --- PAAET (نظام الكلية) aggregate attendance import ---
-
+// --- PAAET (نظام الكلية) cumulative attendance import ---
+// The college's "غياب" column is a running total of the student's absences
+// in this course TO DATE — it never names which lecture date each absence
+// falls on, and it keeps growing week over week rather than resetting per
+// session. So a single import can't be read as "absent/present today" on
+// its own: it only tells us the *delta* against the total we saw last
+// time (stored per-student as paaetAbsenceCount). If the total grew since
+// the last import, that growth is attributed to the ONE lecture the
+// professor currently has open (lectureIndex) — the same lecture they'd be
+// manually marking anyway — and the new total is stored as the fresh
+// baseline for next time.
 export interface PaaetImportResult {
-  matched: { studentId: string; attendance: boolean[] }[];
-  newStudents: { name: string; attendance: boolean[] }[];
+  matched: { studentId: string; absentCount: number }[];
+  newStudents: { name: string; absentCount: number }[];
   matchedCount: number;
   newCount: number;
-}
-
-function buildAttendanceFromAbsences(absentCount: number, lectureCount: number): boolean[] {
-  const att = new Array(Math.max(0, lectureCount)).fill(true);
-  const absent = Math.max(0, Math.min(absentCount, lectureCount));
-  for (let i = lectureCount - absent; i < lectureCount; i++) att[i] = false;
-  return att;
 }
 
 export function parsePaaetAttendanceFile(
@@ -379,7 +381,6 @@ export function parsePaaetAttendanceFile(
           return;
         }
 
-        const lectureCount = course.lectureCount || course.lectures.length || 0;
         const matched: PaaetImportResult["matched"] = [];
         const newStudents: PaaetImportResult["newStudents"] = [];
         const usedStudentIds = new Set<string>();
@@ -391,7 +392,6 @@ export function parsePaaetAttendanceFile(
 
           const absentRaw = Number(String(row[absentCol] ?? "").trim());
           const absentCount = Number.isFinite(absentRaw) ? absentRaw : 0;
-          const attendance = buildAttendanceFromAbsences(absentCount, lectureCount);
 
           const student = course.students.find(
             (s) =>
@@ -403,9 +403,9 @@ export function parsePaaetAttendanceFile(
 
           if (student) {
             usedStudentIds.add(student.id);
-            matched.push({ studentId: student.id, attendance });
+            matched.push({ studentId: student.id, absentCount });
           } else {
-            newStudents.push({ name, attendance });
+            newStudents.push({ name, absentCount });
           }
         }
 
