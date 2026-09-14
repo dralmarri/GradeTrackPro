@@ -46,6 +46,7 @@ function dbRowToStudent(row: any): Student {
     participation: Number(row.participation) || 0,
     homework: Number(row.homework) || 0,
     customScores: (row.custom_scores || {}) as Record<string, number>,
+    paaetAbsenceCount: row.paaet_absence_count != null ? Number(row.paaet_absence_count) : undefined,
   };
 }
 
@@ -249,28 +250,48 @@ export function useCourses() {
     return { ok: true };
   }, [courses, fetchCourses]);
 
+  // Applies the college system's CUMULATIVE absence count — it names no
+  // lecture date, so a student is only marked absent for the currently
+  // open lecture (lectureIndex) if their total grew since the last import
+  // (tracked per-student as paaetAbsenceCount). Re-importing the same
+  // report twice is safe: the second time sees no growth and changes
+  // nothing.
   const importPaaetAttendance = useCallback(async (
     courseId: string,
-    matched: { studentId: string; attendance: boolean[] }[],
-    newStudents: { name: string; attendance: boolean[] }[],
+    lectureIndex: number,
+    matched: { studentId: string; absentCount: number }[],
+    newStudents: { name: string; absentCount: number }[],
   ) => {
     if (!user) return;
     const course = courses.find((c) => c.id === courseId);
     if (!course) return;
     const lc = course.lectureCount || 0;
     for (const m of matched) {
-      const attendance = m.attendance.length ? m.attendance : new Array(lc).fill(true);
-      const { error } = await db.from("students").update({ attendance }).eq("id", m.studentId);
+      const student = course.students.find((s) => s.id === m.studentId);
+      const baseline = student?.paaetAbsenceCount ?? 0;
+      const newAbsence = m.absentCount > baseline;
+      const newAtt = [...(student?.attendance || new Array(lc).fill(true))];
+      if (lectureIndex >= 0 && lectureIndex < newAtt.length) newAtt[lectureIndex] = !newAbsence;
+      const { error } = await db.from("students")
+        .update({ attendance: newAtt, paaet_absence_count: m.absentCount })
+        .eq("id", m.studentId);
       if (error) console.error("Error updating attendance:", error);
     }
     if (newStudents.length) {
-      const rows = newStudents.map((s) => ({
-        course_id: courseId, user_id: user.id, name: s.name,
-        lecture_bonus: new Array(lc).fill(0),
-        attendance: s.attendance.length ? s.attendance : new Array(lc).fill(true),
-        lecture_notes: new Array(lc).fill(""),
-        exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
-      }));
+      const rows = newStudents.map((s) => {
+        const attendance = new Array(lc).fill(true);
+        // a brand-new roster entry has no prior baseline (0), so any
+        // reported absence so far is attributed to today's lecture
+        if (lectureIndex >= 0 && lectureIndex < lc) attendance[lectureIndex] = s.absentCount <= 0;
+        return {
+          course_id: courseId, user_id: user.id, name: s.name,
+          lecture_bonus: new Array(lc).fill(0),
+          attendance,
+          lecture_notes: new Array(lc).fill(""),
+          exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
+          paaet_absence_count: s.absentCount,
+        };
+      });
       const { error } = await db.from("students").insert(rows);
       if (error) console.error("Error adding students:", error);
     }
