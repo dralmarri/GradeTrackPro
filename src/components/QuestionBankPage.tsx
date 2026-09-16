@@ -453,6 +453,13 @@ export default function QuestionBankPage({
               <option value="mixed">{ar ? "متنوع (صح/خطأ + اختيار من متعدد)" : "Mixed (T/F + MCQ)"}</option>
             </select>
           </label>
+          {pasteType === "tf" && (
+            <p className="text-[11px] text-muted-foreground">
+              {ar
+                ? "يقبل أيضاً قائمة عبارات بشرطة (-) بدون ترقيم أو إجابة — كل سطر يصبح سؤال صح/خطأ تحدد إجابته لاحقاً في المعاينة."
+                : "Also accepts a plain \"-\" bulleted list with no numbers or answers — each line becomes a T/F question you'll answer in the review step."}
+            </p>
+          )}
           {pasteType === "mixed" && (
             <div className="grid grid-cols-2 gap-3">
               <label className="space-y-1 text-xs text-muted-foreground">
