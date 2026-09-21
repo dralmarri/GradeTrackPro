@@ -256,11 +256,17 @@ export function useCourses() {
   // (tracked per-student as paaetAbsenceCount). Re-importing the same
   // report twice is safe: the second time sees no growth and changes
   // nothing.
+  // Attendance-only — this must never create roster rows. A name in the
+  // college's file that doesn't match an existing student is reported back
+  // to the caller as unmatched (see AttendancePerLecture's toast) instead
+  // of being silently inserted as a brand-new student; adding students is
+  // the roster-management flow's job (CourseStudentsDialog), not this
+  // button's, and silently doing it here from a failed name match used to
+  // quietly duplicate the whole roster.
   const importPaaetAttendance = useCallback(async (
     courseId: string,
     lectureIndex: number,
     matched: { studentId: string; absentCount: number }[],
-    newStudents: { name: string; absentCount: number }[],
   ) => {
     if (!user) return;
     const course = courses.find((c) => c.id === courseId);
@@ -276,24 +282,6 @@ export function useCourses() {
         .update({ attendance: newAtt, paaet_absence_count: m.absentCount })
         .eq("id", m.studentId);
       if (error) console.error("Error updating attendance:", error);
-    }
-    if (newStudents.length) {
-      const rows = newStudents.map((s) => {
-        const attendance = new Array(lc).fill(true);
-        // a brand-new roster entry has no prior baseline (0), so any
-        // reported absence so far is attributed to today's lecture
-        if (lectureIndex >= 0 && lectureIndex < lc) attendance[lectureIndex] = s.absentCount <= 0;
-        return {
-          course_id: courseId, user_id: user.id, name: s.name,
-          lecture_bonus: new Array(lc).fill(0),
-          attendance,
-          lecture_notes: new Array(lc).fill(""),
-          exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
-          paaet_absence_count: s.absentCount,
-        };
-      });
-      const { error } = await db.from("students").insert(rows);
-      if (error) console.error("Error adding students:", error);
     }
     await fetchCourses();
   }, [user, courses, fetchCourses]);

@@ -349,6 +349,14 @@ export interface PaaetImportResult {
   newCount: number;
 }
 
+// Loose match for names coming from the college's own export — trims,
+// collapses whitespace, and strips Arabic diacritics/tatweel so a purely
+// cosmetic difference (extra space, a stray tashkeel mark) doesn't cause a
+// real match to be missed.
+function normalizeName(n: string): string {
+  return n.trim().replace(/\s+/g, " ").replace(/[ً-ٰٟـ]/g, "");
+}
+
 export function parsePaaetAttendanceFile(
   file: File,
   course: Course,
@@ -393,13 +401,12 @@ export function parsePaaetAttendanceFile(
           const absentRaw = Number(String(row[absentCol] ?? "").trim());
           const absentCount = Number.isFinite(absentRaw) ? absentRaw : 0;
 
-          const student = course.students.find(
-            (s) =>
-              !usedStudentIds.has(s.id) &&
-              (s.name.trim() === name ||
-                s.name.trim().includes(name) ||
-                name.includes(s.name.trim()))
-          );
+          const normName = normalizeName(name);
+          const student = course.students.find((s) => {
+            if (usedStudentIds.has(s.id)) return false;
+            const normStudent = normalizeName(s.name);
+            return normStudent === normName || normStudent.includes(normName) || normName.includes(normStudent);
+          });
 
           if (student) {
             usedStudentIds.add(student.id);

@@ -579,7 +579,7 @@ export default function Index() {
               course={activeCourse}
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
               onUpdateNote={(sid, li, note) => updateLectureNote(activeCourse.id, sid, li, note)}
-              onImportPaaet={(lectureIndex, matched, newStudents) => importPaaetAttendance(activeCourse.id, lectureIndex, matched, newStudents)}
+              onImportPaaet={(lectureIndex, matched) => importPaaetAttendance(activeCourse.id, lectureIndex, matched)}
             />
 
 
