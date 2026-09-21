@@ -61,6 +61,12 @@ export default function QuestionBankPage({
       topic: q.topic || importTopic.trim() || undefined,
     }));
 
+  // loose match for duplicate-question warnings: trims, collapses
+  // whitespace, and drops trailing punctuation so trivial differences
+  // (an extra space, a missing "؟") don't hide an obvious duplicate
+  const normalizeQuestionText = (t: string) =>
+    t.trim().replace(/\s+/g, " ").replace(/[.,؟?!؟]+$/g, "").toLowerCase();
+
   // --- add question form ---
   const [showAdd, setShowAdd] = useState(false);
   const [qText, setQText] = useState("");
@@ -173,11 +179,22 @@ export default function QuestionBankPage({
     setQChoices(t === "essay" ? [] : t === 2 ? ["صح", "خطأ"] : new Array(t).fill(""));
   };
 
+  const [confirmDuplicateAdd, setConfirmDuplicateAdd] = useState(false);
+
   const handleAdd = async () => {
     if (!qText.trim()) { toast.error(ar ? "أدخل نص السؤال" : "Enter question text"); return; }
     if (qType !== "essay" && qType !== 2 && qChoices.some((c) => !c.trim())) {
       toast.error(ar ? "أكمل جميع الخيارات" : "Fill all choices"); return;
     }
+    if (!confirmDuplicateAdd && questions.some((q) => normalizeQuestionText(q.text) === normalizeQuestionText(qText))) {
+      setConfirmDuplicateAdd(true);
+      toast.warning(
+        ar ? "هذا السؤال موجود بالفعل في البنك — اضغط «إضافة» مرة أخرى للحفظ رغم ذلك" : "This question is already in the bank — tap Add again to save it anyway",
+        { duration: 6000 },
+      );
+      return;
+    }
+    setConfirmDuplicateAdd(false);
     setSaving(true);
     const ok = await addQuestion({
       text: qText.trim(),
@@ -453,6 +470,13 @@ export default function QuestionBankPage({
               <option value="mixed">{ar ? "متنوع (صح/خطأ + اختيار من متعدد)" : "Mixed (T/F + MCQ)"}</option>
             </select>
           </label>
+          {pasteType === "tf" && (
+            <p className="text-[11px] text-muted-foreground">
+              {ar
+                ? "يقبل أيضاً قائمة عبارات بشرطة (-) بدون ترقيم أو إجابة — كل سطر يصبح سؤال صح/خطأ تحدد إجابته لاحقاً في المعاينة."
+                : "Also accepts a plain \"-\" bulleted list with no numbers or answers — each line becomes a T/F question you'll answer in the review step."}
+            </p>
+          )}
           {pasteType === "mixed" && (
             <div className="grid grid-cols-2 gap-3">
               <label className="space-y-1 text-xs text-muted-foreground">
@@ -612,11 +636,18 @@ export default function QuestionBankPage({
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
           <textarea
             value={qText}
-            onChange={(e) => setQText(e.target.value)}
+            onChange={(e) => { setQText(e.target.value); setConfirmDuplicateAdd(false); }}
             placeholder={ar ? "نص السؤال…" : "Question text…"}
             rows={2}
             className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
           />
+          {confirmDuplicateAdd && (
+            <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+              {ar
+                ? "هذا السؤال موجود بالفعل في البنك — اضغط «إضافة» مرة أخرى للحفظ رغم ذلك."
+                : "This question is already in the bank — tap Add again to save it anyway."}
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <label className="space-y-1 text-xs text-muted-foreground">
               {ar ? "النوع" : "Type"}
