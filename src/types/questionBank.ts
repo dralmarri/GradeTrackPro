@@ -250,6 +250,11 @@ export function parseQuestionsText(text: string, forcedType: PasteType = "auto")
   const TOPIC_RE = /^(?:الموضوع|العنوان|topic)\s*[:：]\s*(.+)$/i;
 
   const CH_IDX: Record<string, number> = { "أ": 0, "ا": 0, "a": 0, "ب": 1, "b": 1, "ج": 2, "c": 2, "د": 3, "d": 3, "هـ": 4, "ه": 4, "e": 4 };
+  // a plain "- statement." bullet, with no question number and no leading
+  // choice-letter (that's CHOICE_RE's job) — only used in forced "tf" mode,
+  // where a professor pastes a bare list of true/false statements copied
+  // straight from a document, with neither numbering nor answers.
+  const BULLET_RE = /^[-–—•*]\s*(.+)$/;
 
   let topic: string | undefined;
   let chapter: string | undefined;
@@ -302,6 +307,14 @@ export function parseQuestionsText(text: string, forcedType: PasteType = "auto")
     if (am) { flush(am[1], i); return; }
     const cm = line.match(CHOICE_RE);
     if (cm && cur) { cur.choices.push(cm[2].trim()); return; }
+    if (forcedType === "tf") {
+      const bm = line.match(BULLET_RE);
+      if (bm) {
+        if (cur) flush(null, i); // previous bullet had no explicit answer line
+        cur = { text: bm[1].trim(), choices: [], line: i + 1 };
+        return;
+      }
+    }
     // continuation of question text
     if (cur && cur.choices.length === 0) cur.text += " " + line;
   });
