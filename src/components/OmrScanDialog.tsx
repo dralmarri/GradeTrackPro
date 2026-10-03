@@ -251,7 +251,8 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
             : `Scored ${finalScore}/${exam.maxScore + essayTotal} for ${s?.name ?? ""}`,
         );
       }
-      reset(); // ready to scan the next sheet
+      reset();
+      capture(); // straight into the next sheet — no extra tap between papers
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : (ar ? "فشل رصد الدرجة — حاول مجدداً" : "Failed to apply score — try again"));
     } finally {
