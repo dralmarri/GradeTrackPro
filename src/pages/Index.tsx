@@ -514,11 +514,11 @@ export default function Index() {
 
       <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto px-4 py-6 pb-32">
 
-        {(courseTab === "exams" || courseTab === "omr") && (
+        {(courseTab === "exams" || courseTab === "status") && (
           <div className="mb-4 flex gap-2">
             {([
-              { key: "omr", label: lang === "ar" ? "التصحيح الآلي والاختبارات" : "Auto grading & exams" },
               { key: "exams", label: lang === "ar" ? "رصد الدرجات" : "Grade entry" },
+              { key: "status", label: lang === "ar" ? "نتائج الطلبة" : "Student results" },
             ] as const).map((m) => (
               <button
                 key={m.key}
@@ -625,7 +625,7 @@ export default function Index() {
       />
 
       <BottomNav
-        active={courseTab === "attendance" ? "attendance" : courseTab === "status" ? "status" : "assess"}
+        active={courseTab === "attendance" ? "attendance" : courseTab === "omr" ? "assess" : "status"}
         hasActiveCourse={true}
         onHome={goHome}
         onCourseTab={(tab) => setCourseTab(tab === "assess" ? "omr" : tab)}

@@ -661,11 +661,11 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       {zoomedImage && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
-          onClick={() => setZoomedImage(null)}
+          onClick={(e) => { e.stopPropagation(); setZoomedImage(null); }}
         >
           <button
             type="button"
-            onClick={() => setZoomedImage(null)}
+            onClick={(e) => { e.stopPropagation(); setZoomedImage(null); }}
             className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-foreground"
             aria-label={ar ? "إغلاق" : "Close"}
           >
