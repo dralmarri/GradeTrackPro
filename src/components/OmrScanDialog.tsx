@@ -91,6 +91,19 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
           return;
         }
         setWrongExamMatch(match || null);
+        if (!match) {
+          // The code doesn't belong to ANY exam we know of — could be a
+          // sheet for an exam that was since deleted, a bad print, or a
+          // misread. There's nothing to auto-switch to, so grade with
+          // what's selected but say so plainly instead of silently scoring
+          // against a key that's very possibly wrong.
+          toast.warning(
+            ar
+              ? "رمز الورقة لا يطابق أي اختبار محفوظ — تحقق من أن هذه الورقة تخص هذا الاختبار قبل اعتماد الدرجة"
+              : "The sheet's code doesn't match any saved exam — double-check this sheet belongs to this exam before applying the score",
+            { duration: 10000 },
+          );
+        }
       } else {
         setWrongExamMatch(null);
       }
