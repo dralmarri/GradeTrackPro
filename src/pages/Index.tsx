@@ -201,6 +201,8 @@ export default function Index() {
                     onDeleteCourse={deleteCourse}
                     onUpdateCourse={updateCourse}
                     onAddStudents={addStudentsToCourse}
+                    onSyncStudents={syncStudentsToCourse}
+                    onRemoveDuplicates={removeDuplicateStudents}
                     onDeleteStudent={deleteStudent}
                     onSelectCourse={(id) => { setActiveCourseId(id); setMainView("courses"); }}
                   />
@@ -451,6 +453,8 @@ export default function Index() {
             }}
             onUpdateCourse={updateCourse}
             onAddStudents={addStudentsToCourse}
+            onSyncStudents={syncStudentsToCourse}
+            onRemoveDuplicates={removeDuplicateStudents}
             onDeleteStudent={deleteStudent}
             onSelectCourse={(id) => setActiveCourseId(id)}
             onNewCourse={() => setShowNewCourse(true)}

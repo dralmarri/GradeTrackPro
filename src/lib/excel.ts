@@ -442,22 +442,48 @@ function studentRichness(s: Student): number {
   return score;
 }
 
-// Groups a course's CURRENT roster by exact duplicate identity — same civil
-// ID, or (when neither side has one) the exact same normalized name. This
-// is intentionally stricter than studentsMatch's fuzzy substring fallback:
-// grouping existing rows for deletion must never merge two different real
-// students, so only an exact match counts. Each group is only the
-// candidates for a cleanup review; nothing is deleted here.
+// Groups a course's CURRENT roster by the same studentsMatch logic used
+// everywhere else (civil ID when both sides have one, otherwise the fuzzy
+// substring name match) — names re-imported from a different source
+// (Excel vs. PDF, or a slightly different college export) can end up as
+// different text even after normalizeName, so an exact-only comparison
+// here would silently miss real duplicates. Matching is transitive (union
+// of every pairing that matches), since a chain of near-identical re-
+// imports can drift name text a little further from the original each
+// time. The fuzzy match can occasionally over-group (e.g. two different
+// students sharing a short name as a substring of each other) — that's
+// why nothing is deleted here; the caller always shows this as a review
+// list the admin confirms by eye before anything is removed.
 export function findDuplicateGroups(students: Student[]): DuplicateGroup[] {
-  const groups = new Map<string, Student[]>();
-  for (const s of students) {
-    const key = s.studentNumber ? `id:${s.studentNumber}` : `name:${normalizeName(s.name)}`;
-    const arr = groups.get(key);
-    if (arr) arr.push(s); else groups.set(key, [s]);
+  const n = students.length;
+  const parent = Array.from({ length: n }, (_, i) => i);
+  const find = (x: number): number => {
+    while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+    return x;
+  };
+  const union = (a: number, b: number) => {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (studentsMatch(
+        { name: students[i].name, civilId: students[i].studentNumber },
+        { name: students[j].name, civilId: students[j].studentNumber },
+      )) union(i, j);
+    }
+  }
+
+  const byRoot = new Map<number, Student[]>();
+  for (let i = 0; i < n; i++) {
+    const r = find(i);
+    const arr = byRoot.get(r);
+    if (arr) arr.push(students[i]); else byRoot.set(r, [students[i]]);
   }
 
   const result: DuplicateGroup[] = [];
-  for (const [key, group] of groups) {
+  for (const group of byRoot.values()) {
     if (group.length < 2) continue;
     const sorted = [...group].sort((a, b) => {
       const scoreDiff = studentRichness(b) - studentRichness(a);
@@ -465,7 +491,7 @@ export function findDuplicateGroups(students: Student[]): DuplicateGroup[] {
       if (a.createdAt && b.createdAt && a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
       return a.id < b.id ? -1 : 1;
     });
-    result.push({ key, students: sorted, keepId: sorted[0].id });
+    result.push({ key: sorted[0].id, students: sorted, keepId: sorted[0].id });
   }
   return result;
 }
