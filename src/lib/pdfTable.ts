@@ -20,12 +20,16 @@ export type PdfRow = PdfTextItem[];
 // baselines within one visual row).
 export async function extractPdfRows(file: File, yTolerance = 3): Promise<PdfRow[]> {
   const pdfjs = await import("pdfjs-dist");
+  // pdf.js always needs a worker script URL, even when running the
+  // "disableWorker" fallback — without this it throws "No
+  // GlobalWorkerOptions.workerSrc specified" before ever reading the file.
+  // The ?url import lets Vite bundle the worker file and give us a URL that
+  // resolves correctly in both the web build and the Capacitor WebView.
+  const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+
   const buf = new Uint8Array(await file.arrayBuffer());
-  // runs on the main thread instead of spinning up a worker — these
-  // reports are a page or two, and skipping the worker avoids having to
-  // ship/resolve its separate script correctly inside the Capacitor
-  // native app shell as well as the web build
-  const doc = await pdfjs.getDocument({ data: buf, disableWorker: true } as Parameters<typeof pdfjs.getDocument>[0]).promise;
+  const doc = await pdfjs.getDocument({ data: buf } as Parameters<typeof pdfjs.getDocument>[0]).promise;
 
   const items: PdfTextItem[] = [];
   for (let p = 1; p <= doc.numPages; p++) {

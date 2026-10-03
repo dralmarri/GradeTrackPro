@@ -53,10 +53,12 @@ export default function Index() {
     syncStudentsToCourse,
     updateStudent,
     updateAttendance,
+    updateExcused,
     updateLectureNote,
     importPaaetAttendance,
     deleteCourse,
     deleteStudent,
+    removeDuplicateStudents,
   } = useCourses();
   const { banks, createBank } = useQuestionBanks();
 
@@ -578,6 +580,7 @@ export default function Index() {
               lectures={activeCourse.lectures}
               course={activeCourse}
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
+              onUpdateExcused={(sid, li, excused) => updateExcused(activeCourse.id, sid, li, excused)}
               onUpdateNote={(sid, li, note) => updateLectureNote(activeCourse.id, sid, li, note)}
               onImportPaaet={(lectureIndex, matched) => importPaaetAttendance(activeCourse.id, lectureIndex, matched)}
             />
@@ -615,6 +618,7 @@ export default function Index() {
         onAddStudents={(names) => addStudentsToCourse(activeCourse.id, names)}
         onSyncStudents={(names) => syncStudentsToCourse(activeCourse.id, names)}
         onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
+        onRemoveDuplicates={(ids) => removeDuplicateStudents(ids)}
         onUpdateCourse={(u) => updateCourse(activeCourse.id, u)}
       />
 
