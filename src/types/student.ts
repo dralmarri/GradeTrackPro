@@ -23,6 +23,16 @@ export interface Student {
   // ever reports a cumulative count with no per-lecture date. See
   // importPaaetAttendance in useCourses.ts.
   paaetAbsenceCount?: number;
+  // Lecture index this student's PAAET absence count was last reconciled up
+  // to — lets the next import tell which lectures (if any) in between have
+  // no attendance data yet, so a jump of more than one in the cumulative
+  // count can be distributed to the right lecture(s) instead of only the
+  // currently open one. See importPaaetAttendance in useCourses.ts.
+  paaetLastLectureIndex?: number;
+  // Per-lecture "excused absence" (معتذر) flag — excluded from the PAAET
+  // catch-up distribution above (an excused lecture is never auto-marked
+  // absent) and always counted as present everywhere else (bonus, totals).
+  excused?: boolean[];
 }
 
 export interface LectureInfo {

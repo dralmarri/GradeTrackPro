@@ -48,6 +48,8 @@ function dbRowToStudent(row: any): Student {
     homework: Number(row.homework) || 0,
     customScores: (row.custom_scores || {}) as Record<string, number>,
     paaetAbsenceCount: row.paaet_absence_count != null ? Number(row.paaet_absence_count) : undefined,
+    paaetLastLectureIndex: row.paaet_last_lecture_index != null ? Number(row.paaet_last_lecture_index) : undefined,
+    excused: (row.excused || []) as boolean[],
   };
 }
 
@@ -239,6 +241,23 @@ export function useCourses() {
     else await fetchCourses();
   }, [courses, fetchCourses]);
 
+  // Marks (or clears) an "excused absence" (معتذر) for one lecture. An
+  // excused lecture always counts as present everywhere else (bonus,
+  // totals) — only the excused flag itself distinguishes it in the UI and
+  // keeps it out of the PAAET catch-up distribution in importPaaetAttendance.
+  const updateExcused = useCallback(async (courseId: string, studentId: string, lectureIndex: number, excused: boolean) => {
+    const course = courses.find((c) => c.id === courseId);
+    const student = course?.students.find((s) => s.id === studentId);
+    if (!student || !course) return;
+    const newExcused = [...(student.excused || new Array(course.lectureCount).fill(false))];
+    newExcused[lectureIndex] = excused;
+    const newAtt = [...(student.attendance || new Array(course.lectureCount).fill(true))];
+    if (excused) newAtt[lectureIndex] = true;
+    const { error } = await db.from("students").update({ excused: newExcused, attendance: newAtt }).eq("id", studentId);
+    if (error) console.error("Error updating excused:", error);
+    else await fetchCourses();
+  }, [courses, fetchCourses]);
+
   const updateLectureNote = useCallback(async (courseId: string, studentId: string, lectureIndex: number, note: string): Promise<{ ok: boolean; error?: string }> => {
     const course = courses.find((c) => c.id === courseId);
     const student = course?.students.find((s) => s.id === studentId);
@@ -252,11 +271,19 @@ export function useCourses() {
   }, [courses, fetchCourses]);
 
   // Applies the college system's CUMULATIVE absence count — it names no
-  // lecture date, so a student is only marked absent for the currently
-  // open lecture (lectureIndex) if their total grew since the last import
-  // (tracked per-student as paaetAbsenceCount). Re-importing the same
-  // report twice is safe: the second time sees no growth and changes
-  // nothing.
+  // lecture date, so we track the last lecture index each student's count
+  // was reconciled up to (paaetLastLectureIndex) and, when that count grows,
+  // try to tell WHICH of the lectures since then (excluding ones already
+  // marked excused — see updateExcused) the new absence(s) belong to:
+  //  - growth is 0 → every unaccounted lecture was present (unambiguous).
+  //  - growth equals the unaccounted-lecture count → every one of them was
+  //    absent (unambiguous: the student missed every lecture since).
+  //  - any other growth amount is ambiguous (e.g. 3 lectures passed
+  //    unreported but the count only grew by 1 — which one?) — per-product
+  //    decision, we never guess here; those lectures are left untouched and
+  //    reported back to the caller so the admin can resolve them by hand.
+  // A student's very first-ever import has no prior lecture to reconcile
+  // from, so it only ever touches the lecture currently open.
   // Attendance-only — this must never create roster rows. A name in the
   // college's file that doesn't match an existing student is reported back
   // to the caller as unmatched (see AttendancePerLecture's toast) instead
@@ -268,23 +295,44 @@ export function useCourses() {
     courseId: string,
     lectureIndex: number,
     matched: { studentId: string; absentCount: number }[],
-  ) => {
-    if (!user) return;
+  ): Promise<{ studentId: string; name: string; unaccountedCount: number }[]> => {
+    if (!user) return [];
     const course = courses.find((c) => c.id === courseId);
-    if (!course) return;
+    if (!course) return [];
     const lc = course.lectureCount || 0;
+    const ambiguous: { studentId: string; name: string; unaccountedCount: number }[] = [];
+
     for (const m of matched) {
       const student = course.students.find((s) => s.id === m.studentId);
       const baseline = student?.paaetAbsenceCount ?? 0;
-      const newAbsence = m.absentCount > baseline;
+      const lastIdx = student?.paaetLastLectureIndex;
+      const excusedArr = student?.excused || [];
+      const delta = m.absentCount - baseline;
       const newAtt = [...(student?.attendance || new Array(lc).fill(true))];
-      if (lectureIndex >= 0 && lectureIndex < newAtt.length) newAtt[lectureIndex] = !newAbsence;
+
+      if (lastIdx === undefined) {
+        if (lectureIndex >= 0 && lectureIndex < newAtt.length) newAtt[lectureIndex] = delta <= 0;
+      } else {
+        const unaccounted: number[] = [];
+        for (let i = lastIdx + 1; i <= lectureIndex; i++) {
+          if (i >= 0 && i < newAtt.length && !excusedArr[i]) unaccounted.push(i);
+        }
+        if (delta <= 0) {
+          unaccounted.forEach((i) => { newAtt[i] = true; });
+        } else if (delta === unaccounted.length) {
+          unaccounted.forEach((i) => { newAtt[i] = false; });
+        } else if (unaccounted.length > 0) {
+          ambiguous.push({ studentId: m.studentId, name: student?.name || "", unaccountedCount: unaccounted.length });
+        }
+      }
+
       const { error } = await db.from("students")
-        .update({ attendance: newAtt, paaet_absence_count: m.absentCount })
+        .update({ attendance: newAtt, paaet_absence_count: m.absentCount, paaet_last_lecture_index: lectureIndex })
         .eq("id", m.studentId);
       if (error) console.error("Error updating attendance:", error);
     }
     await fetchCourses();
+    return ambiguous;
   }, [user, courses, fetchCourses]);
 
 
@@ -423,7 +471,7 @@ export function useCourses() {
 
   return {
     courses, loading, addCourse, updateCourse, addStudentsToCourse, syncStudentsToCourse,
-    updateStudent, updateLectureBonus, updateAttendance, updateLectureNote, importPaaetAttendance,
+    updateStudent, updateLectureBonus, updateAttendance, updateExcused, updateLectureNote, importPaaetAttendance,
     deleteCourse, deleteStudent, addLecture, deleteAllData, exportAllData, importAllData,
   };
 }

@@ -13,11 +13,12 @@ interface Props {
   lectures: LectureInfo[];
   course: Course;
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
+  onUpdateExcused: (studentId: string, lectureIndex: number, excused: boolean) => void;
   onUpdateNote: (studentId: string, lectureIndex: number, note: string) => Promise<{ ok: boolean; error?: string }> | void;
   onImportPaaet: (
     lectureIndex: number,
     matched: { studentId: string; absentCount: number }[],
-  ) => Promise<void>;
+  ) => Promise<{ studentId: string; name: string; unaccountedCount: number }[]>;
 }
 
 function NoteButton({
@@ -114,7 +115,7 @@ function NoteButton({
   );
 }
 
-export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onUpdateNote, onImportPaaet }: Props) {
+export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onUpdateExcused, onUpdateNote, onImportPaaet }: Props) {
   const { t, lang } = useLanguage();
   const safeStudents = students || [];
   const safeLectures = lectures || [];
@@ -211,7 +212,7 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
         // single-session report), same as a manual attendance toggle — a
         // name that doesn't match an existing student is reported, never
         // auto-added as a new roster entry (that's the roster-sync flow's job)
-        if (paaet.matchedCount > 0) await onImportPaaet(selectedLecture, paaet.matched);
+        const ambiguous = paaet.matchedCount > 0 ? await onImportPaaet(selectedLecture, paaet.matched) : [];
         const msg = lang === "ar"
           ? `تم استيراد حضور «${title}»: ${paaet.matchedCount} طالب${paaet.newCount > 0 ? ` · ${paaet.newCount} اسم لم يُطابَق أي طالب حالي ولم يُضَف` : ""}`
           : `Imported attendance for "${title}": ${paaet.matchedCount} students${paaet.newCount > 0 ? ` · ${paaet.newCount} names didn't match any current student and were skipped` : ""}`;
@@ -220,6 +221,14 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
           console.warn("PAAET unmatched names:", paaet.newStudents.map((s) => s.name));
         } else {
           toast.success(msg, { duration: 5000 });
+        }
+        if (ambiguous.length > 0) {
+          const names = ambiguous.map((a) => `${a.name} (${a.unaccountedCount})`).join("، ");
+          const ambMsg = lang === "ar"
+            ? `لم يتم تسجيل محاضرات سابقة لم تُستورد لها بيانات لبعض الطلبة لأن عدد الغياب الجديد لا يطابق عددها بدقة — راجع يدوياً: ${names}`
+            : `Some students have earlier un-imported lectures whose attendance couldn't be determined automatically — please review manually: ${names}`;
+          toast.warning(ambMsg, { duration: 12000 });
+          console.warn("PAAET ambiguous catch-up:", ambiguous);
         }
         return;
       }
@@ -391,6 +400,7 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
       {/* Student rows */}
       <div className="space-y-2">
         {filtered.map((student, idx) => {
+          const isExcused = student.excused?.[selectedLecture] === true;
           const isPresent = student.attendance?.[selectedLecture] !== false;
           return (
             <div
@@ -411,10 +421,10 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
               {/* Toggle pill */}
               <div className="flex shrink-0 items-center rounded-2xl bg-muted/60 p-1">
                 <button
-                  onClick={() => onUpdateAttendance(student.id, selectedLecture, true)}
+                  onClick={() => { onUpdateExcused(student.id, selectedLecture, false); onUpdateAttendance(student.id, selectedLecture, true); }}
                   className={cn(
                     "rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold transition-all",
-                    isPresent
+                    isPresent && !isExcused
                       ? "bg-success text-success-foreground shadow"
                       : "text-muted-foreground hover:text-foreground"
                   )}
@@ -422,15 +432,26 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
                   {t("presentLabel")}
                 </button>
                 <button
-                  onClick={() => onUpdateAttendance(student.id, selectedLecture, false)}
+                  onClick={() => { onUpdateExcused(student.id, selectedLecture, false); onUpdateAttendance(student.id, selectedLecture, false); }}
                   className={cn(
                     "rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold transition-all",
-                    !isPresent
+                    !isPresent && !isExcused
                       ? "bg-destructive text-destructive-foreground shadow"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {t("absentLabel")}
+                </button>
+                <button
+                  onClick={() => onUpdateExcused(student.id, selectedLecture, true)}
+                  className={cn(
+                    "rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold transition-all",
+                    isExcused
+                      ? "bg-amber-500 text-white shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {lang === "ar" ? "معتذر" : "Excused"}
                 </button>
               </div>
             </div>
