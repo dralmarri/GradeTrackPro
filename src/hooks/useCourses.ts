@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Course, Student, LectureInfo, CustomComponent } from "@/types/student";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeName } from "@/lib/excel";
 import { useAuth } from "@/hooks/useAuth";
 
 // Use any-typed client to bypass empty generated types until tables are created
@@ -256,11 +257,17 @@ export function useCourses() {
   // (tracked per-student as paaetAbsenceCount). Re-importing the same
   // report twice is safe: the second time sees no growth and changes
   // nothing.
+  // Attendance-only — this must never create roster rows. A name in the
+  // college's file that doesn't match an existing student is reported back
+  // to the caller as unmatched (see AttendancePerLecture's toast) instead
+  // of being silently inserted as a brand-new student; adding students is
+  // the roster-management flow's job (CourseStudentsDialog), not this
+  // button's, and silently doing it here from a failed name match used to
+  // quietly duplicate the whole roster.
   const importPaaetAttendance = useCallback(async (
     courseId: string,
     lectureIndex: number,
     matched: { studentId: string; absentCount: number }[],
-    newStudents: { name: string; absentCount: number }[],
   ) => {
     if (!user) return;
     const course = courses.find((c) => c.id === courseId);
@@ -276,24 +283,6 @@ export function useCourses() {
         .update({ attendance: newAtt, paaet_absence_count: m.absentCount })
         .eq("id", m.studentId);
       if (error) console.error("Error updating attendance:", error);
-    }
-    if (newStudents.length) {
-      const rows = newStudents.map((s) => {
-        const attendance = new Array(lc).fill(true);
-        // a brand-new roster entry has no prior baseline (0), so any
-        // reported absence so far is attributed to today's lecture
-        if (lectureIndex >= 0 && lectureIndex < lc) attendance[lectureIndex] = s.absentCount <= 0;
-        return {
-          course_id: courseId, user_id: user.id, name: s.name,
-          lecture_bonus: new Array(lc).fill(0),
-          attendance,
-          lecture_notes: new Array(lc).fill(""),
-          exam1: 0, exam2: 0, final_exam: 0, participation: 0, homework: 0, custom_scores: {},
-          paaet_absence_count: s.absentCount,
-        };
-      });
-      const { error } = await db.from("students").insert(rows);
-      if (error) console.error("Error adding students:", error);
     }
     await fetchCourses();
   }, [user, courses, fetchCourses]);
@@ -312,16 +301,21 @@ export function useCourses() {
     else await fetchCourses();
   }, [fetchCourses]);
 
+  // Matches names loosely (see normalizeName) so a purely cosmetic
+  // difference between the stored roster and a freshly re-exported Excel
+  // file — an extra space, a stray diacritic — doesn't make an enrolled
+  // student look "dropped" (and get deleted + re-added as a duplicate)
+  // when they never actually left.
   const syncStudentsToCourse = useCallback(async (courseId: string, students: { name: string; civilId?: string }[]) => {
     if (!user) return;
     const course = courses.find((c) => c.id === courseId);
     if (!course) return;
     const lc = course.lectureCount || 0;
 
-    const incomingSet = new Set(students.map((n) => n.name.trim()));
-    const toDelete = course.students.filter((s) => !incomingSet.has(s.name.trim())).map((s) => s.id);
-    const existingByName = new Map(course.students.map((s) => [s.name.trim(), s]));
-    const toAdd = students.filter((n) => !existingByName.has(n.name.trim()));
+    const incomingSet = new Set(students.map((n) => normalizeName(n.name)));
+    const toDelete = course.students.filter((s) => !incomingSet.has(normalizeName(s.name))).map((s) => s.id);
+    const existingByName = new Map(course.students.map((s) => [normalizeName(s.name), s]));
+    const toAdd = students.filter((n) => !existingByName.has(normalizeName(n.name)));
 
     if (toDelete.length > 0) {
       await db.from("students").delete().in("id", toDelete);
@@ -338,7 +332,7 @@ export function useCourses() {
     }
     // existing students that now carry a civil ID in the file → learn it
     for (const st of students) {
-      const ex = existingByName.get(st.name.trim());
+      const ex = existingByName.get(normalizeName(st.name));
       if (ex && st.civilId && ex.studentNumber !== st.civilId) {
         await db.from("students").update({ student_number: st.civilId }).eq("id", ex.id);
       }

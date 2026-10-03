@@ -17,7 +17,6 @@ interface Props {
   onImportPaaet: (
     lectureIndex: number,
     matched: { studentId: string; absentCount: number }[],
-    newStudents: { name: string; absentCount: number }[],
   ) => Promise<void>;
 }
 
@@ -207,12 +206,19 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
       const paaet = await parsePaaetAttendanceFile(file, course);
       if (paaet.matchedCount > 0 || paaet.newCount > 0) {
         // applies to the one lecture currently open (matches the file's own
-        // single-session report), same as a manual attendance toggle
-        await onImportPaaet(selectedLecture, paaet.matched, paaet.newStudents);
+        // single-session report), same as a manual attendance toggle — a
+        // name that doesn't match an existing student is reported, never
+        // auto-added as a new roster entry (that's the roster-sync flow's job)
+        if (paaet.matchedCount > 0) await onImportPaaet(selectedLecture, paaet.matched);
         const msg = lang === "ar"
-          ? `تم استيراد حضور «${title}»: ${paaet.matchedCount} طالب${paaet.newCount > 0 ? ` · ${paaet.newCount} طالب جديد أُضيف` : ""}`
-          : `Imported attendance for "${title}": ${paaet.matchedCount} students${paaet.newCount > 0 ? ` · ${paaet.newCount} new added` : ""}`;
-        toast.success(msg, { duration: 5000 });
+          ? `تم استيراد حضور «${title}»: ${paaet.matchedCount} طالب${paaet.newCount > 0 ? ` · ${paaet.newCount} اسم لم يُطابَق أي طالب حالي ولم يُضَف` : ""}`
+          : `Imported attendance for "${title}": ${paaet.matchedCount} students${paaet.newCount > 0 ? ` · ${paaet.newCount} names didn't match any current student and were skipped` : ""}`;
+        if (paaet.newCount > 0) {
+          toast.warning(msg, { duration: 8000 });
+          console.warn("PAAET unmatched names:", paaet.newStudents.map((s) => s.name));
+        } else {
+          toast.success(msg, { duration: 5000 });
+        }
         return;
       }
 
