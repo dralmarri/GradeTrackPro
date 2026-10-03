@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Users, X, RefreshCw, PlusCircle } from "lucide-react";
-import { useState } from "react";
+import { Users, X, RefreshCw, PlusCircle, Copy, Trash2 } from "lucide-react";
+import { useState, useMemo } from "react";
 import { Course } from "@/types/student";
-import { ImportedStudent, normalizeName, studentsMatch } from "@/lib/excel";
+import { ImportedStudent, normalizeName, studentsMatch, findDuplicateGroups } from "@/lib/excel";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
@@ -15,6 +15,7 @@ interface Props {
   onAddStudents: (students: ImportedStudent[]) => void;
   onSyncStudents: (students: ImportedStudent[]) => void;
   onDeleteStudent: (studentId: string) => void;
+  onRemoveDuplicates: (idsToDelete: string[]) => void;
   onUpdateCourse: (updates: Partial<Omit<Course, "id" | "students">>) => void;
 }
 
@@ -25,9 +26,12 @@ export default function CourseStudentsDialog({
   onAddStudents,
   onSyncStudents,
   onDeleteStudent,
+  onRemoveDuplicates,
 }: Props) {
   const { t, dir, lang } = useLanguage();
   const [pendingNames, setPendingNames] = useState<ImportedStudent[] | null>(null);
+  const [reviewingDuplicates, setReviewingDuplicates] = useState(false);
+  const duplicateGroups = useMemo(() => findDuplicateGroups(course.students), [course.students]);
 
   return (
     <>
@@ -83,6 +87,15 @@ export default function CourseStudentsDialog({
                     students={course.students}
                     onDelete={(id) => onDeleteStudent(id)}
                   />
+                  {duplicateGroups.length > 0 && (
+                    <button
+                      onClick={() => setReviewingDuplicates(true)}
+                      className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-2.5 font-display text-sm font-semibold text-destructive transition-all hover:bg-destructive/10"
+                    >
+                      <Copy size={18} />
+                      {lang === "ar" ? `مراجعة التكرارات (${duplicateGroups.length})` : `Review duplicates (${duplicateGroups.length})`}
+                    </button>
+                  )}
                 </div>
               </section>
 
@@ -171,6 +184,77 @@ export default function CourseStudentsDialog({
                   className="rounded-lg py-2 text-sm text-muted-foreground hover:text-foreground"
                 >
                   {lang === "ar" ? "إلغاء" : "Cancel"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Duplicate review dialog — shows exactly what would be removed
+          before anything is deleted, so the matching logic can be checked
+          by eye first. */}
+      <AnimatePresence>
+        {reviewingDuplicates && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+            onClick={() => setReviewingDuplicates(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              dir={dir}
+              className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-card p-6 shadow-2xl"
+            >
+              <h3 className="mb-1 font-display text-base font-bold text-destructive">
+                {lang === "ar" ? "مراجعة التكرارات" : "Review duplicates"}
+              </h3>
+              <p className="mb-4 text-xs text-muted-foreground">
+                {lang === "ar"
+                  ? `تم العثور على ${duplicateGroups.length} اسم مكرر (نفس الرقم المدني أو نفس الاسم تماماً). سيُحتفظ بالسجل الأكثر اكتمالاً من كل مجموعة (الذي يحمل درجات/حضور مُدخلة) ويُحذف الباقي.`
+                  : `Found ${duplicateGroups.length} duplicated name(s) (same civil ID, or the exact same name). The most complete record in each group (the one with entered grades/attendance) is kept, the rest are removed.`}
+              </p>
+              <div className="flex-1 space-y-3 overflow-y-auto">
+                {duplicateGroups.map((g) => (
+                  <div key={g.key} className="rounded-xl border border-border p-3">
+                    {g.students.map((s) => (
+                      <div
+                        key={s.id}
+                        className={`flex items-center justify-between py-1 text-sm ${s.id === g.keepId ? "font-bold text-foreground" : "text-muted-foreground line-through"}`}
+                      >
+                        <span>{s.name}</span>
+                        <span className="shrink-0 text-[10px]">
+                          {s.id === g.keepId
+                            ? (lang === "ar" ? "سيُحتفظ به" : "kept")
+                            : (lang === "ar" ? "سيُحذف" : "removed")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={() => setReviewingDuplicates(false)}
+                  className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
+                >
+                  {lang === "ar" ? "إلغاء" : "Cancel"}
+                </button>
+                <button
+                  onClick={() => {
+                    const idsToDelete = duplicateGroups.flatMap((g) => g.students.filter((s) => s.id !== g.keepId).map((s) => s.id));
+                    onRemoveDuplicates(idsToDelete);
+                    setReviewingDuplicates(false);
+                  }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-destructive py-2.5 text-sm font-semibold text-destructive-foreground hover:brightness-110"
+                >
+                  <Trash2 size={16} />
+                  {lang === "ar" ? "حذف التكرارات" : "Remove duplicates"}
                 </button>
               </div>
             </motion.div>

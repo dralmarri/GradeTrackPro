@@ -50,6 +50,7 @@ function dbRowToStudent(row: any): Student {
     paaetAbsenceCount: row.paaet_absence_count != null ? Number(row.paaet_absence_count) : undefined,
     paaetLastLectureIndex: row.paaet_last_lecture_index != null ? Number(row.paaet_last_lecture_index) : undefined,
     excused: (row.excused || []) as boolean[],
+    createdAt: row.created_at || undefined,
   };
 }
 
@@ -349,6 +350,16 @@ export function useCourses() {
     else await fetchCourses();
   }, [fetchCourses]);
 
+  // Deletes every row EXCEPT the one id-per-group the caller decided to keep
+  // (see findDuplicateGroups in excel.ts) — a review step always happens in
+  // the UI first, this just carries out whatever the admin already confirmed.
+  const removeDuplicateStudents = useCallback(async (idsToDelete: string[]) => {
+    if (idsToDelete.length === 0) return;
+    const { error } = await db.from("students").delete().in("id", idsToDelete);
+    if (error) console.error("Error removing duplicate students:", error);
+    else await fetchCourses();
+  }, [fetchCourses]);
+
   // Matches names loosely (see normalizeName) so a purely cosmetic
   // difference between the stored roster and a freshly re-exported Excel
   // file — an extra space, a stray diacritic — doesn't make an enrolled
@@ -474,6 +485,6 @@ export function useCourses() {
   return {
     courses, loading, addCourse, updateCourse, addStudentsToCourse, syncStudentsToCourse,
     updateStudent, updateLectureBonus, updateAttendance, updateExcused, updateLectureNote, importPaaetAttendance,
-    deleteCourse, deleteStudent, addLecture, deleteAllData, exportAllData, importAllData,
+    deleteCourse, deleteStudent, removeDuplicateStudents, addLecture, deleteAllData, exportAllData, importAllData,
   };
 }

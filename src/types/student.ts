@@ -33,6 +33,10 @@ export interface Student {
   // catch-up distribution above (an excused lecture is never auto-marked
   // absent) and always counted as present everywhere else (bonus, totals).
   excused?: boolean[];
+  // When this row was created — only used to break ties when picking which
+  // duplicate to keep during roster cleanup (see findDuplicateGroups in
+  // useCourses.ts); not shown anywhere in the UI.
+  createdAt?: string;
 }
 
 export interface LectureInfo {

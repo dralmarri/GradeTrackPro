@@ -58,6 +58,7 @@ export default function Index() {
     importPaaetAttendance,
     deleteCourse,
     deleteStudent,
+    removeDuplicateStudents,
   } = useCourses();
   const { banks, createBank } = useQuestionBanks();
 
@@ -617,6 +618,7 @@ export default function Index() {
         onAddStudents={(names) => addStudentsToCourse(activeCourse.id, names)}
         onSyncStudents={(names) => syncStudentsToCourse(activeCourse.id, names)}
         onDeleteStudent={(sid) => deleteStudent(activeCourse.id, sid)}
+        onRemoveDuplicates={(ids) => removeDuplicateStudents(ids)}
         onUpdateCourse={(u) => updateCourse(activeCourse.id, u)}
       />
 

@@ -421,6 +421,55 @@ export function studentsMatch(
   return na === nb || na.includes(nb) || nb.includes(na);
 }
 
+export interface DuplicateGroup {
+  key: string;
+  students: Student[];
+  keepId: string;
+}
+
+// How "filled in" a student's record is — used to pick which of several
+// duplicate rows to keep when cleaning up a roster. Higher is more likely
+// to be the row someone actually recorded real data against, rather than a
+// stray re-import that only ever got the roster defaults.
+function studentRichness(s: Student): number {
+  let score = 0;
+  score += s.attendance?.filter((a) => a === false).length || 0;
+  score += s.lectureBonus?.filter((b) => b).length || 0;
+  if ((s.exam1 || 0) + (s.exam2 || 0) + (s.finalExam || 0) + (s.participation || 0) + (s.homework || 0) > 0) score += 5;
+  if (s.customScores && Object.keys(s.customScores).length > 0) score += 2;
+  if (s.studentNumber) score += 1;
+  score += s.lectureNotes?.filter((n) => n).length || 0;
+  return score;
+}
+
+// Groups a course's CURRENT roster by exact duplicate identity — same civil
+// ID, or (when neither side has one) the exact same normalized name. This
+// is intentionally stricter than studentsMatch's fuzzy substring fallback:
+// grouping existing rows for deletion must never merge two different real
+// students, so only an exact match counts. Each group is only the
+// candidates for a cleanup review; nothing is deleted here.
+export function findDuplicateGroups(students: Student[]): DuplicateGroup[] {
+  const groups = new Map<string, Student[]>();
+  for (const s of students) {
+    const key = s.studentNumber ? `id:${s.studentNumber}` : `name:${normalizeName(s.name)}`;
+    const arr = groups.get(key);
+    if (arr) arr.push(s); else groups.set(key, [s]);
+  }
+
+  const result: DuplicateGroup[] = [];
+  for (const [key, group] of groups) {
+    if (group.length < 2) continue;
+    const sorted = [...group].sort((a, b) => {
+      const scoreDiff = studentRichness(b) - studentRichness(a);
+      if (scoreDiff !== 0) return scoreDiff;
+      if (a.createdAt && b.createdAt && a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
+      return a.id < b.id ? -1 : 1;
+    });
+    result.push({ key, students: sorted, keepId: sorted[0].id });
+  }
+  return result;
+}
+
 // Matches the college report's (name, cumulative-absence-count) rows against
 // the course's current roster. Shared by both the Excel and PDF variants of
 // the attendance-import parser below.
