@@ -396,6 +396,36 @@ export function normalizeName(n: string): string {
   return n.trim().replace(/\s+/g, " ").replace(/[ً-ٰٟـ]/g, "");
 }
 
+// Matches the college report's (name, cumulative-absence-count) rows against
+// the course's current roster. Shared by both the Excel and PDF variants of
+// the attendance-import parser below.
+function matchPaaetEntries(
+  entries: { name: string; absentCount: number }[],
+  course: Course,
+): PaaetImportResult {
+  const matched: PaaetImportResult["matched"] = [];
+  const newStudents: PaaetImportResult["newStudents"] = [];
+  const usedStudentIds = new Set<string>();
+
+  for (const { name, absentCount } of entries) {
+    const normName = normalizeName(name);
+    const student = course.students.find((s) => {
+      if (usedStudentIds.has(s.id)) return false;
+      const normStudent = normalizeName(s.name);
+      return normStudent === normName || normStudent.includes(normName) || normName.includes(normStudent);
+    });
+
+    if (student) {
+      usedStudentIds.add(student.id);
+      matched.push({ studentId: student.id, absentCount });
+    } else {
+      newStudents.push({ name, absentCount });
+    }
+  }
+
+  return { matched, newStudents, matchedCount: matched.length, newCount: newStudents.length };
+}
+
 export function parsePaaetAttendanceFile(
   file: File,
   course: Course,
@@ -428,34 +458,17 @@ export function parsePaaetAttendanceFile(
           return;
         }
 
-        const matched: PaaetImportResult["matched"] = [];
-        const newStudents: PaaetImportResult["newStudents"] = [];
-        const usedStudentIds = new Set<string>();
-
+        const entries: { name: string; absentCount: number }[] = [];
         for (let r = headerRowIdx + 1; r < rows.length; r++) {
           const row = rows[r];
           const name = nameCol >= 0 ? String(row[nameCol] ?? "").trim() : "";
           if (!name || /^\d+$/.test(name)) continue;
 
           const absentRaw = Number(String(row[absentCol] ?? "").trim());
-          const absentCount = Number.isFinite(absentRaw) ? absentRaw : 0;
-
-          const normName = normalizeName(name);
-          const student = course.students.find((s) => {
-            if (usedStudentIds.has(s.id)) return false;
-            const normStudent = normalizeName(s.name);
-            return normStudent === normName || normStudent.includes(normName) || normName.includes(normStudent);
-          });
-
-          if (student) {
-            usedStudentIds.add(student.id);
-            matched.push({ studentId: student.id, absentCount });
-          } else {
-            newStudents.push({ name, absentCount });
-          }
+          entries.push({ name, absentCount: Number.isFinite(absentRaw) ? absentRaw : 0 });
         }
 
-        resolve({ matched, newStudents, matchedCount: matched.length, newCount: newStudents.length });
+        resolve(matchPaaetEntries(entries, course));
       } catch {
         reject(new Error("فشل في قراءة ملف الحضور"));
       }
@@ -463,6 +476,45 @@ export function parsePaaetAttendanceFile(
     reader.onerror = () => reject(new Error("فشل في قراءة الملف"));
     reader.readAsArrayBuffer(file);
   });
+}
+
+// Parses the college system's per-lecture attendance report ("كشف الطلبة")
+// in PDF form. Table rows carry a sequence number, the Arabic name (split
+// across several items), an email ending in "@paaet.edu.kw", a حضور (present)
+// count, then a غياب (absent) count — reconstructed from pdf.js's raw text
+// items the same way as the roster PDF (see extractPdfRows / parseRosterPdf).
+// The absence count is this student's running total for the course so far,
+// not a per-session flag — matchPaaetEntries/the caller treat it the same
+// way as the Excel variant's absentCount.
+export async function parsePaaetAttendancePdf(
+  file: File,
+  course: Course,
+): Promise<PaaetImportResult> {
+  const { extractPdfRows } = await import("@/lib/pdfTable");
+  const rows = await extractPdfRows(file);
+
+  const normDigits = (v: string) => v.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+
+  const entries: { name: string; absentCount: number }[] = [];
+  for (const row of rows) {
+    if (row.length < 4) continue;
+    const first = normDigits(row[0].str);
+    if (!/^\d{1,3}$/.test(first)) continue;
+
+    const emailIdx = row.findIndex((it) => it.str.includes("@"));
+    if (emailIdx < 1 || emailIdx > row.length - 3) continue;
+
+    const present = normDigits(row[emailIdx + 1]?.str || "");
+    const absent = normDigits(row[emailIdx + 2]?.str || "");
+    if (!/^\d+$/.test(present) || !/^\d+$/.test(absent)) continue;
+
+    const name = row.slice(1, emailIdx).map((it) => it.str).join(" ").trim();
+    if (!name) continue;
+
+    entries.push({ name, absentCount: Number(absent) });
+  }
+
+  return matchPaaetEntries(entries, course);
 }
 
 
