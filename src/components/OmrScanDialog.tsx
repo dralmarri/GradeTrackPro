@@ -40,6 +40,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [nameCrop, setNameCrop] = useState<string | null>(null);
   const [civilCrop, setCivilCrop] = useState<string | null>(null);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   // questions the engine flagged (blank / double-marked) — professor sets the
   // intended answer from the row photo and the score is recomputed
   const [reviewItems, setReviewItems] = useState<{ q: number; imageUrl?: string; reason: "blank" | "multiple" }[]>([]);
@@ -409,11 +410,20 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                       )}
                     </p>
                     {it.imageUrl && (
-                      <img
-                        src={it.imageUrl}
-                        alt={`question ${it.q + 1}`}
-                        className="mb-2 w-full rounded-lg border border-border bg-white object-contain"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setZoomedImage(it.imageUrl!)}
+                        className="mb-2 block w-full"
+                      >
+                        <img
+                          src={it.imageUrl}
+                          alt={`question ${it.q + 1}`}
+                          className="w-full rounded-lg border border-border bg-white object-contain"
+                        />
+                        <span className="mt-1 block text-center text-[10px] font-semibold text-primary">
+                          {ar ? "اضغط للتكبير" : "Tap to zoom"}
+                        </span>
+                      </button>
                     )}
                     <div className="flex flex-wrap gap-1.5">
                       {choiceLabelsFor(exam, it.q).map((label, ci) => (
@@ -460,11 +470,13 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                       <p className="mb-1 text-[11px] font-bold text-muted-foreground">
                         {ar ? "الاسم كما كُتب:" : "Name as written:"}
                       </p>
-                      <img
-                        src={nameCrop}
-                        alt="handwritten name"
-                        className="w-full rounded-lg border border-border bg-white object-contain"
-                      />
+                      <button type="button" onClick={() => setZoomedImage(nameCrop)} className="block w-full">
+                        <img
+                          src={nameCrop}
+                          alt="handwritten name"
+                          className="w-full rounded-lg border border-border bg-white object-contain"
+                        />
+                      </button>
                     </div>
                   )}
                   {civilCrop && (
@@ -472,11 +484,13 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                       <p className="mb-1 text-[11px] font-bold text-muted-foreground">
                         {ar ? "الرقم الجامعي كما كُتب:" : "Student ID as written:"}
                       </p>
-                      <img
-                        src={civilCrop}
-                        alt="civil id"
-                        className="w-full rounded-lg border border-border bg-white object-contain"
-                      />
+                      <button type="button" onClick={() => setZoomedImage(civilCrop)} className="block w-full">
+                        <img
+                          src={civilCrop}
+                          alt="civil id"
+                          className="w-full rounded-lg border border-border bg-white object-contain"
+                        />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -619,6 +633,32 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
           </div>
         )}
       </div>
+
+      {/* Full-size zoom overlay — the inline crops are necessarily small to
+          fit the review list, which made ambiguous marks (a scribbled-over
+          bubble right next to another one) hard to read; tapping any crop
+          opens it here at full width so nothing is cut off. */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setZoomedImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setZoomedImage(null)}
+            className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-foreground"
+            aria-label={ar ? "إغلاق" : "Close"}
+          >
+            <X size={18} />
+          </button>
+          <img
+            src={zoomedImage}
+            alt="zoomed crop"
+            className="max-h-full max-w-full rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
