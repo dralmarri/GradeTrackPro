@@ -353,7 +353,7 @@ export interface PaaetImportResult {
 // collapses whitespace, and strips Arabic diacritics/tatweel so a purely
 // cosmetic difference (extra space, a stray tashkeel mark) doesn't cause a
 // real match to be missed.
-function normalizeName(n: string): string {
+export function normalizeName(n: string): string {
   return n.trim().replace(/\s+/g, " ").replace(/[ً-ٰٟـ]/g, "");
 }
 

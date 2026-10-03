@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Course, Student, LectureInfo, CustomComponent } from "@/types/student";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeName } from "@/lib/excel";
 import { useAuth } from "@/hooks/useAuth";
 
 // Use any-typed client to bypass empty generated types until tables are created
@@ -300,16 +301,21 @@ export function useCourses() {
     else await fetchCourses();
   }, [fetchCourses]);
 
+  // Matches names loosely (see normalizeName) so a purely cosmetic
+  // difference between the stored roster and a freshly re-exported Excel
+  // file — an extra space, a stray diacritic — doesn't make an enrolled
+  // student look "dropped" (and get deleted + re-added as a duplicate)
+  // when they never actually left.
   const syncStudentsToCourse = useCallback(async (courseId: string, students: { name: string; civilId?: string }[]) => {
     if (!user) return;
     const course = courses.find((c) => c.id === courseId);
     if (!course) return;
     const lc = course.lectureCount || 0;
 
-    const incomingSet = new Set(students.map((n) => n.name.trim()));
-    const toDelete = course.students.filter((s) => !incomingSet.has(s.name.trim())).map((s) => s.id);
-    const existingByName = new Map(course.students.map((s) => [s.name.trim(), s]));
-    const toAdd = students.filter((n) => !existingByName.has(n.name.trim()));
+    const incomingSet = new Set(students.map((n) => normalizeName(n.name)));
+    const toDelete = course.students.filter((s) => !incomingSet.has(normalizeName(s.name))).map((s) => s.id);
+    const existingByName = new Map(course.students.map((s) => [normalizeName(s.name), s]));
+    const toAdd = students.filter((n) => !existingByName.has(normalizeName(n.name)));
 
     if (toDelete.length > 0) {
       await db.from("students").delete().in("id", toDelete);
@@ -326,7 +332,7 @@ export function useCourses() {
     }
     // existing students that now carry a civil ID in the file → learn it
     for (const st of students) {
-      const ex = existingByName.get(st.name.trim());
+      const ex = existingByName.get(normalizeName(st.name));
       if (ex && st.civilId && ex.studentNumber !== st.civilId) {
         await db.from("students").update({ student_number: st.civilId }).eq("id", ex.id);
       }
