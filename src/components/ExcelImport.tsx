@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Download } from "lucide-react";
-import { parseExcelFile, ImportedStudent } from "@/lib/excel";
+import { parseExcelFile, parseRosterPdf, ImportedStudent } from "@/lib/excel";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
 import { tf } from "@/lib/translations";
@@ -18,7 +18,9 @@ export default function ExcelImport({ onImport }: ExcelImportProps) {
     if (!file) return;
 
     try {
-      const names = await parseExcelFile(file);
+      const names = file.name.toLowerCase().endsWith(".pdf")
+        ? await parseRosterPdf(file)
+        : await parseExcelFile(file);
       if (names.length === 0) {
         toast.error(t("noNamesFound"));
         return;
@@ -37,7 +39,7 @@ export default function ExcelImport({ onImport }: ExcelImportProps) {
       <input
         ref={inputRef}
         type="file"
-        accept=".xlsx,.xls,.csv"
+        accept=".xlsx,.xls,.csv,.pdf"
         className="hidden"
         onChange={handleFile}
       />

@@ -149,6 +149,45 @@ export function parseExcelFile(file: File): Promise<ImportedStudent[]> {
   });
 }
 
+// Parses the college system's "قوائم المسجلين بالشعب" roster PDF export.
+// Its table rows carry a sequence number, a 9-12 digit student ID, the
+// Arabic name, a specialization word, and an optional note — reconstructed
+// from pdf.js's raw text items (see extractPdfRows) since the PDF stores
+// them in column-clustered order, not left-to-right reading order. Rather
+// than relying on fixed column X-ranges (fragile across page sizes), each
+// row is matched by VALUE: a short standalone number becomes the row's
+// sequence number (م) — required so the single header line that also
+// happens to carry the course instructor's name and a stray ID number
+// isn't mistaken for a student row — the longer digit run becomes the
+// student ID, and the row's longest multi-word Arabic text becomes the name.
+export async function parseRosterPdf(file: File): Promise<ImportedStudent[]> {
+  const { extractPdfRows } = await import("@/lib/pdfTable");
+  const rows = await extractPdfRows(file);
+
+  const normDigits = (v: string) => v.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+  const arabicTokenCount = (v: string) => v.split(/\s+/).filter((t) => /[؀-ۿ]/.test(t)).length;
+
+  const seen = new Set<string>();
+  const names: ImportedStudent[] = [];
+
+  for (const row of rows) {
+    let civilId: string | undefined;
+    let name = "";
+    let hasSeqNum = false;
+    for (const item of row) {
+      const digits = normDigits(item.str);
+      if (/^\d{1,3}$/.test(digits)) { hasSeqNum = true; continue; }
+      if (/^\d{7,14}$/.test(digits)) { civilId = digits; continue; }
+      if (arabicTokenCount(item.str) >= 2 && item.str.length > name.length) name = item.str;
+    }
+    if (!name || !civilId || !hasSeqNum || seen.has(name)) continue;
+    seen.add(name);
+    names.push({ name, civilId });
+  }
+
+  return names;
+}
+
 export function exportToExcel(course: Course) {
   const bonusOn = course.bonusEnabled !== false;
   const customs = course.customComponents || [];
