@@ -3,7 +3,7 @@ import { Student, LectureInfo, Course } from "@/types/student";
 import { ChevronRight, ChevronLeft, Search, Download, Upload, Loader2, StickyNote, CheckCheck, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
-import { exportAttendanceTemplate, parseAttendanceFile, parsePaaetAttendanceFile } from "@/lib/excel";
+import { exportAttendanceTemplate, parseAttendanceFile, parsePaaetAttendanceFile, parsePaaetAttendancePdf } from "@/lib/excel";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
@@ -203,7 +203,9 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
     e.target.value = "";
     setImporting(true);
     try {
-      const paaet = await parsePaaetAttendanceFile(file, course);
+      const paaet = file.name.toLowerCase().endsWith(".pdf")
+        ? await parsePaaetAttendancePdf(file, course)
+        : await parsePaaetAttendanceFile(file, course);
       if (paaet.matchedCount > 0 || paaet.newCount > 0) {
         // applies to the one lecture currently open (matches the file's own
         // single-session report), same as a manual attendance toggle — a
@@ -339,7 +341,7 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xlsx,.xls,.csv"
+            accept=".xlsx,.xls,.csv,.pdf"
             className="hidden"
             onChange={handleImport}
           />
