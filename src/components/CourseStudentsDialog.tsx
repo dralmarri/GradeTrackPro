@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Users, X, RefreshCw, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { Course } from "@/types/student";
-import { ImportedStudent } from "@/lib/excel";
+import { ImportedStudent, normalizeName } from "@/lib/excel";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
@@ -75,8 +75,8 @@ export default function CourseStudentsDialog({
                 <div className="flex flex-wrap gap-2">
                   <ExcelImport onImport={(students) => setPendingNames(students)} />
                   <ManualAddStudents onAdd={(names) => {
-                    const existing = new Set(course.students.map((s) => s.name.trim()));
-                    const fresh = names.filter((n) => !existing.has(n.trim()));
+                    const existing = new Set(course.students.map((s) => normalizeName(s.name)));
+                    const fresh = names.filter((n) => !existing.has(normalizeName(n)));
                     if (fresh.length) onAddStudents(fresh.map((name) => ({ name })));
                   }} />
                   <ManualDeleteStudents
@@ -135,8 +135,8 @@ export default function CourseStudentsDialog({
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => {
-                    const existing = new Set(course.students.map((s) => s.name.trim()));
-                    const fresh = (pendingNames ?? []).filter((n) => !existing.has(n.name.trim()));
+                    const existing = new Set(course.students.map((s) => normalizeName(s.name)));
+                    const fresh = (pendingNames ?? []).filter((n) => !existing.has(normalizeName(n.name)));
                     if (fresh.length) onAddStudents(fresh);
                     setPendingNames(null);
                   }}
