@@ -70,19 +70,38 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       const raw = await scanAnswerSheet(file, examForScan);
 
       // The sheet's machine-readable code doesn't match the exam currently
-      // selected — most likely the professor scanned a different exam's
-      // sheet than the one they picked. Look for the exam it actually
-      // belongs to among the course's other exams and offer to switch,
-      // instead of silently grading it against the wrong answer key.
+      // selected — most likely the professor scanned a different exam
+      // version's sheet than the one they had open. Look for the exam it
+      // actually belongs to among the course's other exams and switch to
+      // it automatically (no sorting sheets by version, no manual tap
+      // needed) instead of silently grading it against the wrong answer
+      // key. Only when the printed code doesn't match ANY known exam do we
+      // fall back to just warning — there's nothing to auto-switch to.
       if (raw.detectedExamCode !== examCode(examForScan.id) && allExams) {
         const match = allExams.find((e) => e.id !== examForScan.id && examCode(e.id) === raw.detectedExamCode);
+        if (match && onSwitchExam) {
+          setWrongExamMatch(null);
+          toast.success(
+            ar
+              ? `تم التعرّف على النموذج تلقائياً: «${match.title}» — جارٍ إعادة التصحيح به`
+              : `Form version detected automatically: "${match.title}" — re-grading with it`,
+            { duration: 5000 },
+          );
+          onSwitchExam(match);
+          return;
+        }
         setWrongExamMatch(match || null);
-        if (match) {
+        if (!match) {
+          // The code doesn't belong to ANY exam we know of — could be a
+          // sheet for an exam that was since deleted, a bad print, or a
+          // misread. There's nothing to auto-switch to, so grade with
+          // what's selected but say so plainly instead of silently scoring
+          // against a key that's very possibly wrong.
           toast.warning(
             ar
-              ? `يبدو أن هذه الورقة من اختبار «${match.title}» — راجع التنبيه أدناه`
-              : `This sheet looks like it's from "${match.title}" — see the notice below`,
-            { duration: 8000 },
+              ? "رمز الورقة لا يطابق أي اختبار محفوظ — تحقق من أن هذه الورقة تخص هذا الاختبار قبل اعتماد الدرجة"
+              : "The sheet's code doesn't match any saved exam — double-check this sheet belongs to this exam before applying the score",
+            { duration: 10000 },
           );
         }
       } else {
