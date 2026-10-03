@@ -70,7 +70,7 @@ const dict = {
     andStudents: " و {n} طالب",
     // BonusTable
     noStudentsYet: "لا يوجد طلبة بعد",
-    importExcelToAdd: "قم باستيراد كشف Excel لإضافة الطلبة",
+    importExcelToAdd: "قم باستيراد كشف الطلبة (Excel أو PDF) لإضافتهم",
     noLecturesYet: "لا توجد محاضرات بعد",
     addLectureToStart: "أضف محاضرة جديدة للبدء",
     lectureOf: "المحاضرة {i} من {n} • أقصى بونص: {max}",
@@ -151,7 +151,7 @@ const dict = {
     // Excel import
     noNamesFound: "لم يتم العثور على أسماء في الملف",
     studentsAdded: "تم إضافة {n} طالب بنجاح",
-    importExcel: "استيراد Excel",
+    importExcel: "استيراد ملف",
     // Auth
     signInTitle: "سجّل دخولك للوصول لبياناتك",
     signUpTitle: "أنشئ حساباً جديداً",
@@ -260,7 +260,7 @@ const dict = {
     courseCreated: "Course created with {lectures} lectures",
     andStudents: " and {n} students",
     noStudentsYet: "No students yet",
-    importExcelToAdd: "Import an Excel sheet to add students",
+    importExcelToAdd: "Import a student list (Excel or PDF) to add students",
     noLecturesYet: "No lectures yet",
     addLectureToStart: "Add a new lecture to get started",
     lectureOf: "Lecture {i} of {n} • Max bonus: {max}",
@@ -334,7 +334,7 @@ const dict = {
     maxGradesSaved: "Max grades saved",
     noNamesFound: "No names found in the file",
     studentsAdded: "Added {n} students successfully",
-    importExcel: "Import Excel",
+    importExcel: "Import file",
     signInTitle: "Sign in to access your data",
     signUpTitle: "Create a new account",
     email: "Email",
