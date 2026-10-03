@@ -132,12 +132,16 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     answers.push(picked);
     if (picked < 0) {
       const xs = pts.map((p) => p.x);
-      const x0 = Math.min(...xs) - 10, x1 = Math.max(...xs) + 6;
+      // Generous margins so the question-number circle and every choice
+      // bubble (including the last one) sit well clear of the crop edge —
+      // a tight crop here used to cut the last bubble right at its border,
+      // leaving the professor unable to tell what it actually was.
+      const x0 = Math.min(...xs) - 16, x1 = Math.max(...xs) + 12;
       const y = pts[0].y;
       review.push({
         q,
         reason: picked === -1 ? "blank" : "multiple",
-        imageUrl: rectifyRegion(srcRgba, w, h, H, x0, y - 4.5, x1, y + 4.5, 9),
+        imageUrl: rectifyRegion(srcRgba, w, h, H, x0, y - 6, x1, y + 6, 12),
       });
     }
   }
