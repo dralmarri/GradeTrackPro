@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Course, Student, LectureInfo, CustomComponent } from "@/types/student";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeName } from "@/lib/excel";
+import { studentsMatch } from "@/lib/excel";
 import { useAuth } from "@/hooks/useAuth";
 
 // Use any-typed client to bypass empty generated types until tables are created
@@ -360,10 +360,12 @@ export function useCourses() {
     if (!course) return;
     const lc = course.lectureCount || 0;
 
-    const incomingSet = new Set(students.map((n) => normalizeName(n.name)));
-    const toDelete = course.students.filter((s) => !incomingSet.has(normalizeName(s.name))).map((s) => s.id);
-    const existingByName = new Map(course.students.map((s) => [normalizeName(s.name), s]));
-    const toAdd = students.filter((n) => !existingByName.has(normalizeName(n.name)));
+    const toDelete = course.students
+      .filter((s) => !students.some((n) => studentsMatch(n, { name: s.name, civilId: s.studentNumber })))
+      .map((s) => s.id);
+    const toAdd = students.filter(
+      (n) => !course.students.some((s) => studentsMatch(n, { name: s.name, civilId: s.studentNumber })),
+    );
 
     if (toDelete.length > 0) {
       await db.from("students").delete().in("id", toDelete);
@@ -380,7 +382,7 @@ export function useCourses() {
     }
     // existing students that now carry a civil ID in the file → learn it
     for (const st of students) {
-      const ex = existingByName.get(normalizeName(st.name));
+      const ex = course.students.find((s) => studentsMatch(st, { name: s.name, civilId: s.studentNumber }));
       if (ex && st.civilId && ex.studentNumber !== st.civilId) {
         await db.from("students").update({ student_number: st.civilId }).eq("id", ex.id);
       }

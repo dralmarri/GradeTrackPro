@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Users, X, RefreshCw, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { Course } from "@/types/student";
-import { ImportedStudent, normalizeName } from "@/lib/excel";
+import { ImportedStudent, normalizeName, studentsMatch } from "@/lib/excel";
 import ExcelImport from "@/components/ExcelImport";
 import ManualAddStudents from "@/components/ManualAddStudents";
 import ManualDeleteStudents from "@/components/ManualDeleteStudents";
@@ -135,8 +135,9 @@ export default function CourseStudentsDialog({
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => {
-                    const existing = new Set(course.students.map((s) => normalizeName(s.name)));
-                    const fresh = (pendingNames ?? []).filter((n) => !existing.has(normalizeName(n.name)));
+                    const fresh = (pendingNames ?? []).filter(
+                      (n) => !course.students.some((s) => studentsMatch(n, { name: s.name, civilId: s.studentNumber })),
+                    );
                     if (fresh.length) onAddStudents(fresh);
                     setPendingNames(null);
                   }}

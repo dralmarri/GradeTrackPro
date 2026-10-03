@@ -388,12 +388,37 @@ export interface PaaetImportResult {
   newCount: number;
 }
 
-// Loose match for names coming from the college's own export — trims,
-// collapses whitespace, and strips Arabic diacritics/tatweel so a purely
-// cosmetic difference (extra space, a stray tashkeel mark) doesn't cause a
-// real match to be missed.
+// Loose match for names coming from the college's own export — normalizes
+// Unicode form (NFKC: copy-pasting from a PDF vs. typing directly can
+// produce visually-identical Arabic text using different underlying code
+// points, which breaks plain string equality even after trimming), strips
+// invisible bidi/zero-width marks some sources insert around Arabic text,
+// collapses whitespace, and strips Arabic diacritics/tatweel — so a purely
+// cosmetic difference never causes a real match to be missed (and, worse,
+// a duplicate student to be created).
 export function normalizeName(n: string): string {
-  return n.trim().replace(/\s+/g, " ").replace(/[ً-ٰٟـ]/g, "");
+  return n
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "");
+}
+
+// Matches a roster entry against a stored student. Prefers the civil
+// ID/student number when both sides have one \u2014 it's an exact identifier, so
+// it catches a real match even when the two names were entered through
+// different sources and happen to normalize differently (and conversely,
+// never falsely matches two different students who happen to share a
+// normalized name). Falls back to the fuzzy name match otherwise.
+export function studentsMatch(
+  a: { name: string; civilId?: string },
+  b: { name: string; civilId?: string },
+): boolean {
+  if (a.civilId && b.civilId) return a.civilId === b.civilId;
+  const na = normalizeName(a.name);
+  const nb = normalizeName(b.name);
+  return na === nb || na.includes(nb) || nb.includes(na);
 }
 
 // Matches the college report's (name, cumulative-absence-count) rows against
