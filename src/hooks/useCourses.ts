@@ -259,6 +259,31 @@ export function useCourses() {
     else await fetchCourses();
   }, [courses, fetchCourses]);
 
+  // One-time setup for a course whose attendance was tracked manually
+  // (correctly, lecture by lecture) up through some point before PAAET
+  // import was ever used. Rather than treating the NEXT import as a cold
+  // start — which can only mark the single lecture being imported, because
+  // a brand-new tracker has no earlier reference point to catch up from —
+  // this computes each student's true absence count from the course's own
+  // already-recorded attendance (lectures 0..anchorLectureIndex) and
+  // stores it as the baseline, with anchorLectureIndex as the last
+  // reconciled lecture. The next PAAET import then correctly distributes
+  // across every lecture since the anchor via the normal catch-up logic in
+  // importPaaetAttendance, instead of only ever covering the lecture
+  // currently open.
+  const setPaaetBaseline = useCallback(async (courseId: string, anchorLectureIndex: number) => {
+    const course = courses.find((c) => c.id === courseId);
+    if (!course) return;
+    for (const s of course.students) {
+      const baseline = (s.attendance || []).slice(0, anchorLectureIndex + 1).filter((a) => a === false).length;
+      const { error } = await db.from("students")
+        .update({ paaet_absence_count: baseline, paaet_last_lecture_index: anchorLectureIndex })
+        .eq("id", s.id);
+      if (error) console.error("Error setting PAAET baseline:", error);
+    }
+    await fetchCourses();
+  }, [courses, fetchCourses]);
+
   const updateLectureNote = useCallback(async (courseId: string, studentId: string, lectureIndex: number, note: string): Promise<{ ok: boolean; error?: string }> => {
     const course = courses.find((c) => c.id === courseId);
     const student = course?.students.find((s) => s.id === studentId);
@@ -484,7 +509,7 @@ export function useCourses() {
 
   return {
     courses, loading, addCourse, updateCourse, addStudentsToCourse, syncStudentsToCourse,
-    updateStudent, updateLectureBonus, updateAttendance, updateExcused, updateLectureNote, importPaaetAttendance,
+    updateStudent, updateLectureBonus, updateAttendance, updateExcused, setPaaetBaseline, updateLectureNote, importPaaetAttendance,
     deleteCourse, deleteStudent, removeDuplicateStudents, addLecture, deleteAllData, exportAllData, importAllData,
   };
 }

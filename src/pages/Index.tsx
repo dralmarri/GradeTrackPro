@@ -54,6 +54,7 @@ export default function Index() {
     updateStudent,
     updateAttendance,
     updateExcused,
+    setPaaetBaseline,
     updateLectureNote,
     importPaaetAttendance,
     deleteCourse,
@@ -587,6 +588,7 @@ export default function Index() {
               onUpdateExcused={(sid, li, excused) => updateExcused(activeCourse.id, sid, li, excused)}
               onUpdateNote={(sid, li, note) => updateLectureNote(activeCourse.id, sid, li, note)}
               onImportPaaet={(lectureIndex, matched) => importPaaetAttendance(activeCourse.id, lectureIndex, matched)}
+              onSetPaaetBaseline={(lectureIndex) => setPaaetBaseline(activeCourse.id, lectureIndex)}
             />
 
 

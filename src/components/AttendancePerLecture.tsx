@@ -19,6 +19,7 @@ interface Props {
     lectureIndex: number,
     matched: { studentId: string; absentCount: number }[],
   ) => Promise<{ studentId: string; name: string; unaccountedCount: number }[]>;
+  onSetPaaetBaseline: (lectureIndex: number) => Promise<void>;
 }
 
 function NoteButton({
@@ -115,13 +116,14 @@ function NoteButton({
   );
 }
 
-export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onUpdateExcused, onUpdateNote, onImportPaaet }: Props) {
+export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onUpdateExcused, onUpdateNote, onImportPaaet, onSetPaaetBaseline }: Props) {
   const { t, lang } = useLanguage();
   const safeStudents = students || [];
   const safeLectures = lectures || [];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [showImportHint, setShowImportHint] = useState(false);
+  const [confirmingBaseline, setConfirmingBaseline] = useState(false);
 
   const [selectedLecture, setSelectedLecture] = useState(() => {
     if (safeLectures.length === 0) return 0;
@@ -362,6 +364,47 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
               : "If your institution uses a separate external app to track attendance — download the attendance file from it (usually saved to your device's Downloads folder), then tap here and pick it, and attendance is recorded here automatically instead of entering it by hand."}
           </p>
         )}
+
+        {/* One-time setup: use THIS lecture's already-correct attendance as
+            the starting point for the automatic PAAET catch-up tracking,
+            instead of the system cold-starting from whatever lecture is
+            imported next (which can only mark that single lecture). */}
+        <div className="mt-2 border-t border-border/60 pt-2">
+          {!confirmingBaseline ? (
+            <button
+              onClick={() => setConfirmingBaseline(true)}
+              className="px-1 text-[10px] font-medium text-muted-foreground underline decoration-dotted hover:text-foreground"
+            >
+              {lang === "ar" ? `تعيين «${title}» كنقطة انطلاق لتتبّع الغياب التراكمي` : `Set "${title}" as the absence-tracking starting point`}
+            </button>
+          ) : (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-2.5">
+              <p className="mb-2 text-[10px] leading-relaxed text-foreground">
+                {lang === "ar"
+                  ? `سيحسب النظام غياب كل طالب المسجَّل فعلياً عندك حتى «${title}» ويعتمده كخط أساس — استخدم هذا فقط إن كان حضور «${title}» وما قبلها مسجَّلاً بشكل صحيح يدوياً. الاستيرادات القادمة ستبني تلقائياً على هذا الأساس.`
+                  : `This computes each student's actual recorded absences through "${title}" and sets it as the baseline — only use this if attendance through "${title}" is already correctly recorded by hand. Future imports will build on this automatically.`}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmingBaseline(false)}
+                  className="flex-1 rounded-lg border border-border py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted"
+                >
+                  {lang === "ar" ? "إلغاء" : "Cancel"}
+                </button>
+                <button
+                  onClick={async () => {
+                    await onSetPaaetBaseline(selectedLecture);
+                    setConfirmingBaseline(false);
+                    toast.success(lang === "ar" ? "تم تعيين نقطة الانطلاق بنجاح" : "Baseline set successfully");
+                  }}
+                  className="flex-1 rounded-lg bg-primary py-1.5 text-[11px] font-semibold text-primary-foreground hover:brightness-110"
+                >
+                  {lang === "ar" ? "تأكيد" : "Confirm"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search + sort */}
