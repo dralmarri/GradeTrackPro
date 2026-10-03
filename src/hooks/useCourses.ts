@@ -47,8 +47,6 @@ function dbRowToStudent(row: any): Student {
     participation: Number(row.participation) || 0,
     homework: Number(row.homework) || 0,
     customScores: (row.custom_scores || {}) as Record<string, number>,
-    paaetAbsenceCount: row.paaet_absence_count != null ? Number(row.paaet_absence_count) : undefined,
-    paaetLastLectureIndex: row.paaet_last_lecture_index != null ? Number(row.paaet_last_lecture_index) : undefined,
     excused: (row.excused || []) as boolean[],
     createdAt: row.created_at || undefined,
   };
@@ -259,31 +257,6 @@ export function useCourses() {
     else await fetchCourses();
   }, [courses, fetchCourses]);
 
-  // One-time setup for a course whose attendance was tracked manually
-  // (correctly, lecture by lecture) up through some point before PAAET
-  // import was ever used. Rather than treating the NEXT import as a cold
-  // start — which can only mark the single lecture being imported, because
-  // a brand-new tracker has no earlier reference point to catch up from —
-  // this computes each student's true absence count from the course's own
-  // already-recorded attendance (lectures 0..anchorLectureIndex) and
-  // stores it as the baseline, with anchorLectureIndex as the last
-  // reconciled lecture. The next PAAET import then correctly distributes
-  // across every lecture since the anchor via the normal catch-up logic in
-  // importPaaetAttendance, instead of only ever covering the lecture
-  // currently open.
-  const setPaaetBaseline = useCallback(async (courseId: string, anchorLectureIndex: number) => {
-    const course = courses.find((c) => c.id === courseId);
-    if (!course) return;
-    for (const s of course.students) {
-      const baseline = (s.attendance || []).slice(0, anchorLectureIndex + 1).filter((a) => a === false).length;
-      const { error } = await db.from("students")
-        .update({ paaet_absence_count: baseline, paaet_last_lecture_index: anchorLectureIndex })
-        .eq("id", s.id);
-      if (error) console.error("Error setting PAAET baseline:", error);
-    }
-    await fetchCourses();
-  }, [courses, fetchCourses]);
-
   const updateLectureNote = useCallback(async (courseId: string, studentId: string, lectureIndex: number, note: string): Promise<{ ok: boolean; error?: string }> => {
     const course = courses.find((c) => c.id === courseId);
     const student = course?.students.find((s) => s.id === studentId);
@@ -295,73 +268,6 @@ export function useCourses() {
     await fetchCourses();
     return { ok: true };
   }, [courses, fetchCourses]);
-
-  // Applies the college system's CUMULATIVE absence count — it names no
-  // lecture date, so we track the last lecture index each student's count
-  // was reconciled up to (paaetLastLectureIndex) and, when that count grows,
-  // try to tell WHICH of the lectures since then (excluding ones already
-  // marked excused — see updateExcused) the new absence(s) belong to:
-  //  - growth is 0 → every unaccounted lecture was present (unambiguous).
-  //  - growth equals the unaccounted-lecture count → every one of them was
-  //    absent (unambiguous: the student missed every lecture since).
-  //  - any other growth amount is ambiguous (e.g. 3 lectures passed
-  //    unreported but the count only grew by 1 — which one?) — per-product
-  //    decision, we never guess here; those lectures are left untouched and
-  //    reported back to the caller so the admin can resolve them by hand.
-  // A student's very first-ever import has no prior lecture to reconcile
-  // from, so it only ever touches the lecture currently open.
-  // Attendance-only — this must never create roster rows. A name in the
-  // college's file that doesn't match an existing student is reported back
-  // to the caller as unmatched (see AttendancePerLecture's toast) instead
-  // of being silently inserted as a brand-new student; adding students is
-  // the roster-management flow's job (CourseStudentsDialog), not this
-  // button's, and silently doing it here from a failed name match used to
-  // quietly duplicate the whole roster.
-  const importPaaetAttendance = useCallback(async (
-    courseId: string,
-    lectureIndex: number,
-    matched: { studentId: string; absentCount: number }[],
-  ): Promise<{ studentId: string; name: string; unaccountedCount: number }[]> => {
-    if (!user) return [];
-    const course = courses.find((c) => c.id === courseId);
-    if (!course) return [];
-    const lc = course.lectureCount || 0;
-    const ambiguous: { studentId: string; name: string; unaccountedCount: number }[] = [];
-
-    for (const m of matched) {
-      const student = course.students.find((s) => s.id === m.studentId);
-      const baseline = student?.paaetAbsenceCount ?? 0;
-      const lastIdx = student?.paaetLastLectureIndex;
-      const excusedArr = student?.excused || [];
-      const delta = m.absentCount - baseline;
-      const newAtt = [...(student?.attendance || new Array(lc).fill(true))];
-
-      if (lastIdx === undefined) {
-        if (lectureIndex >= 0 && lectureIndex < newAtt.length) newAtt[lectureIndex] = delta <= 0;
-      } else {
-        const unaccounted: number[] = [];
-        for (let i = lastIdx + 1; i <= lectureIndex; i++) {
-          if (i >= 0 && i < newAtt.length && !excusedArr[i]) unaccounted.push(i);
-        }
-        if (delta <= 0) {
-          unaccounted.forEach((i) => { newAtt[i] = true; });
-        } else if (delta === unaccounted.length) {
-          unaccounted.forEach((i) => { newAtt[i] = false; });
-        } else if (unaccounted.length > 0) {
-          ambiguous.push({ studentId: m.studentId, name: student?.name || "", unaccountedCount: unaccounted.length });
-        }
-      }
-
-      const { error } = await db.from("students")
-        .update({ attendance: newAtt, paaet_absence_count: m.absentCount, paaet_last_lecture_index: lectureIndex })
-        .eq("id", m.studentId);
-      if (error) console.error("Error updating attendance:", error);
-    }
-    await fetchCourses();
-    return ambiguous;
-  }, [user, courses, fetchCourses]);
-
-
 
   const deleteCourse = useCallback(async (courseId: string) => {
     const { error } = await db.from("courses").delete().eq("id", courseId);
@@ -509,7 +415,7 @@ export function useCourses() {
 
   return {
     courses, loading, addCourse, updateCourse, addStudentsToCourse, syncStudentsToCourse,
-    updateStudent, updateLectureBonus, updateAttendance, updateExcused, setPaaetBaseline, updateLectureNote, importPaaetAttendance,
+    updateStudent, updateLectureBonus, updateAttendance, updateExcused, updateLectureNote,
     deleteCourse, deleteStudent, removeDuplicateStudents, addLecture, deleteAllData, exportAllData, importAllData,
   };
 }

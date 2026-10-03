@@ -1,9 +1,9 @@
-import { useRef, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Student, LectureInfo, Course } from "@/types/student";
-import { ChevronRight, ChevronLeft, Search, Download, Upload, Loader2, StickyNote, CheckCheck, ArrowUpDown } from "lucide-react";
+import { ChevronRight, ChevronLeft, Search, Download, StickyNote, CheckCheck, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
-import { exportAttendanceTemplate, parseAttendanceFile, parsePaaetAttendanceFile, parsePaaetAttendancePdf } from "@/lib/excel";
+import { exportAttendanceTemplate } from "@/lib/excel";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,11 +15,6 @@ interface Props {
   onUpdateAttendance: (studentId: string, lectureIndex: number, present: boolean) => void;
   onUpdateExcused: (studentId: string, lectureIndex: number, excused: boolean) => void;
   onUpdateNote: (studentId: string, lectureIndex: number, note: string) => Promise<{ ok: boolean; error?: string }> | void;
-  onImportPaaet: (
-    lectureIndex: number,
-    matched: { studentId: string; absentCount: number }[],
-  ) => Promise<{ studentId: string; name: string; unaccountedCount: number }[]>;
-  onSetPaaetBaseline: (lectureIndex: number) => Promise<void>;
 }
 
 function NoteButton({
@@ -116,14 +111,10 @@ function NoteButton({
   );
 }
 
-export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onUpdateExcused, onUpdateNote, onImportPaaet, onSetPaaetBaseline }: Props) {
+export default function AttendancePerLecture({ students, lectures, course, onUpdateAttendance, onUpdateExcused, onUpdateNote }: Props) {
   const { t, lang } = useLanguage();
   const safeStudents = students || [];
   const safeLectures = lectures || [];
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [importing, setImporting] = useState(false);
-  const [showImportHint, setShowImportHint] = useState(false);
-  const [confirmingBaseline, setConfirmingBaseline] = useState(false);
 
   const [selectedLecture, setSelectedLecture] = useState(() => {
     if (safeLectures.length === 0) return 0;
@@ -200,63 +191,6 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
   const subtitle = dateObj.toLocaleDateString("ar-EG-u-nu-latn", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const title = `المحاضرة ${selectedLecture + 1}`;
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    setImporting(true);
-    try {
-      const paaet = file.name.toLowerCase().endsWith(".pdf")
-        ? await parsePaaetAttendancePdf(file, course)
-        : await parsePaaetAttendanceFile(file, course);
-      if (paaet.matchedCount > 0 || paaet.newCount > 0) {
-        // applies to the one lecture currently open (matches the file's own
-        // single-session report), same as a manual attendance toggle — a
-        // name that doesn't match an existing student is reported, never
-        // auto-added as a new roster entry (that's the roster-sync flow's job)
-        const ambiguous = paaet.matchedCount > 0 ? await onImportPaaet(selectedLecture, paaet.matched) : [];
-        const msg = lang === "ar"
-          ? `تم استيراد حضور «${title}»: ${paaet.matchedCount} طالب${paaet.newCount > 0 ? ` · ${paaet.newCount} اسم لم يُطابَق أي طالب حالي ولم يُضَف` : ""}`
-          : `Imported attendance for "${title}": ${paaet.matchedCount} students${paaet.newCount > 0 ? ` · ${paaet.newCount} names didn't match any current student and were skipped` : ""}`;
-        if (paaet.newCount > 0) {
-          toast.warning(msg, { duration: 8000 });
-          console.warn("PAAET unmatched names:", paaet.newStudents.map((s) => s.name));
-        } else {
-          toast.success(msg, { duration: 5000 });
-        }
-        if (ambiguous.length > 0) {
-          const names = ambiguous.map((a) => `${a.name} (${a.unaccountedCount})`).join("، ");
-          const ambMsg = lang === "ar"
-            ? `لم يتم تسجيل محاضرات سابقة لم تُستورد لها بيانات لبعض الطلبة لأن عدد الغياب الجديد لا يطابق عددها بدقة — راجع يدوياً: ${names}`
-            : `Some students have earlier un-imported lectures whose attendance couldn't be determined automatically — please review manually: ${names}`;
-          toast.warning(ambMsg, { duration: 12000 });
-          console.warn("PAAET ambiguous catch-up:", ambiguous);
-        }
-        return;
-      }
-
-      const result = await parseAttendanceFile(file, course);
-      if (result.updates.length === 0) {
-        toast.error(lang === "ar" ? "لم يتم التعرف على بيانات حضور في الملف" : "No attendance data found in file");
-        return;
-      }
-      result.updates.forEach(({ studentId, lectureIndex, present }) => {
-        onUpdateAttendance(studentId, lectureIndex, present);
-      });
-      const msg = lang === "ar"
-        ? `تم استيراد ${result.updates.length} سجل حضور بنجاح${result.unmatched.length > 0 ? ` · ${result.unmatched.length} اسم لم يُطابَق` : ""}`
-        : `Imported ${result.updates.length} attendance records${result.unmatched.length > 0 ? ` · ${result.unmatched.length} unmatched` : ""}`;
-      toast.success(msg, { duration: 5000 });
-      if (result.unmatched.length > 0) {
-        console.warn("Unmatched students:", result.unmatched);
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "فشل الاستيراد");
-    } finally {
-      setImporting(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
       {/* Lecture nav */}
@@ -331,80 +265,15 @@ export default function AttendancePerLecture({ students, lectures, course, onUpd
         </div>
       </div>
 
-      {/* Import / Export attendance */}
+      {/* Export attendance template */}
       <div className="rounded-[32px] border border-border bg-card p-3 shadow-sm">
-        <div className="flex gap-2">
-          <button
-            onClick={() => exportAttendanceTemplate(course)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-border bg-background px-3 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-          >
-            <Download size={14} />
-            {lang === "ar" ? "تصدير قالب الحضور" : "Export Template"}
-          </button>
-          <button
-            onClick={() => { setShowImportHint(true); fileInputRef.current?.click(); }}
-            disabled={importing}
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
-          >
-            {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            {lang === "ar" ? "استيراد الحضور (Excel / نظام الكلية)" : "Import (Excel / College system)"}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv,.pdf"
-            className="hidden"
-            onChange={handleImport}
-          />
-        </div>
-        {showImportHint && (
-          <p className="mt-2 px-1 text-[10px] leading-relaxed text-muted-foreground">
-            {lang === "ar"
-              ? "إن كانت مؤسستك تستخدم تطبيقاً خارجياً منفصلاً لرصد حضور الطلاب — نزّل منه ملف الحضور (يُحفظ عادة في مجلد التنزيلات Downloads بجهازك) ثم اضغط هنا واخترْه، ليُسجَّل الحضور تلقائياً في هذا التطبيق دون إدخاله يدوياً."
-              : "If your institution uses a separate external app to track attendance — download the attendance file from it (usually saved to your device's Downloads folder), then tap here and pick it, and attendance is recorded here automatically instead of entering it by hand."}
-          </p>
-        )}
-
-        {/* One-time setup: use THIS lecture's already-correct attendance as
-            the starting point for the automatic PAAET catch-up tracking,
-            instead of the system cold-starting from whatever lecture is
-            imported next (which can only mark that single lecture). */}
-        <div className="mt-2 border-t border-border/60 pt-2">
-          {!confirmingBaseline ? (
-            <button
-              onClick={() => setConfirmingBaseline(true)}
-              className="px-1 text-[10px] font-medium text-muted-foreground underline decoration-dotted hover:text-foreground"
-            >
-              {lang === "ar" ? `تعيين «${title}» كنقطة انطلاق لتتبّع الغياب التراكمي` : `Set "${title}" as the absence-tracking starting point`}
-            </button>
-          ) : (
-            <div className="rounded-xl border border-primary/30 bg-primary/5 p-2.5">
-              <p className="mb-2 text-[10px] leading-relaxed text-foreground">
-                {lang === "ar"
-                  ? `سيحسب النظام غياب كل طالب المسجَّل فعلياً عندك حتى «${title}» ويعتمده كخط أساس — استخدم هذا فقط إن كان حضور «${title}» وما قبلها مسجَّلاً بشكل صحيح يدوياً. الاستيرادات القادمة ستبني تلقائياً على هذا الأساس.`
-                  : `This computes each student's actual recorded absences through "${title}" and sets it as the baseline — only use this if attendance through "${title}" is already correctly recorded by hand. Future imports will build on this automatically.`}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setConfirmingBaseline(false)}
-                  className="flex-1 rounded-lg border border-border py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted"
-                >
-                  {lang === "ar" ? "إلغاء" : "Cancel"}
-                </button>
-                <button
-                  onClick={async () => {
-                    await onSetPaaetBaseline(selectedLecture);
-                    setConfirmingBaseline(false);
-                    toast.success(lang === "ar" ? "تم تعيين نقطة الانطلاق بنجاح" : "Baseline set successfully");
-                  }}
-                  className="flex-1 rounded-lg bg-primary py-1.5 text-[11px] font-semibold text-primary-foreground hover:brightness-110"
-                >
-                  {lang === "ar" ? "تأكيد" : "Confirm"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => exportAttendanceTemplate(course)}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-3 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          <Download size={14} />
+          {lang === "ar" ? "تصدير قالب الحضور" : "Export Template"}
+        </button>
       </div>
 
       {/* Search + sort */}

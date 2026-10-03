@@ -54,9 +54,7 @@ export default function Index() {
     updateStudent,
     updateAttendance,
     updateExcused,
-    setPaaetBaseline,
     updateLectureNote,
-    importPaaetAttendance,
     deleteCourse,
     deleteStudent,
     removeDuplicateStudents,
@@ -587,8 +585,6 @@ export default function Index() {
               onUpdateAttendance={(sid, li, present) => updateAttendance(activeCourse.id, sid, li, present)}
               onUpdateExcused={(sid, li, excused) => updateExcused(activeCourse.id, sid, li, excused)}
               onUpdateNote={(sid, li, note) => updateLectureNote(activeCourse.id, sid, li, note)}
-              onImportPaaet={(lectureIndex, matched) => importPaaetAttendance(activeCourse.id, lectureIndex, matched)}
-              onSetPaaetBaseline={(lectureIndex) => setPaaetBaseline(activeCourse.id, lectureIndex)}
             />
 
 
