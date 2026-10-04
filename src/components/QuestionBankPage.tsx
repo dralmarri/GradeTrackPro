@@ -14,6 +14,7 @@ import {
   Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste, Pencil, X, Check, FileDown,
 } from "lucide-react";
 import { exportQuestionBankToWord } from "@/lib/exportQuestionBankWord";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 // This is the single place questions are browsed AND selected for exam
 // generation — the same checkboxes used to pick questions to delete also
@@ -34,6 +35,8 @@ interface Props {
   // here.
   banks: QuestionBank[];
   bankCounts: Record<string, number>;
+  onCreateBank: (name: string) => Promise<string>;
+  onDeleteBank: (bankId: string) => Promise<boolean>;
   selectedIds: Set<string>;
   setSelectedIds: Dispatch<SetStateAction<Set<string>>>;
   examPoints: Record<string, number>;
@@ -41,7 +44,7 @@ interface Props {
 }
 
 export default function QuestionBankPage({
-  bankId, banks, bankCounts, selectedIds, setSelectedIds, examPoints, setExamPoints,
+  bankId, banks, bankCounts, onCreateBank, onDeleteBank, selectedIds, setSelectedIds, examPoints, setExamPoints,
 }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
@@ -66,6 +69,9 @@ export default function QuestionBankPage({
   const [importChapter, setImportChapter] = useState("");
   const [importTopic, setImportTopic] = useState("");
   const [exportingWord, setExportingWord] = useState(false);
+  const [creatingBank, setCreatingBank] = useState(false);
+  const [newBankName, setNewBankName] = useState("");
+  const [pendingDeleteBank, setPendingDeleteBank] = useState<{ id: string; name: string } | null>(null);
 
   const handleExportWord = async () => {
     if (questions.length === 0) {
@@ -360,34 +366,85 @@ export default function QuestionBankPage({
     setExamPoints({});
   };
 
-  const bankSwitcher = banks.length > 1 && (
-    <div className="flex flex-wrap gap-2">
-      {banks.map((b) => (
-        <button
-          key={b.id}
-          type="button"
-          onClick={() => switchBank(b.id)}
-          className={cn(
-            "flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-start transition-colors",
-            b.id === viewingBankId
-              ? "border-primary bg-primary/10"
-              : "border-border bg-card hover:bg-muted",
-          )}
-        >
-          <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl", b.id === viewingBankId ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
-            <Library size={14} />
-          </span>
-          <span className="min-w-0">
-            <span className={cn("block truncate text-xs font-bold", b.id === viewingBankId ? "text-primary" : "text-foreground")}>
-              {b.name}
-              {b.id === bankId && (ar ? " (بنك هذا المقرر)" : " (this course's bank)")}
+  const handleCreateBank = async () => {
+    const name = newBankName.trim();
+    if (!name) return;
+    const id = await onCreateBank(name);
+    if (id) {
+      switchBank(id);
+      setCreatingBank(false);
+      setNewBankName("");
+      toast.success(ar ? "تم إنشاء البنك" : "Bank created");
+    } else {
+      toast.error(ar ? "تعذّر إنشاء البنك" : "Could not create the bank");
+    }
+  };
+
+  const bankSwitcher = (
+    <div className="space-y-2">
+      {(banks.length > 0 || creatingBank) && (
+        <div className="flex flex-wrap gap-2">
+          {banks.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => switchBank(b.id)}
+              className={cn(
+                "flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-start transition-colors",
+                b.id === viewingBankId
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-card hover:bg-muted",
+              )}
+            >
+              <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl", b.id === viewingBankId ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
+                <Library size={14} />
+              </span>
+              <span className="min-w-0">
+                <span className={cn("block truncate text-xs font-bold", b.id === viewingBankId ? "text-primary" : "text-foreground")}>
+                  {b.name}
+                  {b.id === bankId && (ar ? " (بنك هذا المقرر)" : " (this course's bank)")}
+                </span>
+                <span className="block text-[10px] text-muted-foreground">
+                  {bankCounts[b.id] || 0} {ar ? "سؤالاً" : "questions"}
+                </span>
+              </span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => { setNewBankName(""); setCreatingBank((v) => !v); }}
+            title={ar ? "بنك جديد" : "New bank"}
+            className={cn(
+              "flex items-center gap-2 rounded-2xl border border-dashed px-3.5 py-2.5 text-start transition-colors",
+              creatingBank ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted",
+            )}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted">
+              <Plus size={14} />
             </span>
-            <span className="block text-[10px] text-muted-foreground">
-              {bankCounts[b.id] || 0} {ar ? "سؤالاً" : "questions"}
-            </span>
-          </span>
-        </button>
-      ))}
+            <span className="text-xs font-bold">{ar ? "بنك جديد" : "New bank"}</span>
+          </button>
+        </div>
+      )}
+      {creatingBank && (
+        <div className="flex gap-2">
+          <input
+            value={newBankName}
+            onChange={(e) => setNewBankName(e.target.value)}
+            placeholder={ar ? "اسم البنك الجديد" : "New bank name"}
+            autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter") handleCreateBank(); }}
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+          <button
+            type="button"
+            onClick={handleCreateBank}
+            className="shrink-0 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <Check size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -398,12 +455,12 @@ export default function QuestionBankPage({
         <div className="flex flex-col items-center gap-2 rounded-[28px] border border-dashed border-border bg-card p-8 text-center">
           <Library size={28} className="mb-1 text-muted-foreground opacity-50" />
           <p className="font-display text-base font-bold text-foreground">
-            {ar ? "لا يوجد بنك أسئلة مرتبط بهذا المقرر" : "No question bank linked to this course"}
+            {ar ? "لا يوجد بنك أسئلة محدد" : "No question bank selected"}
           </p>
           <p className="max-w-sm text-sm text-muted-foreground">
             {banks.length > 0
-              ? (ar ? "اختر بنكاً من الأعلى لتصفحه، أو اربط هذا المقرر ببنك من صفحة إدارة المقرر في الإعدادات." : "Pick a bank above to browse it, or link this course to one from the course settings page.")
-              : (ar ? "اربط هذا المقرر ببنك أسئلة جديد أو موجود من صفحة إدارة المقرر في الإعدادات، ليصبح متاحاً هنا." : "Link this course to a new or existing bank from the course settings page to use it here.")}
+              ? (ar ? "اختر بنكاً من الأعلى لتصفحه، أو أنشئ بنكاً جديداً." : "Pick a bank above to browse it, or create a new one.")
+              : (ar ? "أنشئ بنك أسئلة من الزر أعلاه، ثم اربطه بأي مقرر تريد من صفحة إدارة المقرر في الإعدادات." : "Create a question bank with the button above, then link it to any course from the course settings page.")}
           </p>
         </div>
       </div>
@@ -442,6 +499,13 @@ export default function QuestionBankPage({
         >
           {exportingWord ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
           {ar ? "تصدير Word" : "Export Word"}
+        </button>
+        <button
+          onClick={() => setPendingDeleteBank({ id: viewingBankId, name: bankName || "" })}
+          title={ar ? "حذف البنك" : "Delete bank"}
+          className="flex shrink-0 items-center justify-center rounded-xl border border-destructive/30 bg-background px-3 py-2 text-destructive transition-colors hover:bg-destructive/10"
+        >
+          <Trash2 size={14} />
         </button>
       </div>
 
@@ -1122,6 +1186,34 @@ export default function QuestionBankPage({
           </div>
         )
       )}
+
+      <ConfirmDialog
+        open={!!pendingDeleteBank}
+        onOpenChange={(o) => { if (!o) setPendingDeleteBank(null); }}
+        title={ar ? "حذف بنك الأسئلة" : "Delete question bank"}
+        description={
+          pendingDeleteBank
+            ? (ar
+              ? `هل أنت متأكد من حذف بنك «${pendingDeleteBank.name}»؟ سيُحذف نهائياً مع كل أسئلته، ولن يتأثر أي مقرر آخر مرتبط به سوى فقدان الربط بهذا البنك.`
+              : `Delete the bank "${pendingDeleteBank.name}"? This permanently removes it and all its questions. Any other course linked to it just loses the link.`)
+            : ""
+        }
+        confirmLabel={ar ? "حذف" : "Delete"}
+        cancelLabel={ar ? "إلغاء" : "Cancel"}
+        destructive
+        onConfirm={async () => {
+          if (!pendingDeleteBank) return;
+          const id = pendingDeleteBank.id;
+          const ok = await onDeleteBank(id);
+          setPendingDeleteBank(null);
+          if (ok) {
+            if (viewingBankId === id) setViewingBankId(bankId !== id ? bankId : null);
+            toast.success(ar ? "تم حذف بنك الأسئلة" : "Question bank deleted");
+          } else {
+            toast.error(ar ? "تعذّر حذف بنك الأسئلة" : "Could not delete the question bank");
+          }
+        }}
+      />
     </div>
   );
 }

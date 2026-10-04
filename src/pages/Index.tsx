@@ -61,7 +61,7 @@ export default function Index() {
     deleteStudent,
     removeDuplicateStudents,
   } = useCourses();
-  const { banks, bankCounts, createBank } = useQuestionBanks();
+  const { banks, bankCounts, createBank, deleteBank } = useQuestionBanks();
 
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [showNewCourse, setShowNewCourse] = useState(false);
@@ -252,6 +252,8 @@ export default function Index() {
                     bankId={null}
                     banks={banks}
                     bankCounts={bankCounts}
+                    onCreateBank={createBank}
+                    onDeleteBank={deleteBank}
                     selectedIds={standaloneBankSelected}
                     setSelectedIds={setStandaloneBankSelected}
                     examPoints={standaloneBankPoints}
@@ -615,6 +617,8 @@ export default function Index() {
             bankId={activeCourse.bankId || null}
             banks={banks}
             bankCounts={bankCounts}
+            onCreateBank={createBank}
+            onDeleteBank={deleteBank}
             onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
             onApplyScore={async (studentId, targetComponent, score) => {
               const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];

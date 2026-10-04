@@ -27,11 +27,13 @@ interface Props {
   bankId: string | null;
   banks: QuestionBank[];
   bankCounts: Record<string, number>;
+  onCreateBank: (name: string) => Promise<string>;
+  onDeleteBank: (bankId: string) => Promise<boolean>;
   onApplyScore: (studentId: string, targetComponent: string, score: number) => Promise<void>;
   onLearnNumber: (studentId: string, studentNumber: string) => Promise<void>;
 }
 
-export default function OmrExamsPage({ course, bankId, banks, bankCounts, onApplyScore, onLearnNumber }: Props) {
+export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCreateBank, onDeleteBank, onApplyScore, onLearnNumber }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const { exams, loading, addExam, updateExam, updateAnswerKey, deleteExam } = useOmrExams(course.id);
@@ -335,6 +337,8 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onAppl
           bankId={bankId}
           banks={banks}
           bankCounts={bankCounts}
+          onCreateBank={onCreateBank}
+          onDeleteBank={onDeleteBank}
           selectedIds={examSelected}
           setSelectedIds={setExamSelected}
           examPoints={examPoints}
