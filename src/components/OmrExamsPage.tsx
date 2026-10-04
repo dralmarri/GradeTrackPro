@@ -11,14 +11,15 @@ import OmrScansDialog from "@/components/OmrScansDialog";
 import OmrStatsDialog from "@/components/OmrStatsDialog";
 import QuestionBankPage from "@/components/QuestionBankPage";
 import GenerateExamPanel from "@/components/GenerateExamPanel";
-import { GeneratedForm, QuestionBank } from "@/types/questionBank";
+import { GeneratedForm, QuestionBank, BankQuestion } from "@/types/questionBank";
+import { printQuestionPaper } from "@/lib/omr/questionPaper";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Plus, Printer, Trash2, KeyRound, ScanLine, Loader2, CheckCircle2, Pencil, History, BarChart3,
-  Database, Wand2, Camera, ChevronRight, AlertTriangle,
+  Database, Wand2, Camera, ChevronRight, AlertTriangle, FileText,
 } from "lucide-react";
 
 
@@ -163,6 +164,29 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
     courseName: course.name + (course.section ? ` — شعبة ${course.section}` : ""),
     logoDataUrl: logo || undefined,
   });
+
+  // Rebuilds a printable form from the exam's own saved snapshot (see the
+  // questionPaper comment on OmrExam) — lets "ورقة الأسئلة" be reprinted
+  // from the exam's history, long after the generation session that
+  // created it. The filler fields (id/bankId/correct) on each reconstructed
+  // BankQuestion are never read by buildQuestionPaperHtml, only text/
+  // choices/points are.
+  const formFromExam = (exam: OmrExam): GeneratedForm | null => {
+    if (!exam.questionPaper) return null;
+    const mkQuestion = (q: { text: string; choices: string[]; points: number }, i: number): BankQuestion => ({
+      id: `snapshot-${i}`, bankId: "", text: q.text, choices: q.choices, correct: 0, points: q.points, createdAt: exam.createdAt,
+    });
+    return {
+      version: exam.version || "",
+      questions: exam.questionPaper.questions.map(mkQuestion),
+      choiceOrders: exam.questionPaper.choiceOrders,
+      answerKey: exam.answerKey,
+      sections: exam.sections || [{ questionCount: exam.questionCount, choiceCount: exam.choiceCount }],
+      essayQuestions: (exam.essayQuestions || []).map((q, i) => ({
+        id: `essay-${i}`, bankId: "", text: q.text, choices: [], correct: -1, points: q.points, createdAt: exam.createdAt,
+      })),
+    };
+  };
 
   const handleLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -670,6 +694,19 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
                 >
                   <Pencil size={15} />
                 </button>
+                {formFromExam(exam) && (
+                  <button
+                    onClick={() => {
+                      const form = formFromExam(exam);
+                      const essayTotal = (exam.essayQuestions || []).reduce((a, q) => a + (q.points || 0), 0);
+                      if (!form || !printQuestionPaper(exam.title, form, sheetHeader(), exam.maxScore + essayTotal)) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print");
+                    }}
+                    title={ar ? "طباعة ورقة الأسئلة" : "Print question paper"}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted"
+                  >
+                    <FileText size={15} />
+                  </button>
+                )}
                 <button
                   onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print"); }}
                   title={ar ? "طباعة ورقة الإجابة" : "Print sheet"}

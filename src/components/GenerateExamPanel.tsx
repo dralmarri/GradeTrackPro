@@ -38,6 +38,7 @@ interface Props {
     version?: string; idMode?: "bubbles" | "written";
     essayQuestions?: { text: string; points: number }[];
     source?: "bank" | "manual";
+    questionPaper?: { questions: { text: string; choices: string[]; points: number }[]; choiceOrders: number[][] };
   }) => Promise<string>;
   onSetAnswerKey: (examId: string, key: number[], weights?: number[]) => Promise<void>;
   buildExam: (
@@ -243,6 +244,13 @@ export default function GenerateExamPanel({
           idMode: "written",
           essayQuestions: essayQuestions.length ? essayQuestions : undefined,
           source: "bank",
+          // snapshot of the question paper's own content, so "ورقة الأسئلة"
+          // can be reprinted later from the exam's history — see the
+          // questionPaper comment on OmrExam.
+          questionPaper: form.questions.length ? {
+            questions: form.questions.map((q, qi) => ({ text: q.text, choices: q.choices, points: weights[qi] ?? 1 })),
+            choiceOrders: form.choiceOrders,
+          } : undefined,
         });
         if (!id) throw new Error(ar ? "فشل إنشاء الاختبار" : "Failed to create exam");
         await onSetAnswerKey(id, form.answerKey, weights.length ? weights : undefined);
