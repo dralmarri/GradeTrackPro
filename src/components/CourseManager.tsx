@@ -74,6 +74,8 @@ export default function CourseManager({
   const [pendingDeleteBank, setPendingDeleteBank] = useState<{ id: string; name: string } | null>(null);
   const [renamingBank, setRenamingBank] = useState(false);
   const [bankRenameValue, setBankRenameValue] = useState("");
+  const [creatingBank, setCreatingBank] = useState(false);
+  const [newBankName, setNewBankName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [pendingImport, setPendingImport] = useState<{ courseId: string; names: ImportedStudent[] } | null>(null);
@@ -333,7 +335,44 @@ export default function CourseManager({
                       <Trash2 size={14} />
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => { setNewBankName(""); setCreatingBank((v) => !v); setRenamingBank(false); }}
+                    title={lang === "ar" ? "بنك جديد باسم مخصص" : "New bank with a custom name"}
+                    className="flex shrink-0 items-center justify-center rounded-lg border border-primary/30 bg-primary/5 px-3 text-primary transition-colors hover:bg-primary/10"
+                  >
+                    <Plus size={14} />
+                  </button>
                 </div>
+                {creatingBank && (
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      value={newBankName}
+                      onChange={(e) => setNewBankName(e.target.value)}
+                      placeholder={lang === "ar" ? "اسم البنك الجديد" : "New bank name"}
+                      autoFocus
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const name = newBankName.trim();
+                        if (!name) return;
+                        const id = await createBank(name);
+                        if (id) {
+                          setEditBankChoice(id);
+                          setCreatingBank(false);
+                          toast.success(lang === "ar" ? "تم إنشاء البنك" : "Bank created");
+                        } else {
+                          toast.error(lang === "ar" ? "تعذّر إنشاء البنك" : "Could not create the bank");
+                        }
+                      }}
+                      className="shrink-0 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+                    >
+                      <Check size={16} />
+                    </button>
+                  </div>
+                )}
                 {renamingBank && editBankChoice && editBankChoice !== "new" && (
                   <div className="mt-2 flex gap-2">
                     <input
