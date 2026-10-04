@@ -16,6 +16,7 @@ import AttendanceSummary from "@/components/AttendanceSummary";
 import AttendancePerLecture from "@/components/AttendancePerLecture";
 import SettingsPage from "@/components/SettingsPage";
 import CourseManager from "@/components/CourseManager";
+import QuestionBankPage from "@/components/QuestionBankPage";
 import CourseStudentsDialog from "@/components/CourseStudentsDialog";
 import BottomNav from "@/components/BottomNav";
 
@@ -30,6 +31,7 @@ import {
   Users,
   ChevronDown,
   Settings,
+  Library,
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -59,7 +61,7 @@ export default function Index() {
     deleteStudent,
     removeDuplicateStudents,
   } = useCourses();
-  const { banks, createBank } = useQuestionBanks();
+  const { banks, bankCounts, createBank } = useQuestionBanks();
 
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [showNewCourse, setShowNewCourse] = useState(false);
@@ -79,6 +81,13 @@ export default function Index() {
   const [mainView, setMainView] = useState<MainView>("courses");
   const [studentsDialogOpen, setStudentsDialogOpen] = useState(false);
   const [coursesManageOpen, setCoursesManageOpen] = useState(false);
+  const [banksManageOpen, setBanksManageOpen] = useState(false);
+  // No course context here — these only matter for the exam-generation
+  // checkboxes inside QuestionBankPage, which aren't meaningful outside a
+  // specific course's "نماذج الاختبارات" flow, so a local throwaway pair
+  // is enough (nothing elsewhere ever reads them).
+  const [standaloneBankSelected, setStandaloneBankSelected] = useState<Set<string>>(new Set());
+  const [standaloneBankPoints, setStandaloneBankPoints] = useState<Record<string, number>>({});
 
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
@@ -209,6 +218,45 @@ export default function Index() {
               )}
             </div>
           </div>
+
+          {/* Banks belong to the account, not any one course (see
+              useQuestionBanks) — this is the only way to browse/add/edit/
+              export a bank without going through a course that happens to
+              be linked to it, or that has none linked at all. */}
+          <div className="mx-auto max-w-3xl px-4 pt-6">
+            <div className="rounded-2xl border border-border bg-card shadow-sm">
+              <button
+                type="button"
+                onClick={() => setBanksManageOpen((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 p-6"
+              >
+                <div className="flex items-center gap-2">
+                  <Library className="text-primary" size={20} />
+                  <h2 className="font-display text-lg font-bold">
+                    {lang === "ar" ? "بنوك الأسئلة" : "Question banks"}
+                  </h2>
+                </div>
+                <ChevronDown
+                  size={18}
+                  className={`text-muted-foreground transition-transform ${banksManageOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {banksManageOpen && (
+                <div className="px-6 pb-6">
+                  <QuestionBankPage
+                    bankId={null}
+                    banks={banks}
+                    bankCounts={bankCounts}
+                    selectedIds={standaloneBankSelected}
+                    setSelectedIds={setStandaloneBankSelected}
+                    examPoints={standaloneBankPoints}
+                    setExamPoints={setStandaloneBankPoints}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
           <SettingsPage courses={courses} onUpdateCourse={updateCourse} />
         </div>
 
@@ -560,7 +608,8 @@ export default function Index() {
           <OmrExamsPage
             course={activeCourse}
             bankId={activeCourse.bankId || null}
-            bankName={banks.find((b) => b.id === activeCourse.bankId)?.name}
+            banks={banks}
+            bankCounts={bankCounts}
             onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
             onApplyScore={async (studentId, targetComponent, score) => {
               const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
