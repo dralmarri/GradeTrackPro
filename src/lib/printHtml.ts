@@ -2,6 +2,7 @@ import { isNativeApp } from "@/lib/platform";
 
 const FRAME_ID = "gtp-print-frame";
 const STYLE_ID = "gtp-print-style";
+const PREVIEW_ID = "gtp-print-preview";
 
 // Prints a self-contained HTML string.
 //
@@ -24,7 +25,7 @@ const STYLE_ID = "gtp-print-style";
 // printing uses. So on native we inject the sheet into the current page as
 // a same-origin iframe, hide the rest of the app via @media print, print
 // the webview, then clean up.
-async function printNative(html: string): Promise<boolean> {
+async function printNative(html: string): Promise<void> {
   const { Printer } = await import("@capgo/capacitor-printer");
 
   document.getElementById(FRAME_ID)?.remove();
@@ -69,10 +70,9 @@ async function printNative(html: string): Promise<boolean> {
   } finally {
     cleanup();
   }
-  return true;
 }
 
-function printWeb(html: string): boolean {
+function printWeb(html: string): void {
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
   iframe.style.right = "0";
@@ -91,7 +91,7 @@ function printWeb(html: string): boolean {
   const doc = iframe.contentWindow?.document;
   if (!doc) {
     iframe.remove();
-    return false;
+    return;
   }
   doc.open();
   doc.write(html);
@@ -109,13 +109,99 @@ function printWeb(html: string): boolean {
   const fonts = (doc as Document & { fonts?: { ready: Promise<unknown> } }).fonts;
   if (fonts?.ready) fonts.ready.then(runPrint, runPrint);
   else setTimeout(runPrint, 500);
-  return true;
+}
+
+async function doPrint(html: string): Promise<void> {
+  if (isNativeApp()) {
+    try {
+      await printNative(html);
+    } catch {
+      printWeb(html);
+    }
+  } else {
+    printWeb(html);
+  }
+}
+
+// Shows the generated sheet full-screen inside the app first, with an
+// explicit "طباعة" button, instead of handing straight off to the OS print
+// sheet — the native print sheet's own preview thumbnail wasn't reliably
+// rendering the content before the professor had to commit to printing, so
+// there was no way to actually check the form was right before paper came
+// out of the printer.
+function showPreview(html: string): void {
+  document.getElementById(PREVIEW_ID)?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = PREVIEW_ID;
+  Object.assign(overlay.style, {
+    position: "fixed", inset: "0", zIndex: "9999",
+    display: "flex", flexDirection: "column",
+    background: "rgba(15, 23, 42, 0.92)",
+  } as CSSStyleDeclaration);
+
+  const toolbar = document.createElement("div");
+  Object.assign(toolbar.style, {
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    padding: "12px 16px", gap: "8px",
+    background: "#0f172a",
+    paddingTop: "max(12px, env(safe-area-inset-top))",
+  } as CSSStyleDeclaration);
+
+  const closeBtn = document.createElement("button");
+  closeBtn.textContent = "✕";
+  Object.assign(closeBtn.style, {
+    width: "36px", height: "36px", borderRadius: "999px",
+    background: "rgba(255,255,255,0.12)", color: "#fff", border: "0",
+    fontSize: "16px", cursor: "pointer",
+  } as CSSStyleDeclaration);
+  closeBtn.onclick = () => overlay.remove();
+
+  const printBtn = document.createElement("button");
+  printBtn.textContent = "🖨️ طباعة";
+  Object.assign(printBtn.style, {
+    padding: "10px 20px", borderRadius: "12px",
+    background: "#2563eb", color: "#fff", border: "0",
+    fontSize: "14px", fontWeight: "700", cursor: "pointer",
+  } as CSSStyleDeclaration);
+  printBtn.onclick = async () => {
+    printBtn.disabled = true;
+    const original = printBtn.textContent;
+    printBtn.textContent = "...";
+    try {
+      await doPrint(html);
+    } finally {
+      printBtn.disabled = false;
+      printBtn.textContent = original;
+    }
+  };
+
+  toolbar.appendChild(closeBtn);
+  toolbar.appendChild(printBtn);
+
+  const frameWrap = document.createElement("div");
+  Object.assign(frameWrap.style, {
+    flex: "1", minHeight: "0", overflow: "auto",
+    display: "flex", justifyContent: "center", padding: "12px",
+  } as CSSStyleDeclaration);
+
+  const iframe = document.createElement("iframe");
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  iframe.src = url;
+  iframe.onload = () => URL.revokeObjectURL(url);
+  Object.assign(iframe.style, {
+    width: "210mm", maxWidth: "100%", minHeight: "297mm",
+    border: "0", borderRadius: "8px", background: "#fff",
+  } as CSSStyleDeclaration);
+
+  frameWrap.appendChild(iframe);
+  overlay.appendChild(toolbar);
+  overlay.appendChild(frameWrap);
+  document.body.appendChild(overlay);
 }
 
 export function printHtml(html: string): boolean {
-  if (isNativeApp()) {
-    printNative(html).catch(() => printWeb(html));
-    return true;
-  }
-  return printWeb(html);
+  showPreview(html);
+  return true;
 }
