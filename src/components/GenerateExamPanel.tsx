@@ -541,8 +541,8 @@ export default function GenerateExamPanel({
                 </span>
                 <span className="block text-muted-foreground">
                   {ar
-                    ? "يقسّم \"الدرجة القصوى\" بالتساوي على أسئلة صح/خطأ واختيار من متعدد المختارة، متجاهلاً درجاتها في البنك (المقالي يبقى إضافياً كما هو)."
-                    : "Splits \"Max score\" evenly across the selected T/F and MCQ questions, ignoring their bank points (essay stays additive as usual)."}
+                    ? "يوزّع \"الدرجة القصوى\" على أسئلة صح/خطأ واختيار من متعدد المختارة بحيث يكون سؤال الاختيار من متعدد بضعف درجة سؤال الصح/خطأ، متجاهلاً درجاتها في البنك (المقالي يبقى إضافياً كما هو)."
+                    : "Splits \"Max score\" across the selected T/F and MCQ questions so each MCQ question is worth double a T/F question, ignoring their bank points (essay stays additive as usual)."}
                 </span>
               </span>
             </label>
