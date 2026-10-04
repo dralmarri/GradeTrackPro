@@ -107,13 +107,25 @@ export function useOmrExams(courseId: string | null) {
     else await fetchExams();
   }, [fetchExams]);
 
-  const updateAnswerKey = useCallback(async (examId: string, answerKey: number[], weights?: number[] | null) => {
+  const updateAnswerKey = useCallback(async (
+    examId: string,
+    answerKey: number[],
+    weights?: number[] | null,
+    questionPaper?: { questions: { text: string; choices: string[]; points: number }[]; choiceOrders: number[][] } | null,
+    essayQuestions?: { text: string; points: number }[] | null,
+  ) => {
     const u: any = { answer_key: answerKey, updated_at: new Date().toISOString() };
     if (weights !== undefined) {
       u.question_weights = weights;
       // keep maxScore consistent with the weight total
       if (weights) u.max_score = Math.round(weights.reduce((a, b) => a + b, 0) * 100) / 100;
     }
+    // When the professor edits question points from the print-preview
+    // screen, keep the saved question paper / essay points in sync too —
+    // otherwise a later reprint from the exam's history would show the
+    // old, now-incorrect point values again.
+    if (questionPaper !== undefined) u.question_paper = questionPaper;
+    if (essayQuestions !== undefined) u.essay_questions = essayQuestions && essayQuestions.length ? essayQuestions : null;
     const { error } = await db.from("omr_exams")
       .update(u)
       .eq("id", examId);

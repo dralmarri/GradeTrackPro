@@ -16,6 +16,7 @@ import { BankQuestion, GeneratedForm, generateForms, seededShuffle } from "@/typ
 import { useQuestionBank } from "@/hooks/useQuestionBank";
 import { printQuestionPaper } from "@/lib/omr/questionPaper";
 import { printAnswerSheet, SheetHeader } from "@/lib/omr/sheet";
+import ExamPointsEditDialog from "@/components/ExamPointsEditDialog";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,11 @@ interface Props {
     source?: "bank" | "manual";
     questionPaper?: { questions: { text: string; choices: string[]; points: number }[]; choiceOrders: number[][] };
   }) => Promise<string>;
-  onSetAnswerKey: (examId: string, key: number[], weights?: number[]) => Promise<void>;
+  onSetAnswerKey: (
+    examId: string, key: number[], weights?: number[],
+    questionPaper?: { questions: { text: string; choices: string[]; points: number }[]; choiceOrders: number[][] } | null,
+    essayQuestions?: { text: string; points: number }[] | null,
+  ) => Promise<void>;
   buildExam: (
     id: string, form: GeneratedForm, title: string, targetComponent: string, maxScore: number,
     idMode: "bubbles" | "written", essayQuestions?: { text: string; points: number }[],
@@ -81,6 +86,43 @@ export default function GenerateExamPanel({
   const [autoDistribute, setAutoDistribute] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{ exam: OmrExam | null; form: GeneratedForm }[]>([]);
+
+  // Editing points one last time right before printing — opened from the
+  // "ورقة الأسئلة"/"ورقة الإجابة" buttons below instead of printing
+  // immediately.
+  const [printEdit, setPrintEdit] = useState<{ key: string; mode: "paper" | "answer"; exam: OmrExam | null; form: GeneratedForm } | null>(null);
+  const [printSaving, setPrintSaving] = useState(false);
+
+  const handlePrintConfirm = async (updatedForm: GeneratedForm) => {
+    if (!printEdit) return;
+    const { mode, exam, key } = printEdit;
+    setPrintSaving(true);
+    try {
+      let updatedExam = exam;
+      if (exam) {
+        const weights = updatedForm.questions.map((q) => q.points ?? 1);
+        const essayQs = updatedForm.essayQuestions.map((q) => ({ text: q.text, points: q.points ?? 1 }));
+        const questionPaper = updatedForm.questions.length ? {
+          questions: updatedForm.questions.map((q, qi) => ({ text: q.text, choices: q.choices, points: weights[qi] ?? 1 })),
+          choiceOrders: updatedForm.choiceOrders,
+        } : undefined;
+        await onSetAnswerKey(exam.id, exam.answerKey, weights.length ? weights : undefined, questionPaper, essayQs.length ? essayQs : null);
+        const newMax = weights.length ? Math.round(weights.reduce((a, b) => a + b, 0) * 100) / 100 : exam.maxScore;
+        updatedExam = { ...exam, maxScore: newMax, questionWeights: weights, questionPaper, essayQuestions: essayQs.length ? essayQs : undefined };
+      }
+      setGenerated((prev) => prev.map((g) => ((g.exam?.id ?? g.form.version) === key ? { exam: updatedExam, form: updatedForm } : g)));
+      const essayTotal = updatedForm.essayQuestions.reduce((a, q) => a + (q.points ?? 1), 0);
+      if (mode === "paper") {
+        const displayMax = updatedExam ? updatedExam.maxScore + essayTotal : undefined;
+        if (!printQuestionPaper(updatedExam?.title ?? genTitle.trim(), updatedForm, sheetHeader(), displayMax)) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print");
+      } else if (updatedExam) {
+        if (!printAnswerSheet(updatedExam, sheetHeader())) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print");
+      }
+    } finally {
+      setPrintSaving(false);
+      setPrintEdit(null);
+    }
+  };
   // set instead of generating immediately when the picked questions'
   // points don't match "الدرجة القصوى" — lets the professor preview and
   // fix each question's points right here before actually generating,
@@ -203,21 +245,13 @@ export default function GenerateExamPanel({
       bubbleIdx.forEach((idx, j) => { picked[idx] = { ...picked[idx], points: dist[j] }; });
     }
 
-    // Bank points are always the real weights now — a question saved as
-    // "1 درجة" is worth exactly 1 point when graded, never silently
-    // redistributed to match "الدرجة القصوى" just because every picked
-    // question happened to share the same value. So "الدرجة القصوى" is
-    // only a target — if the actual total doesn't match, don't generate
-    // yet: show an editable preview instead (pendingGen below) so the
-    // professor can fix the points right there, rather than a plain
-    // yes/no with no way to act on the mismatch. Skipped when "توزيع
-    // تلقائي" is on, since the total is then guaranteed to match already.
-    if (genMode === "full" && genPickMode === "random" && !autoDistribute) {
-      const bubbleTotal = picked.filter((q) => kindOf(q) !== "essay").reduce((a, q) => a + (q.points ?? 1), 0);
-      if (bubbleTotal !== genMax) {
-        setPendingGen({ picked, seedBase });
-        return;
-      }
+    // Always show an editable preview before actually creating the exam —
+    // not only when the total mismatches "الدرجة القصوى". This lets the
+    // professor double-check (and tweak) each question's points one last
+    // time, even when the auto math already hit the target exactly.
+    if (genMode === "full" && genPickMode === "random") {
+      setPendingGen({ picked, seedBase });
+      return;
     }
 
     await finishGenerate(picked, seedBase);
@@ -541,8 +575,8 @@ export default function GenerateExamPanel({
                 </span>
                 <span className="block text-muted-foreground">
                   {ar
-                    ? "يقسّم \"الدرجة القصوى\" بالتساوي على أسئلة صح/خطأ واختيار من متعدد المختارة، متجاهلاً درجاتها في البنك (المقالي يبقى إضافياً كما هو)."
-                    : "Splits \"Max score\" evenly across the selected T/F and MCQ questions, ignoring their bank points (essay stays additive as usual)."}
+                    ? "يوزّع \"الدرجة القصوى\" على أسئلة صح/خطأ واختيار من متعدد المختارة بحيث يكون سؤال الاختيار من متعدد بضعف درجة سؤال الصح/خطأ، متجاهلاً درجاتها في البنك (المقالي يبقى إضافياً كما هو)."
+                    : "Splits \"Max score\" across the selected T/F and MCQ questions so each MCQ question is worth double a T/F question, ignoring their bank points (essay stays additive as usual)."}
                 </span>
               </span>
             </label>
@@ -659,18 +693,14 @@ export default function GenerateExamPanel({
                   </span>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => {
-                        const essayTotal = form.essayQuestions.reduce((a, q) => a + (q.points ?? 1), 0);
-                        const displayMax = exam ? exam.maxScore + essayTotal : undefined;
-                        if (!printQuestionPaper(exam?.title ?? genTitle.trim(), form, sheetHeader(), displayMax)) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print");
-                      }}
+                      onClick={() => setPrintEdit({ key: exam?.id ?? form.version, mode: "paper", exam, form })}
                       className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-muted"
                     >
                       <FileText size={13} />
                       {ar ? "ورقة الأسئلة" : "Questions"}
                     </button>
                     {exam && <button
-                      onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print"); }}
+                      onClick={() => setPrintEdit({ key: exam.id, mode: "answer", exam, form })}
                       className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-muted"
                     >
                       <Printer size={13} />
@@ -682,6 +712,15 @@ export default function GenerateExamPanel({
             </div>
           )}
         </div>
+      )}
+      {printEdit && (
+        <ExamPointsEditDialog
+          form={printEdit.form}
+          ar={ar}
+          busy={printSaving}
+          onCancel={() => setPrintEdit(null)}
+          onConfirm={handlePrintConfirm}
+        />
       )}
     </>
   );
