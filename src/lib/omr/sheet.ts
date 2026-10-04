@@ -5,6 +5,14 @@ import { choiceCountFor, choiceLabelsFor } from "@/types/exam";
 import { PAGE_W, PAGE_H, MARK_SIZE, MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, questionRows, questionNumberX, CODE_BITS, codeMarkPos, examCode } from "@/lib/omr/layout";
 import { printHtml } from "@/lib/printHtml";
 
+// Summing several already-rounded per-question weights in plain floating
+// point can drift by a trailing fraction (25.000000000000007 instead of
+// 25) — round to 2 decimals and let Number()'s string conversion drop any
+// now-clean trailing zeros before this ever reaches a printed sheet.
+export function formatScore(n: number): string {
+  return String(Number(n.toFixed(2)));
+}
+
 export interface SheetHeader {
   institution?: string;
   college?: string;
@@ -75,7 +83,7 @@ function identityAndMeta(exam: OmrExam, header?: SheetHeader): string {
   out.push(`<rect x="30" y="34" width="68" height="38" rx="2" fill="${PALE}" stroke="#e5e7eb" stroke-width="0.4"/>`);
   const cells: [string, string, number, number][] = [
     ["المقرر:", header?.courseName || "—", 94, 41], ["الاختبار:", exam.title, 61, 41],
-    ["عدد الأسئلة:", String(exam.questionCount), 94, 53], ["الدرجة الكلية:", String(exam.maxScore), 61, 53],
+    ["عدد الأسئلة:", String(exam.questionCount), 94, 53], ["الدرجة الكلية:", formatScore(exam.maxScore), 61, 53],
   ];
   for (const [label, value, x, y] of cells) {
     out.push(svgText(x, y, label, 2.1, `fill="${MUTED}" direction="rtl" text-anchor="start"`));

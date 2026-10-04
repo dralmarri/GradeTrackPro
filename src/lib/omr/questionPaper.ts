@@ -6,6 +6,7 @@
 
 import type { GeneratedForm } from "@/types/questionBank";
 import type { SheetHeader } from "@/lib/omr/sheet";
+import { formatScore } from "@/lib/omr/sheet";
 import { choiceLabels } from "@/types/exam";
 import { printHtml } from "@/lib/printHtml";
 
@@ -184,7 +185,7 @@ export function buildQuestionPaperHtml(
     </div>
     <div class="icon-row">
       <span>عدد الأسئلة: ${form.questions.length + form.essayQuestions.length}</span>
-      ${maxScore != null ? `<span>الدرجة الكلية: ${maxScore}</span>` : ""}
+      ${maxScore != null ? `<span>الدرجة الكلية: ${formatScore(maxScore)}</span>` : ""}
     </div>
   </div>
 
