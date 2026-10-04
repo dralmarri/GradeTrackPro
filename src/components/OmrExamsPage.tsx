@@ -13,6 +13,7 @@ import QuestionBankPage from "@/components/QuestionBankPage";
 import GenerateExamPanel from "@/components/GenerateExamPanel";
 import { GeneratedForm, QuestionBank, BankQuestion } from "@/types/questionBank";
 import { printQuestionPaper } from "@/lib/omr/questionPaper";
+import ExamPointsEditDialog from "@/components/ExamPointsEditDialog";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,37 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const { exams, loading, addExam, updateExam, updateAnswerKey, deleteExam } = useOmrExams(course.id);
+
+  // Editing points one last time right before (re)printing an exam from
+  // its history — opened from the "ورقة الأسئلة"/"ورقة الإجابة" buttons
+  // below instead of printing immediately.
+  const [printEdit, setPrintEdit] = useState<{ exam: OmrExam; mode: "paper" | "answer"; form: GeneratedForm } | null>(null);
+  const [printSaving, setPrintSaving] = useState(false);
+
+  const handlePrintConfirm = async (updatedForm: GeneratedForm) => {
+    if (!printEdit) return;
+    const { exam, mode } = printEdit;
+    setPrintSaving(true);
+    try {
+      const weights = updatedForm.questions.map((q) => q.points ?? 1);
+      const essayQs = updatedForm.essayQuestions.map((q) => ({ text: q.text, points: q.points ?? 1 }));
+      const questionPaper = updatedForm.questions.length ? {
+        questions: updatedForm.questions.map((q, qi) => ({ text: q.text, choices: q.choices, points: weights[qi] ?? 1 })),
+        choiceOrders: updatedForm.choiceOrders,
+      } : undefined;
+      await updateAnswerKey(exam.id, exam.answerKey, weights.length ? weights : undefined, questionPaper, essayQs.length ? essayQs : null);
+      const newMax = weights.length ? Math.round(weights.reduce((a, b) => a + b, 0) * 100) / 100 : exam.maxScore;
+      const essayTotal = essayQs.reduce((a, q) => a + (q.points ?? 1), 0);
+      if (mode === "paper") {
+        if (!printQuestionPaper(exam.title, updatedForm, sheetHeader(), newMax + essayTotal)) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print");
+      } else {
+        if (!printAnswerSheet({ ...exam, maxScore: newMax, questionWeights: weights, essayQuestions: essayQs.length ? essayQs : undefined }, sheetHeader())) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print");
+      }
+    } finally {
+      setPrintSaving(false);
+      setPrintEdit(null);
+    }
+  };
 
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
@@ -698,8 +730,7 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
                   <button
                     onClick={() => {
                       const form = formFromExam(exam);
-                      const essayTotal = (exam.essayQuestions || []).reduce((a, q) => a + (q.points || 0), 0);
-                      if (!form || !printQuestionPaper(exam.title, form, sheetHeader(), exam.maxScore + essayTotal)) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print");
+                      if (form) setPrintEdit({ exam, mode: "paper", form });
                     }}
                     title={ar ? "طباعة ورقة الأسئلة" : "Print question paper"}
                     className="flex h-9 w-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted"
@@ -708,7 +739,11 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
                   </button>
                 )}
                 <button
-                  onClick={() => { if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print"); }}
+                  onClick={() => {
+                    const form = formFromExam(exam);
+                    if (form) setPrintEdit({ exam, mode: "answer", form });
+                    else if (!printAnswerSheet(exam, sheetHeader())) toast.error(ar ? "تعذّرت الطباعة" : "Couldn't print");
+                  }}
                   title={ar ? "طباعة ورقة الإجابة" : "Print sheet"}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-border transition-colors hover:bg-muted"
                 >
@@ -1006,6 +1041,16 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
           onLearnNumber={onLearnNumber}
           allExams={exams}
           onSwitchExam={(e) => setScanExam(e)}
+        />
+      )}
+
+      {printEdit && (
+        <ExamPointsEditDialog
+          form={printEdit.form}
+          ar={ar}
+          busy={printSaving}
+          onCancel={() => setPrintEdit(null)}
+          onConfirm={handlePrintConfirm}
         />
       )}
     </div>
