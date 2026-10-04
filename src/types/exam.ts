@@ -55,6 +55,13 @@ export interface OmrExam {
   // with a blank writing area and are scored manually after scanning (see
   // OmrScanDialog). Their points are on top of maxScore, not part of it.
   essayQuestions?: { text: string; points: number }[];
+  // Snapshot of the bubble-graded questions' own content (text, choices in
+  // their ORIGINAL bank order, and points) plus the per-question shuffle
+  // applied when this form was generated — lets the question paper
+  // ("ورقة الأسئلة") be reprinted later from the exam's history, instead of
+  // only existing in memory for the moment right after generation. Absent
+  // on rows saved before this existed, and on manual (non-bank) exams.
+  questionPaper?: { questions: { text: string; choices: string[]; points: number }[]; choiceOrders: number[][] };
   // "bank" = generated from the question bank (GenerateExamPanel, full
   // exam with questions + auto answer key). "manual" = the answer-sheet-
   // only flow, for a paper exam the professor already has outside the
