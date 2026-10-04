@@ -22,16 +22,27 @@ function rowToBank(row: any): QuestionBank {
 export function useQuestionBanks() {
   const { user } = useAuth();
   const [banks, setBanks] = useState<QuestionBank[]>([]);
+  const [bankCounts, setBankCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   const fetchBanks = useCallback(async () => {
-    if (!user) { setBanks([]); setLoading(false); return; }
+    if (!user) { setBanks([]); setBankCounts({}); setLoading(false); return; }
     const { data, error } = await db
       .from("question_banks").select("*")
       .order("name", { ascending: true });
     if (error) { console.error("Error fetching question banks:", error); setLoading(false); return; }
     setBanks((data || []).map(rowToBank));
     setLoading(false);
+
+    // Lightweight count per bank (id + bank_id only, not the full question
+    // rows) — lets a bank switcher show "N questions" for every bank
+    // without each one paying for a full useQuestionBank() fetch.
+    const { data: qRows, error: qErr } = await db
+      .from("omr_questions").select("bank_id").not("bank_id", "is", null);
+    if (qErr) { console.error("Error fetching bank question counts:", qErr); return; }
+    const counts: Record<string, number> = {};
+    for (const r of qRows || []) counts[r.bank_id] = (counts[r.bank_id] || 0) + 1;
+    setBankCounts(counts);
   }, [user]);
 
   useEffect(() => { fetchBanks(); }, [fetchBanks]);
@@ -73,5 +84,5 @@ export function useQuestionBanks() {
     return true;
   }, [fetchBanks]);
 
-  return { banks, loading, createBank, renameBank, deleteBank, refetch: fetchBanks };
+  return { banks, bankCounts, loading, createBank, renameBank, deleteBank, refetch: fetchBanks };
 }

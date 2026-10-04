@@ -59,7 +59,7 @@ export default function Index() {
     deleteStudent,
     removeDuplicateStudents,
   } = useCourses();
-  const { banks, createBank } = useQuestionBanks();
+  const { banks, bankCounts, createBank } = useQuestionBanks();
 
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [showNewCourse, setShowNewCourse] = useState(false);
@@ -560,7 +560,8 @@ export default function Index() {
           <OmrExamsPage
             course={activeCourse}
             bankId={activeCourse.bankId || null}
-            bankName={banks.find((b) => b.id === activeCourse.bankId)?.name}
+            banks={banks}
+            bankCounts={bankCounts}
             onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
             onApplyScore={async (studentId, targetComponent, score) => {
               const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];

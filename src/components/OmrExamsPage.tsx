@@ -11,7 +11,7 @@ import OmrScansDialog from "@/components/OmrScansDialog";
 import OmrStatsDialog from "@/components/OmrStatsDialog";
 import QuestionBankPage from "@/components/QuestionBankPage";
 import GenerateExamPanel from "@/components/GenerateExamPanel";
-import { GeneratedForm } from "@/types/questionBank";
+import { GeneratedForm, QuestionBank } from "@/types/questionBank";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -25,12 +25,13 @@ import {
 interface Props {
   course: Course;
   bankId: string | null;
-  bankName?: string;
+  banks: QuestionBank[];
+  bankCounts: Record<string, number>;
   onApplyScore: (studentId: string, targetComponent: string, score: number) => Promise<void>;
   onLearnNumber: (studentId: string, studentNumber: string) => Promise<void>;
 }
 
-export default function OmrExamsPage({ course, bankId, bankName, onApplyScore, onLearnNumber }: Props) {
+export default function OmrExamsPage({ course, bankId, banks, bankCounts, onApplyScore, onLearnNumber }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const { exams, loading, addExam, updateExam, updateAnswerKey, deleteExam } = useOmrExams(course.id);
@@ -333,7 +334,8 @@ export default function OmrExamsPage({ course, bankId, bankName, onApplyScore, o
         <QuestionBankPage
           course={course}
           bankId={bankId}
-          bankName={bankName}
+          banks={banks}
+          bankCounts={bankCounts}
           selectedIds={examSelected}
           setSelectedIds={setExamSelected}
           examPoints={examPoints}
