@@ -27,6 +27,7 @@ import {
   PlusCircle,
   RefreshCw,
   Copy,
+  Library,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -76,6 +77,11 @@ export default function CourseManager({
   const [bankRenameValue, setBankRenameValue] = useState("");
   const [creatingBank, setCreatingBank] = useState(false);
   const [newBankName, setNewBankName] = useState("");
+  // Quick bank link/create right on the course card itself — separate from
+  // the fuller edit-course form's own bank picker, so linking/switching a
+  // course's bank doesn't require opening "تعديل البيانات" first.
+  const [quickBankCreateFor, setQuickBankCreateFor] = useState<string | null>(null);
+  const [quickBankName, setQuickBankName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [pendingImport, setPendingImport] = useState<{ courseId: string; names: ImportedStudent[] } | null>(null);
@@ -745,6 +751,69 @@ export default function CourseManager({
                           </button>
                         )}
                       </div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
+                        <Library size={13} />
+                        {lang === "ar" ? "بنك الأسئلة" : "Question bank"}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={course.bankId || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            onUpdateCourse(course.id, { bankId: val || null });
+                            toast.success(
+                              val
+                                ? (lang === "ar" ? "تم ربط البنك بهذا المقرر" : "Bank linked to this course")
+                                : (lang === "ar" ? "تم إلغاء ربط البنك" : "Bank unlinked"),
+                            );
+                          }}
+                          className="min-w-0 flex-1 rounded-xl border border-input bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="">{lang === "ar" ? "بدون بنك أسئلة" : "No question bank"}</option>
+                          {banks.map((b) => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => { setQuickBankName(""); setQuickBankCreateFor((v) => (v === course.id ? null : course.id)); }}
+                          title={lang === "ar" ? "بنك جديد" : "New bank"}
+                          className="flex shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-primary transition-colors hover:bg-primary/10"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                      {quickBankCreateFor === course.id && (
+                        <div className="mt-2 flex gap-2">
+                          <input
+                            value={quickBankName}
+                            onChange={(e) => setQuickBankName(e.target.value)}
+                            placeholder={lang === "ar" ? "اسم البنك الجديد" : "New bank name"}
+                            autoFocus
+                            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const name = quickBankName.trim();
+                              if (!name) return;
+                              const id = await createBank(name);
+                              if (id) {
+                                onUpdateCourse(course.id, { bankId: id });
+                                setQuickBankCreateFor(null);
+                                toast.success(lang === "ar" ? "تم إنشاء البنك وربطه بالمقرر" : "Bank created and linked");
+                              } else {
+                                toast.error(lang === "ar" ? "تعذّر إنشاء البنك" : "Could not create the bank");
+                              }
+                            }}
+                            className="shrink-0 rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+                          >
+                            <Check size={16} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <p className="mb-1.5 flex items-center gap-1.5 px-0.5 text-xs font-bold text-muted-foreground">
