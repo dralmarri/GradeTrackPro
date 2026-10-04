@@ -1,9 +1,8 @@
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
-import { Course } from "@/types/student";
 import { ChoiceCount, choiceLabels } from "@/types/exam";
 import {
   Difficulty, DIFFICULTY_LABELS, parseQuestionRows, parseQuestionsText,
-  PasteType, ParsedQuestion, parseNumRanges,
+  PasteType, ParsedQuestion, parseNumRanges, QuestionBank,
 } from "@/types/questionBank";
 import * as XLSX from "xlsx";
 import { useQuestionBank } from "@/hooks/useQuestionBank";
@@ -25,9 +24,16 @@ import { exportQuestionBankToWord } from "@/lib/exportQuestionBankWord";
 // "نماذج الاختبارات"), which reads this same selection instead of showing
 // its own duplicate question list.
 interface Props {
-  course: Course;
   bankId: string | null;
-  bankName?: string;
+  // Every bank on the account — lets the page offer a switcher when there's
+  // more than one, so a bank doesn't have to be linked to THIS course to be
+  // browsed, added to, edited, or exported from here. Purely a viewing
+  // choice: it never changes which bank the course itself is linked to
+  // (that's course settings' job), so exam generation elsewhere always
+  // keeps reading the course's actual bankId regardless of what's shown
+  // here.
+  banks: QuestionBank[];
+  bankCounts: Record<string, number>;
   selectedIds: Set<string>;
   setSelectedIds: Dispatch<SetStateAction<Set<string>>>;
   examPoints: Record<string, number>;
@@ -35,11 +41,16 @@ interface Props {
 }
 
 export default function QuestionBankPage({
-  bankId, bankName, selectedIds, setSelectedIds, examPoints, setExamPoints,
+  bankId, banks, bankCounts, selectedIds, setSelectedIds, examPoints, setExamPoints,
 }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { questions, loading, addQuestion, addQuestions, updateQuestion, deleteQuestion, deleteQuestions } = useQuestionBank(bankId);
+  // Defaults to the course's own bank, but can be switched to browse any
+  // other bank on the account — see the Props comment on `banks`.
+  const [viewingBankId, setViewingBankId] = useState<string | null>(bankId);
+  useEffect(() => { setViewingBankId(bankId); }, [bankId]);
+  const bankName = banks.find((b) => b.id === viewingBankId)?.name;
+  const { questions, loading, addQuestion, addQuestions, updateQuestion, deleteQuestion, deleteQuestions } = useQuestionBank(viewingBankId);
   const [showBank, setShowBank] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -337,24 +348,72 @@ export default function QuestionBankPage({
     );
   }
 
-  if (!bankId) {
+  const switchBank = (id: string) => {
+    if (id === viewingBankId) return;
+    setViewingBankId(id);
+    // The checkboxes below are read by GenerateExamPanel to build an exam
+    // for THIS course, from the course's own bank — a selection made while
+    // looking at a different bank doesn't mean anything there, so carrying
+    // it over would silently select the wrong questions once the professor
+    // switches back.
+    setSelectedIds(new Set());
+    setExamPoints({});
+  };
+
+  const bankSwitcher = banks.length > 1 && (
+    <div className="flex flex-wrap gap-2">
+      {banks.map((b) => (
+        <button
+          key={b.id}
+          type="button"
+          onClick={() => switchBank(b.id)}
+          className={cn(
+            "flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-start transition-colors",
+            b.id === viewingBankId
+              ? "border-primary bg-primary/10"
+              : "border-border bg-card hover:bg-muted",
+          )}
+        >
+          <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl", b.id === viewingBankId ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
+            <Library size={14} />
+          </span>
+          <span className="min-w-0">
+            <span className={cn("block truncate text-xs font-bold", b.id === viewingBankId ? "text-primary" : "text-foreground")}>
+              {b.name}
+              {b.id === bankId && (ar ? " (بنك هذا المقرر)" : " (this course's bank)")}
+            </span>
+            <span className="block text-[10px] text-muted-foreground">
+              {bankCounts[b.id] || 0} {ar ? "سؤالاً" : "questions"}
+            </span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+
+  if (!viewingBankId) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-[28px] border border-dashed border-border bg-card p-8 text-center">
-        <Library size={28} className="mb-1 text-muted-foreground opacity-50" />
-        <p className="font-display text-base font-bold text-foreground">
-          {ar ? "لا يوجد بنك أسئلة مرتبط بهذا المقرر" : "No question bank linked to this course"}
-        </p>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          {ar
-            ? "اربط هذا المقرر ببنك أسئلة جديد أو موجود من صفحة إدارة المقرر في الإعدادات، ليصبح متاحاً هنا."
-            : "Link this course to a new or existing bank from the course settings page to use it here."}
-        </p>
+      <div className="space-y-4">
+        {bankSwitcher}
+        <div className="flex flex-col items-center gap-2 rounded-[28px] border border-dashed border-border bg-card p-8 text-center">
+          <Library size={28} className="mb-1 text-muted-foreground opacity-50" />
+          <p className="font-display text-base font-bold text-foreground">
+            {ar ? "لا يوجد بنك أسئلة مرتبط بهذا المقرر" : "No question bank linked to this course"}
+          </p>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            {banks.length > 0
+              ? (ar ? "اختر بنكاً من الأعلى لتصفحه، أو اربط هذا المقرر ببنك من صفحة إدارة المقرر في الإعدادات." : "Pick a bank above to browse it, or link this course to one from the course settings page.")
+              : (ar ? "اربط هذا المقرر ببنك أسئلة جديد أو موجود من صفحة إدارة المقرر في الإعدادات، ليصبح متاحاً هنا." : "Link this course to a new or existing bank from the course settings page to use it here.")}
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {bankSwitcher}
+
       {/* header */}
       <div className="flex items-center gap-3 rounded-[28px] border border-border bg-card p-4 shadow-sm sm:p-5">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
