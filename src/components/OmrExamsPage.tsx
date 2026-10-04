@@ -332,7 +332,6 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onAppl
       </button>
       {bankOpen && (
         <QuestionBankPage
-          course={course}
           bankId={bankId}
           banks={banks}
           bankCounts={bankCounts}

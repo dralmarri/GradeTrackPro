@@ -1,5 +1,4 @@
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
-import { Course } from "@/types/student";
 import { ChoiceCount, choiceLabels } from "@/types/exam";
 import {
   Difficulty, DIFFICULTY_LABELS, parseQuestionRows, parseQuestionsText,
@@ -25,7 +24,6 @@ import { exportQuestionBankToWord } from "@/lib/exportQuestionBankWord";
 // "نماذج الاختبارات"), which reads this same selection instead of showing
 // its own duplicate question list.
 interface Props {
-  course: Course;
   bankId: string | null;
   // Every bank on the account — lets the page offer a switcher when there's
   // more than one, so a bank doesn't have to be linked to THIS course to be
