@@ -22,6 +22,7 @@ function rowToExam(row: any): OmrExam {
     idMode: row.id_mode === "written" ? "written" : "bubbles",
     questionWeights: Array.isArray(row.question_weights) && row.question_weights.length ? (row.question_weights as number[]) : undefined,
     essayQuestions: Array.isArray(row.essay_questions) && row.essay_questions.length ? (row.essay_questions as { text: string; points: number }[]) : undefined,
+    questionPaper: row.question_paper || undefined,
     source: row.source === "bank" || row.source === "manual" ? row.source : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -58,6 +59,7 @@ export function useOmrExams(courseId: string | null) {
     idMode?: "bubbles" | "written";
     essayQuestions?: { text: string; points: number }[];
     source?: "bank" | "manual";
+    questionPaper?: { questions: { text: string; choices: string[]; points: number }[]; choiceOrders: number[][] };
   }): Promise<string> => {
     if (!user || !courseId) return "";
     const row: any = {
@@ -75,14 +77,16 @@ export function useOmrExams(courseId: string | null) {
       id_mode: input.idMode || "written",
       essay_questions: input.essayQuestions && input.essayQuestions.length ? input.essayQuestions : null,
       source: input.source || null,
+      question_paper: input.questionPaper || null,
     };
     let { data, error } = await db.from("omr_exams").insert(row).select().single();
-    // schema catch-up: an older database may not have the essay_questions
-    // and/or source columns yet — drop whichever the error names and
-    // retry, instead of failing to create the exam.
-    for (let i = 0; i < 2 && error && /(essay_questions|source)/.test(error.message || ""); i++) {
+    // schema catch-up: an older database may not have the essay_questions,
+    // source, and/or question_paper columns yet — drop whichever the error
+    // names and retry, instead of failing to create the exam.
+    for (let i = 0; i < 3 && error && /(essay_questions|source|question_paper)/.test(error.message || ""); i++) {
       if (/essay_questions/.test(error.message || "")) delete row.essay_questions;
       if (/source/.test(error.message || "")) delete row.source;
+      if (/question_paper/.test(error.message || "")) delete row.question_paper;
       ({ data, error } = await db.from("omr_exams").insert(row).select().single());
     }
     if (error || !data) { console.error("Error adding omr exam:", error); return ""; }
