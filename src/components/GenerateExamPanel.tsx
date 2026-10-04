@@ -102,6 +102,24 @@ export default function GenerateExamPanel({
     return arr;
   };
 
+  // Same as distributeEvenly, but weights MCQ questions at double a T/F
+  // question's points (the natural per-question value, since a 4-choice
+  // question is worth more than a 2-choice one) instead of splitting the
+  // target total flatly per question — while still hitting `total` exactly.
+  // `kinds[i]` is "mcq" | "tf" for each item at index i (essays excluded
+  // beforehand by the caller).
+  const distributeByType = (kinds: ("mcq" | "tf")[], total: number): number[] => {
+    const count = kinds.length;
+    if (count <= 0) return [];
+    const units = kinds.map((k) => (k === "mcq" ? 2 : 1));
+    const unitSum = units.reduce((a, b) => a + b, 0);
+    const perUnit = total / unitSum;
+    const arr = units.map((u) => Math.round(u * perUnit * 100) / 100);
+    const drift = Math.round((total - arr.reduce((a, b) => a + b, 0)) * 100) / 100;
+    arr[arr.length - 1] = Math.round((arr[arr.length - 1] + drift) * 100) / 100;
+    return arr;
+  };
+
   const genPool = useMemo(
     () => questions.filter((q) =>
       (genChapters.size === 0 || genChapters.has(q.chapter || "")) &&
@@ -178,7 +196,10 @@ export default function GenerateExamPanel({
     // total always matches what was typed, so no mismatch is possible.
     if (genMode === "full" && genPickMode === "random" && autoDistribute) {
       const bubbleIdx = picked.map((_, i) => i).filter((i) => kindOf(picked[i]) !== "essay");
-      const dist = distributeEvenly(bubbleIdx.length, genMax);
+      const bubbleKinds = bubbleIdx.map((i) => kindOf(picked[i]) as "mcq" | "tf");
+      const dist = bubbleKinds.some((k) => k === "mcq") && bubbleKinds.some((k) => k === "tf")
+        ? distributeByType(bubbleKinds, genMax)
+        : distributeEvenly(bubbleIdx.length, genMax);
       bubbleIdx.forEach((idx, j) => { picked[idx] = { ...picked[idx], points: dist[j] }; });
     }
 
