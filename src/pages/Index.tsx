@@ -61,7 +61,7 @@ export default function Index() {
     deleteStudent,
     removeDuplicateStudents,
   } = useCourses();
-  const { banks, bankCounts, createBank } = useQuestionBanks();
+  const { banks, bankCounts, createBank, deleteBank } = useQuestionBanks();
 
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [showNewCourse, setShowNewCourse] = useState(false);
@@ -69,7 +69,12 @@ export default function Index() {
   const [newSection, setNewSection] = useState("");
   // "new" = create a bank named after the course, "" = no bank, otherwise
   // an existing bank's id — lets a new semester's course reuse a past bank.
-  const [newCourseBankChoice, setNewCourseBankChoice] = useState<string>("new");
+  // Defaults to "no bank" — linking a course to a (new or existing) bank is
+  // an explicit choice the user makes, never a silent side effect of just
+  // creating a course. Defaulting this to "new" previously meant every
+  // course created without the professor noticing/changing this dropdown
+  // silently created its own freshly-named, empty bank.
+  const [newCourseBankChoice, setNewCourseBankChoice] = useState<string>("");
   const [semesterStart, setSemesterStart] = useState<Date | undefined>();
   const [semesterEnd, setSemesterEnd] = useState<Date | undefined>();
   const [startOpen, setStartOpen] = useState(false);
@@ -146,7 +151,7 @@ export default function Index() {
     setSelectedDays([]);
     setLectureTime("");
     setPendingStudents([]);
-    setNewCourseBankChoice("new");
+    setNewCourseBankChoice("");
   };
 
   if (loading) {
@@ -247,6 +252,8 @@ export default function Index() {
                     bankId={null}
                     banks={banks}
                     bankCounts={bankCounts}
+                    onCreateBank={createBank}
+                    onDeleteBank={deleteBank}
                     selectedIds={standaloneBankSelected}
                     setSelectedIds={setStandaloneBankSelected}
                     examPoints={standaloneBankPoints}
@@ -343,15 +350,15 @@ export default function Index() {
                         onChange={(e) => setNewCourseBankChoice(e.target.value)}
                         className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                       >
+                        <option value="">
+                          {lang === "ar" ? "بدون بنك أسئلة" : "No question bank"}
+                        </option>
                         <option value="new">
                           {lang === "ar" ? "بنك جديد باسم المقرر" : "New bank named after the course"}
                         </option>
                         {banks.map((b) => (
                           <option key={b.id} value={b.id}>{b.name}</option>
                         ))}
-                        <option value="">
-                          {lang === "ar" ? "بدون بنك أسئلة" : "No question bank"}
-                        </option>
                       </select>
                       {newCourseBankChoice && newCourseBankChoice !== "new" && (
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -610,6 +617,8 @@ export default function Index() {
             bankId={activeCourse.bankId || null}
             banks={banks}
             bankCounts={bankCounts}
+            onCreateBank={createBank}
+            onDeleteBank={deleteBank}
             onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
             onApplyScore={async (studentId, targetComponent, score) => {
               const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
