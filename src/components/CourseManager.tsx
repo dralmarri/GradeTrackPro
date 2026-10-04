@@ -70,7 +70,8 @@ export default function CourseManager({
 }: CourseManagerProps) {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
-  const { banks, createBank, renameBank } = useQuestionBanks();
+  const { banks, createBank, renameBank, deleteBank } = useQuestionBanks();
+  const [pendingDeleteBank, setPendingDeleteBank] = useState<{ id: string; name: string } | null>(null);
   const [renamingBank, setRenamingBank] = useState(false);
   const [bankRenameValue, setBankRenameValue] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -317,6 +318,19 @@ export default function CourseManager({
                       className="flex shrink-0 items-center justify-center rounded-lg border border-input bg-background px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       <Edit3 size={14} />
+                    </button>
+                  )}
+                  {editBankChoice && editBankChoice !== "new" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = banks.find((b) => b.id === editBankChoice);
+                        if (current) setPendingDeleteBank({ id: current.id, name: current.name });
+                      }}
+                      title={lang === "ar" ? "حذف البنك" : "Delete bank"}
+                      className="flex shrink-0 items-center justify-center rounded-lg border border-destructive/30 bg-background px-3 text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      <Trash2 size={14} />
                     </button>
                   )}
                 </div>
@@ -735,6 +749,34 @@ export default function CourseManager({
             onDeleteCourse(pendingDelete.id);
             toast.success(t("courseDeletedToast"));
             setPendingDelete(null);
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeleteBank}
+        onOpenChange={(o) => { if (!o) setPendingDeleteBank(null); }}
+        title={lang === "ar" ? "حذف بنك الأسئلة" : "Delete question bank"}
+        description={
+          pendingDeleteBank
+            ? (lang === "ar"
+              ? `هل أنت متأكد من حذف بنك «${pendingDeleteBank.name}»؟ سيُحذف نهائياً مع كل أسئلته، ولن يتأثر أي مقرر آخر مرتبط به سوى فقدان الربط بهذا البنك.`
+              : `Delete the bank "${pendingDeleteBank.name}"? This permanently removes it and all its questions. Any other course linked to it just loses the link.`)
+            : ""
+        }
+        confirmLabel={lang === "ar" ? "حذف" : "Delete"}
+        cancelLabel={lang === "ar" ? "إلغاء" : "Cancel"}
+        destructive
+        onConfirm={async () => {
+          if (!pendingDeleteBank) return;
+          const id = pendingDeleteBank.id;
+          const ok = await deleteBank(id);
+          setPendingDeleteBank(null);
+          if (ok) {
+            if (editBankChoice === id) setEditBankChoice("");
+            toast.success(lang === "ar" ? "تم حذف بنك الأسئلة" : "Question bank deleted");
+          } else {
+            toast.error(lang === "ar" ? "تعذّر حذف بنك الأسئلة" : "Could not delete the question bank");
           }
         }}
       />
