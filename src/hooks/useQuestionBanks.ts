@@ -57,5 +57,21 @@ export function useQuestionBanks() {
     else await fetchBanks();
   }, [fetchBanks]);
 
-  return { banks, loading, createBank, renameBank, refetch: fetchBanks };
+  // Deletes the bank's own questions first — question_banks.id is only
+  // ON DELETE SET NULL from omr_questions.bank_id (so a bank can be removed
+  // without silently cascading into deleting a course's exam questions in
+  // the general case), which would otherwise leave its questions orphaned
+  // (unreachable through any bank, but still sitting in the table) instead
+  // of actually gone. Any course.bank_id pointing here is auto-cleared by
+  // its own ON DELETE SET NULL once the bank row itself is removed.
+  const deleteBank = useCallback(async (bankId: string) => {
+    const { error: qErr } = await db.from("omr_questions").delete().eq("bank_id", bankId);
+    if (qErr) { console.error("Error deleting bank's questions:", qErr); return false; }
+    const { error } = await db.from("question_banks").delete().eq("id", bankId);
+    if (error) { console.error("Error deleting question bank:", error); return false; }
+    await fetchBanks();
+    return true;
+  }, [fetchBanks]);
+
+  return { banks, loading, createBank, renameBank, deleteBank, refetch: fetchBanks };
 }

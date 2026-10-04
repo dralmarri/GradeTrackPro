@@ -12,8 +12,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
 import {
-  Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste, Pencil, X, Check,
+  Plus, Trash2, Loader2, Library, ChevronDown, Upload, Download, ClipboardPaste, Pencil, X, Check, FileDown,
 } from "lucide-react";
+import { exportQuestionBankToWord } from "@/lib/exportQuestionBankWord";
 
 // This is the single place questions are browsed AND selected for exam
 // generation — the same checkboxes used to pick questions to delete also
@@ -53,6 +54,22 @@ export default function QuestionBankPage({
   // الفصل/الموضوع يُختاران هنا ويُطبَّقان على كل الأسئلة المستوردة (لصقاً أو Excel)
   const [importChapter, setImportChapter] = useState("");
   const [importTopic, setImportTopic] = useState("");
+  const [exportingWord, setExportingWord] = useState(false);
+
+  const handleExportWord = async () => {
+    if (questions.length === 0) {
+      toast.error(ar ? "لا توجد أسئلة لتصديرها" : "No questions to export");
+      return;
+    }
+    setExportingWord(true);
+    try {
+      await exportQuestionBankToWord(bankName || "", questions, ar);
+    } catch {
+      toast.error(ar ? "تعذّر تصدير ملف Word" : "Could not export the Word file");
+    } finally {
+      setExportingWord(false);
+    }
+  };
 
   const applyImportMeta = <T extends { chapter?: string; topic?: string }>(qs: T[]): T[] =>
     qs.map((q) => ({
@@ -358,6 +375,15 @@ export default function QuestionBankPage({
             )}
           </div>
         </div>
+        <button
+          onClick={handleExportWord}
+          disabled={exportingWord || questions.length === 0}
+          title={ar ? "تصدير البنك كملف Word" : "Export bank as a Word file"}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {exportingWord ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+          {ar ? "تصدير Word" : "Export Word"}
+        </button>
       </div>
 
       {/* actions — adding questions to the bank. Generating an exam FROM the
