@@ -229,7 +229,11 @@ export default function GenerateExamPanel({
         // Always the actual sum of each question's own points — never
         // silently redistributed to match "الدرجة القصوى" (see the
         // confirmation above, which already caught any mismatch).
-        const maxScore = weights.length ? weights.reduce((a, b) => a + b, 0) : genMax;
+        // Rounded to 2 decimals — summing several already-rounded weights
+        // (e.g. from distributeEvenly) in plain floating point can drift
+        // by a trailing fraction like 25.000000000000007, which then
+        // prints literally on the sheet instead of a clean "25".
+        const maxScore = weights.length ? Math.round(weights.reduce((a, b) => a + b, 0) * 100) / 100 : genMax;
         const essayQuestions = form.essayQuestions.map((q) => ({ text: q.text, points: q.points ?? 1 }));
         const id = await onCreateExam({
           title: genTitle.trim(),
