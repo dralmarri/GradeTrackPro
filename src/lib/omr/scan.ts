@@ -118,7 +118,9 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   const isCrossedOut = (mmX: number, mmY: number): boolean => {
     const sampleOuterArm = (dx: number, dy: number): boolean => {
       let darkCount = 0, total = 0;
-      for (let t = 1.05; t <= 1.7; t += 0.15) {
+      // starts at 1.25R so a scribble that slightly overflows the circle
+      // edge isn't mistaken for a strike-through
+      for (let t = 1.25; t <= 1.85; t += 0.15) {
         const [px, py] = applyH(H, mmX + dx * BUBBLE_R * t, mmY + dy * BUBBLE_R * t);
         const ix = Math.round(px), iy = Math.round(py);
         if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
@@ -141,7 +143,7 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     const ratios: number[] = [];
     for (let d = 0; d <= 9; d++) {
       const p = idBubble(exam, col, d);
-      ratios.push(isCrossedOut(p.x, p.y) ? 0 : fillAt(p.x, p.y));
+      ratios.push(isCrossedOut(p.x, p.y) ? -1 : fillAt(p.x, p.y));
     }
     const digit = pickOne(ratios);
     studentNumber += digit >= 0 ? String(digit) : "؟";
@@ -159,9 +161,9 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
       const p = questionBubble(exam, q, c);
       pts.push(p);
       // A choice the student crossed out is excluded from candidates
-      // entirely (ratio forced to 0) — an X through a bubble means "not
+      // entirely (marked -1, see pickOne) — an X through a bubble means "not
       // this one", not "ambiguous between this and another".
-      ratios.push(isCrossedOut(p.x, p.y) ? 0 : fillAt(p.x, p.y));
+      ratios.push(isCrossedOut(p.x, p.y) ? -1 : fillAt(p.x, p.y));
     }
     const picked = pickOne(ratios);
     answers.push(picked);
@@ -318,22 +320,26 @@ function sampleSquare(
 
 // pick the single filled bubble: index, or -1 blank, -2 ambiguous
 function pickOne(ratios: number[]): number {
-  // Students rarely shade a bubble solid — a light pencil fill, an X, or a
-  // quick scribble often covers well under half the circle's area, yet
-  // was still being flagged as "blank" and sent to manual review. Lowered
-  // from 0.45/0.18 so a clearly-intended mark (even a sparse one) is read
-  // automatically, while a near-empty circle (stray dot, eraser smudge)
-  // still falls below FILL_MIN and a real double-mark still trips MARGIN.
-  const FILL_MIN = 0.15;
-  const MARGIN = 0.10;
+  // Every empty bubble already reads partly "dark" from its own printed
+  // letter (أ/ب/ج…), so an absolute threshold low enough to catch a sparse
+  // student scribble also catches empty bubbles. Measure each bubble
+  // against the emptiest one in the same row instead: the printed-letter
+  // ink cancels out and only the student's added ink counts.
+  const MARK_MIN = 0.12;   // added ink needed to count as a mark at all
+  const SECOND_REL = 0.5;  // a 2nd bubble counts as marked only if ≥ half as inked as the 1st
+  // negative = crossed-out by the student: excluded, and kept out of the
+  // baseline so it can't drag it to 0 and make empty bubbles look marked
+  const kept = ratios.filter((v) => v >= 0);
+  if (!kept.length) return -1;
+  const base = kept.length > 1 ? Math.min(...kept) : 0;
+  const adj = ratios.map((v) => (v < 0 ? 0 : v - base));
   let best = -1, bestV = 0, second = 0;
-  ratios.forEach((v, i) => {
+  adj.forEach((v, i) => {
     if (v > bestV) { second = bestV; bestV = v; best = i; }
     else if (v > second) second = v;
   });
-  if (bestV < FILL_MIN) return -1;
-  if (second >= FILL_MIN) return -2;      // double-marked / crossed-out → professor decides
-  if (bestV - second < MARGIN) return -2; // too close to call
+  if (bestV < MARK_MIN) return -1;
+  if (second >= MARK_MIN && second >= bestV * SECOND_REL) return -2; // genuinely double-marked
   return best;
 }
 
