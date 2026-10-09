@@ -116,24 +116,28 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   // bubble: a continuous stroke reaching past the circle on both sides of
   // a diagonal means it was crossed out, not just shaded.
   const isCrossedOut = (mmX: number, mmY: number): boolean => {
-    const sampleOuterArm = (dx: number, dy: number): boolean => {
-      let darkCount = 0, total = 0;
-      // starts at 1.25R so a scribble that slightly overflows the circle
-      // edge isn't mistaken for a strike-through
-      for (let t = 1.25; t <= 1.85; t += 0.15) {
-        const [px, py] = applyH(H, mmX + dx * BUBBLE_R * t, mmY + dy * BUBBLE_R * t);
-        const ix = Math.round(px), iy = Math.round(py);
-        if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
-        total++;
-        if (dark[iy * w + ix]) darkCount++;
+    // An arm has ink if any sample in a narrow wedge (±14°, swept in 2° steps so a thin stroke can't slip between samples) around the
+    // diagonal, just outside the circle, is dark — a hand-drawn X is
+    // thin, short and never exactly at 45°, so a single-pixel ray misses
+    // it. Radius 1.2R–1.5R stays clear of the circle's own outline and of
+    // the neighbouring rows' bubbles (row pitch 7.8mm).
+    const armHasInk = (deg: number): boolean => {
+      let hits = 0;
+      for (let da = -14; da <= 14; da += 2) {
+        const a = ((deg + da) * Math.PI) / 180;
+        for (let t = 1.2; t <= 1.5; t += 0.075) {
+          const [px, py] = applyH(H, mmX + Math.cos(a) * BUBBLE_R * t, mmY + Math.sin(a) * BUBBLE_R * t);
+          const ix = Math.round(px), iy = Math.round(py);
+          if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+          if (dark[iy * w + ix]) hits++;
+        }
       }
-      return total > 0 && darkCount / total > 0.4;
+      return hits >= 2;
     };
-    const diagonals: [[number, number], [number, number]][] = [
-      [[-0.71, -0.71], [0.71, 0.71]],
-      [[-0.71, 0.71], [0.71, -0.71]],
-    ];
-    return diagonals.some(([a, b]) => sampleOuterArm(a[0], a[1]) && sampleOuterArm(b[0], b[1]));
+    const arms = [45, 135, 225, 315].map(armHasInk);
+    const inkedArms = arms.filter(Boolean).length;
+    // both ends of one diagonal (a single strike) or 3+ arms (an X)
+    return inkedArms >= 3 || (arms[0] && arms[2]) || (arms[1] && arms[3]);
   };
 
   // student number (bubble grid only — "written" mode is read by eye/AI later)
@@ -326,7 +330,7 @@ function pickOne(ratios: number[]): number {
   // against the emptiest one in the same row instead: the printed-letter
   // ink cancels out and only the student's added ink counts.
   const MARK_MIN = 0.12;   // added ink needed to count as a mark at all
-  const SECOND_REL = 0.5;  // a 2nd bubble counts as marked only if ≥ half as inked as the 1st
+  const SECOND_REL = 0.35; // a 2nd bubble with ≥35% of the 1st's ink → review, never a silent guess
   // negative = crossed-out by the student: excluded, and kept out of the
   // baseline so it can't drag it to 0 and make empty bubbles look marked
   const kept = ratios.filter((v) => v >= 0);
