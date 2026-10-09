@@ -8,7 +8,7 @@
 //   6. decide marked / blank / ambiguous per question and per ID digit
 
 import { OmrExam, choiceCountFor } from "@/types/exam";
-import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, CODE_BITS, codeMarkPos } from "@/lib/omr/layout";
+import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, CODE_BITS, codeMarkPos, PAGE_W, PAGE_H } from "@/lib/omr/layout";
 
 export interface OmrScanRaw {
   studentNumber: string;      // "" digits that were readable, in order
@@ -21,6 +21,12 @@ export interface OmrScanRaw {
   detectedExamCode: number;   // decoded from the sheet's exam-code marks — compare against examCode(exam.id)
   nameImageUrl?: string;      // rectified crop of the handwritten-name box
   civilIdImageUrl?: string;   // rectified crop of the civil-ID strip (written mode)
+  // The whole sheet, straightened upright, with a green ring drawn over
+  // every bubble the engine picked as the student's answer — lets the
+  // professor eyeball the full page at once and confirm every detected
+  // choice actually matches what the student marked, instead of trusting
+  // the per-question review crops alone (which only cover flagged ones).
+  annotatedImageUrl?: string;
   debug?: {
     threshold: number;
     corners: { x: number; y: number }[];
@@ -191,12 +197,60 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     debugRatios.push(fillAt(p.x, p.y));
   }
 
+  const annotatedImageUrl = buildAnnotatedSheet(srcRgba, w, h, H, exam, answers);
+
   return {
     studentNumber, answers, review, markQuality: bestDot,
     detectedExamCode,
-    nameImageUrl, civilIdImageUrl,
+    nameImageUrl, civilIdImageUrl, annotatedImageUrl,
     debug: { threshold: thr, corners, rotation: bestRotation, orientDot: bestDot, sampleRatios: debugRatios },
   };
+}
+
+// Straighten the whole sheet upright and ring every picked answer in green,
+// so the professor can confirm the full page at a glance instead of only
+// seeing crops of the questions that were flagged for review.
+function buildAnnotatedSheet(
+  src: Uint8ClampedArray, w: number, h: number, H: number[],
+  exam: OmrExam, answers: number[], pxPerMm = 4,
+): string | undefined {
+  try {
+    const ow = Math.round(PAGE_W * pxPerMm);
+    const oh = Math.round(PAGE_H * pxPerMm);
+    const out = document.createElement("canvas");
+    out.width = ow; out.height = oh;
+    const ctx = out.getContext("2d")!;
+    const img = ctx.createImageData(ow, oh);
+    for (let oy = 0; oy < oh; oy++) {
+      for (let ox = 0; ox < ow; ox++) {
+        const [sx, sy] = applyH(H, ox / pxPerMm, oy / pxPerMm);
+        const ix = Math.round(sx), iy = Math.round(sy);
+        const di = (oy * ow + ox) * 4;
+        if (ix >= 0 && iy >= 0 && ix < w && iy < h) {
+          const si = (iy * w + ix) * 4;
+          img.data[di] = src[si]; img.data[di + 1] = src[si + 1]; img.data[di + 2] = src[si + 2]; img.data[di + 3] = 255;
+        } else {
+          img.data[di] = img.data[di + 1] = img.data[di + 2] = 255; img.data[di + 3] = 255;
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+
+    ctx.lineWidth = Math.max(2, pxPerMm * 0.6);
+    ctx.strokeStyle = "#16a34a";
+    for (let q = 0; q < exam.questionCount; q++) {
+      const c = answers[q];
+      if (c == null || c < 0) continue;
+      const p = questionBubble(exam, q, c);
+      const r = BUBBLE_R * pxPerMm * 1.15;
+      ctx.beginPath();
+      ctx.arc(p.x * pxPerMm, p.y * pxPerMm, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    return out.toDataURL("image/jpeg", 0.85);
+  } catch {
+    return undefined;
+  }
 }
 
 // Warp a sheet-mm rectangle out of the photo into an upright crop (data URL).

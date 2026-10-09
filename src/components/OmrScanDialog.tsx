@@ -10,7 +10,7 @@ import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  Camera, Loader2, X, CheckCircle2, AlertTriangle, UserRound, RotateCcw, Search,
+  Camera, Loader2, X, CheckCircle2, AlertTriangle, UserRound, RotateCcw, Search, ScanLine,
 } from "lucide-react";
 
 
@@ -40,6 +40,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [nameCrop, setNameCrop] = useState<string | null>(null);
   const [civilCrop, setCivilCrop] = useState<string | null>(null);
+  const [annotatedSheet, setAnnotatedSheet] = useState<string | null>(null);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   // questions the engine flagged (blank / double-marked) — professor sets the
   // intended answer from the row photo and the score is recomputed
@@ -57,7 +58,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [essayScores, setEssayScores] = useState<number[]>(() => (exam.essayQuestions || []).map(() => 0));
   const { addScan } = useOmrScans(null); // used for recording only
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setAnnotatedSheet(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
   const essayTotal = (exam.essayQuestions || []).reduce((a, q) => a + (q.points ?? 1), 0);
   const essayEarned = essayScores.reduce((a, s) => a + (s || 0), 0);
 
@@ -123,6 +124,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       setReviewItems(raw.review || []);
       setNameCrop(raw.nameImageUrl || null);
       setCivilCrop(raw.civilIdImageUrl || null);
+      setAnnotatedSheet(raw.annotatedImageUrl || null);
       if (match) setSelectedStudentId(match.id);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : (ar ? "فشل المسح" : "Scan failed"));
@@ -371,6 +373,20 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                 </p>
               )}
             </div>
+
+            {/* full sheet with every detected answer ringed in green — lets
+                the professor eyeball the whole page at once instead of
+                trusting the summary alone */}
+            {annotatedSheet && (
+              <button
+                type="button"
+                onClick={() => setZoomedImage(annotatedSheet)}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-xs font-bold text-foreground hover:bg-muted"
+              >
+                <ScanLine size={14} />
+                {ar ? "عرض ورقة الإجابة كاملة مع الاختيارات" : "View full answer sheet with picks"}
+              </button>
+            )}
 
             {/* manual essay grading — not read by the scanner, entered by hand */}
             {(exam.essayQuestions || []).length > 0 && (
