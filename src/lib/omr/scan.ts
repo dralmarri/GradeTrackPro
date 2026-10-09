@@ -116,22 +116,28 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   // bubble: a continuous stroke reaching past the circle on both sides of
   // a diagonal means it was crossed out, not just shaded.
   const isCrossedOut = (mmX: number, mmY: number): boolean => {
-    const sampleOuterArm = (dx: number, dy: number): boolean => {
-      let darkCount = 0, total = 0;
-      for (let t = 1.05; t <= 1.7; t += 0.15) {
-        const [px, py] = applyH(H, mmX + dx * BUBBLE_R * t, mmY + dy * BUBBLE_R * t);
-        const ix = Math.round(px), iy = Math.round(py);
-        if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
-        total++;
-        if (dark[iy * w + ix]) darkCount++;
+    // An arm has ink if any sample in a narrow wedge (±14°, swept in 2° steps so a thin stroke can't slip between samples) around the
+    // diagonal, just outside the circle, is dark — a hand-drawn X is
+    // thin, short and never exactly at 45°, so a single-pixel ray misses
+    // it. Radius 1.2R–1.5R stays clear of the circle's own outline and of
+    // the neighbouring rows' bubbles (row pitch 7.8mm).
+    const armHasInk = (deg: number): boolean => {
+      let hits = 0;
+      for (let da = -14; da <= 14; da += 2) {
+        const a = ((deg + da) * Math.PI) / 180;
+        for (let t = 1.2; t <= 1.5; t += 0.075) {
+          const [px, py] = applyH(H, mmX + Math.cos(a) * BUBBLE_R * t, mmY + Math.sin(a) * BUBBLE_R * t);
+          const ix = Math.round(px), iy = Math.round(py);
+          if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+          if (dark[iy * w + ix]) hits++;
+        }
       }
-      return total > 0 && darkCount / total > 0.4;
+      return hits >= 2;
     };
-    const diagonals: [[number, number], [number, number]][] = [
-      [[-0.71, -0.71], [0.71, 0.71]],
-      [[-0.71, 0.71], [0.71, -0.71]],
-    ];
-    return diagonals.some(([a, b]) => sampleOuterArm(a[0], a[1]) && sampleOuterArm(b[0], b[1]));
+    const arms = [45, 135, 225, 315].map(armHasInk);
+    const inkedArms = arms.filter(Boolean).length;
+    // both ends of one diagonal (a single strike) or 3+ arms (an X)
+    return inkedArms >= 3 || (arms[0] && arms[2]) || (arms[1] && arms[3]);
   };
 
   // student number (bubble grid only — "written" mode is read by eye/AI later)
@@ -141,7 +147,7 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     const ratios: number[] = [];
     for (let d = 0; d <= 9; d++) {
       const p = idBubble(exam, col, d);
-      ratios.push(isCrossedOut(p.x, p.y) ? 0 : fillAt(p.x, p.y));
+      ratios.push(isCrossedOut(p.x, p.y) ? -1 : fillAt(p.x, p.y));
     }
     const digit = pickOne(ratios);
     studentNumber += digit >= 0 ? String(digit) : "؟";
@@ -159,9 +165,9 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
       const p = questionBubble(exam, q, c);
       pts.push(p);
       // A choice the student crossed out is excluded from candidates
-      // entirely (ratio forced to 0) — an X through a bubble means "not
+      // entirely (marked -1, see pickOne) — an X through a bubble means "not
       // this one", not "ambiguous between this and another".
-      ratios.push(isCrossedOut(p.x, p.y) ? 0 : fillAt(p.x, p.y));
+      ratios.push(isCrossedOut(p.x, p.y) ? -1 : fillAt(p.x, p.y));
     }
     const picked = pickOne(ratios);
     answers.push(picked);
@@ -318,22 +324,33 @@ function sampleSquare(
 
 // pick the single filled bubble: index, or -1 blank, -2 ambiguous
 function pickOne(ratios: number[]): number {
-  // Students rarely shade a bubble solid — a light pencil fill, an X, or a
-  // quick scribble often covers well under half the circle's area, yet
-  // was still being flagged as "blank" and sent to manual review. Lowered
-  // from 0.45/0.18 so a clearly-intended mark (even a sparse one) is read
-  // automatically, while a near-empty circle (stray dot, eraser smudge)
-  // still falls below FILL_MIN and a real double-mark still trips MARGIN.
-  const FILL_MIN = 0.15;
-  const MARGIN = 0.10;
+  // Every empty bubble already reads partly "dark" from its own printed
+  // letter (أ/ب/ج…), so an absolute threshold low enough to catch a sparse
+  // student scribble also catches empty bubbles. Measure each bubble
+  // against the emptiest one in the same row instead: the printed-letter
+  // ink cancels out and only the student's added ink counts.
+  const MARK_MIN = 0.12;   // added ink needed to count as a mark at all
+  const SECOND_REL = 0.25; // a 2nd bubble with ≥25% of the 1st's ink → review, never a silent guess
+  // negative = crossed-out by the student: excluded, and kept out of the
+  // baseline so it can't drag it to 0 and make empty bubbles look marked
+  const kept = ratios.filter((v) => v >= 0);
+  if (!kept.length) return -1;
+  // The emptiest bubble is only a valid baseline if it really looks
+  // empty (printed letter only, ~15%). In a 2-choice T/F row where the
+  // student filled both and struck one, the "emptiest" is the real
+  // answer — subtracting it would erase it and hand the win to the
+  // crossed-out bubble. Fall back to a typical empty-bubble level then.
+  const EMPTY_MAX = 0.25, EMPTY_TYPICAL = 0.15;
+  const rowMin = kept.length > 1 ? Math.min(...kept) : 0;
+  const base = rowMin <= EMPTY_MAX ? rowMin : EMPTY_TYPICAL;
+  const adj = ratios.map((v) => (v < 0 ? 0 : Math.max(0, v - base)));
   let best = -1, bestV = 0, second = 0;
-  ratios.forEach((v, i) => {
+  adj.forEach((v, i) => {
     if (v > bestV) { second = bestV; bestV = v; best = i; }
     else if (v > second) second = v;
   });
-  if (bestV < FILL_MIN) return -1;
-  if (second >= FILL_MIN) return -2;      // double-marked / crossed-out → professor decides
-  if (bestV - second < MARGIN) return -2; // too close to call
+  if (bestV < MARK_MIN) return -1;
+  if (second >= MARK_MIN && second >= bestV * SECOND_REL) return -2; // genuinely double-marked
   return best;
 }
 
