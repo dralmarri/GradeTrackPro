@@ -237,10 +237,15 @@ function buildAnnotatedSheet(
     ctx.putImageData(img, 0, 0);
 
     ctx.lineWidth = Math.max(2, pxPerMm * 0.6);
-    ctx.strokeStyle = "#16a34a";
     for (let q = 0; q < exam.questionCount; q++) {
       const c = answers[q];
       if (c == null || c < 0) continue;
+      // Green ring = this pick matches the saved answer key (graded
+      // correct); red ring = it doesn't — so the professor can see, per
+      // question, exactly which mark the score was computed from and
+      // whether it was counted right or wrong.
+      const key = exam.answerKey?.[q];
+      ctx.strokeStyle = key != null && key >= 0 && c === key ? "#16a34a" : "#dc2626";
       const p = questionBubble(exam, q, c);
       const r = BUBBLE_R * pxPerMm * 1.15;
       ctx.beginPath();

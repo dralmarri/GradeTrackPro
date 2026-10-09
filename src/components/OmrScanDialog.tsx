@@ -374,18 +374,25 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
               )}
             </div>
 
-            {/* full sheet with every detected answer ringed in green — lets
-                the professor eyeball the whole page at once instead of
-                trusting the summary alone */}
+            {/* full sheet with every detected answer ringed — green if it
+                matched the answer key, red if not — lets the professor
+                eyeball the whole page at once instead of trusting the
+                summary alone */}
             {annotatedSheet && (
-              <button
-                type="button"
-                onClick={() => setZoomedImage(annotatedSheet)}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-xs font-bold text-foreground hover:bg-muted"
-              >
-                <ScanLine size={14} />
-                {ar ? "عرض ورقة الإجابة كاملة مع الاختيارات" : "View full answer sheet with picks"}
-              </button>
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => setZoomedImage(annotatedSheet)}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-xs font-bold text-foreground hover:bg-muted"
+                >
+                  <ScanLine size={14} />
+                  {ar ? "عرض ورقة الإجابة كاملة مع الاختيارات" : "View full answer sheet with picks"}
+                </button>
+                <p className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full border-2 border-success" />{ar ? "إجابة صحيحة" : "Correct"}</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full border-2 border-destructive" />{ar ? "إجابة خاطئة" : "Incorrect"}</span>
+                </p>
+              </div>
             )}
 
             {/* manual essay grading — not read by the scanner, entered by hand */}
