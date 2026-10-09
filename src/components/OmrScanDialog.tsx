@@ -477,7 +477,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                     {/* dir="ltr": the printed sheet lays choices out left→right
                         (number, then أ/ص, ب/خ…), so the buttons follow the
                         same order as the row photo above them */}
-                    <div dir="ltr" className="flex flex-wrap gap-1.5">
+                    <div dir="ltr" className="flex flex-wrap justify-center gap-1.5">
                       {choiceLabelsFor(exam, it.q).map((label, ci) => (
                         <button
                           key={ci}
@@ -627,7 +627,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                         </span>
                       </button>
                       {isEditing && (
-                        <div dir="ltr" className="mt-1 flex flex-wrap gap-1.5 rounded-lg bg-muted/40 p-2">
+                        <div dir="ltr" className="mt-1 flex flex-wrap justify-center gap-1.5 rounded-lg bg-muted/40 p-2">
                           {choiceLabelsFor(exam, r.questionIndex).map((label, ci) => (
                             <button
                               key={ci}
