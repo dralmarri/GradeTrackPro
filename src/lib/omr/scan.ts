@@ -102,6 +102,32 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     return total > 0 ? darkCount / total : 0;
   };
 
+  // A bubble a student filled and then struck a big X/line through (a
+  // change of mind) still reads as "filled" by fillAt — the X's ink sits
+  // mostly on top of the circle. What distinguishes a strike from a plain
+  // fill is that its strokes run well PAST the circle's edge in a straight
+  // diagonal line. Check both ends of each diagonal, just outside the
+  // bubble: a continuous stroke reaching past the circle on both sides of
+  // a diagonal means it was crossed out, not just shaded.
+  const isCrossedOut = (mmX: number, mmY: number): boolean => {
+    const sampleOuterArm = (dx: number, dy: number): boolean => {
+      let darkCount = 0, total = 0;
+      for (let t = 1.05; t <= 1.7; t += 0.15) {
+        const [px, py] = applyH(H, mmX + dx * BUBBLE_R * t, mmY + dy * BUBBLE_R * t);
+        const ix = Math.round(px), iy = Math.round(py);
+        if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+        total++;
+        if (dark[iy * w + ix]) darkCount++;
+      }
+      return total > 0 && darkCount / total > 0.4;
+    };
+    const diagonals: [[number, number], [number, number]][] = [
+      [[-0.71, -0.71], [0.71, 0.71]],
+      [[-0.71, 0.71], [0.71, -0.71]],
+    ];
+    return diagonals.some(([a, b]) => sampleOuterArm(a[0], a[1]) && sampleOuterArm(b[0], b[1]));
+  };
+
   // student number (bubble grid only — "written" mode is read by eye/AI later)
   let studentNumber = "";
   if (exam.idMode !== "written")
@@ -109,7 +135,7 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     const ratios: number[] = [];
     for (let d = 0; d <= 9; d++) {
       const p = idBubble(exam, col, d);
-      ratios.push(fillAt(p.x, p.y));
+      ratios.push(isCrossedOut(p.x, p.y) ? 0 : fillAt(p.x, p.y));
     }
     const digit = pickOne(ratios);
     studentNumber += digit >= 0 ? String(digit) : "؟";
@@ -126,7 +152,10 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     for (let c = 0; c < qChoices; c++) {
       const p = questionBubble(exam, q, c);
       pts.push(p);
-      ratios.push(fillAt(p.x, p.y));
+      // A choice the student crossed out is excluded from candidates
+      // entirely (ratio forced to 0) — an X through a bubble means "not
+      // this one", not "ambiguous between this and another".
+      ratios.push(isCrossedOut(p.x, p.y) ? 0 : fillAt(p.x, p.y));
     }
     const picked = pickOne(ratios);
     answers.push(picked);
