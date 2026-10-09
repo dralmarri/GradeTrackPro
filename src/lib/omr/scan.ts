@@ -330,13 +330,20 @@ function pickOne(ratios: number[]): number {
   // against the emptiest one in the same row instead: the printed-letter
   // ink cancels out and only the student's added ink counts.
   const MARK_MIN = 0.12;   // added ink needed to count as a mark at all
-  const SECOND_REL = 0.35; // a 2nd bubble with ≥35% of the 1st's ink → review, never a silent guess
+  const SECOND_REL = 0.25; // a 2nd bubble with ≥25% of the 1st's ink → review, never a silent guess
   // negative = crossed-out by the student: excluded, and kept out of the
   // baseline so it can't drag it to 0 and make empty bubbles look marked
   const kept = ratios.filter((v) => v >= 0);
   if (!kept.length) return -1;
-  const base = kept.length > 1 ? Math.min(...kept) : 0;
-  const adj = ratios.map((v) => (v < 0 ? 0 : v - base));
+  // The emptiest bubble is only a valid baseline if it really looks
+  // empty (printed letter only, ~15%). In a 2-choice T/F row where the
+  // student filled both and struck one, the "emptiest" is the real
+  // answer — subtracting it would erase it and hand the win to the
+  // crossed-out bubble. Fall back to a typical empty-bubble level then.
+  const EMPTY_MAX = 0.25, EMPTY_TYPICAL = 0.15;
+  const rowMin = kept.length > 1 ? Math.min(...kept) : 0;
+  const base = rowMin <= EMPTY_MAX ? rowMin : EMPTY_TYPICAL;
+  const adj = ratios.map((v) => (v < 0 ? 0 : Math.max(0, v - base)));
   let best = -1, bestV = 0, second = 0;
   adj.forEach((v, i) => {
     if (v > bestV) { second = bestV; bestV = v; best = i; }
