@@ -589,7 +589,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                 needs a way to fix any answer by hand, not only the
                 ambiguous ones. Tapping a question expands the same
                 choice-picker used for flagged questions. */}
-            <details className="rounded-2xl border border-border bg-card p-4 shadow-sm" open={reviewItems.length > 0}>
+            <details className="rounded-2xl border border-border bg-card p-4 shadow-sm" open>
               <summary className="cursor-pointer text-xs font-bold text-muted-foreground">
                 {ar ? "تفاصيل الإجابات (اضغط أي سؤال لتصحيحه يدوياً)" : "Answer details (tap any question to correct it by hand)"}
               </summary>
