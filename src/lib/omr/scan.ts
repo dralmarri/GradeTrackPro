@@ -230,8 +230,14 @@ function sampleSquare(
 
 // pick the single filled bubble: index, or -1 blank, -2 ambiguous
 function pickOne(ratios: number[]): number {
-  const FILL_MIN = 0.45;
-  const MARGIN = 0.18;
+  // Students rarely shade a bubble solid — a light pencil fill, an X, or a
+  // quick scribble often covers well under half the circle's area, yet
+  // was still being flagged as "blank" and sent to manual review. Lowered
+  // from 0.45/0.18 so a clearly-intended mark (even a sparse one) is read
+  // automatically, while a near-empty circle (stray dot, eraser smudge)
+  // still falls below FILL_MIN and a real double-mark still trips MARGIN.
+  const FILL_MIN = 0.22;
+  const MARGIN = 0.12;
   let best = -1, bestV = 0, second = 0;
   ratios.forEach((v, i) => {
     if (v > bestV) { second = bestV; bestV = v; best = i; }
