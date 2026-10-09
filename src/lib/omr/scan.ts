@@ -8,7 +8,7 @@
 //   6. decide marked / blank / ambiguous per question and per ID digit
 
 import { OmrExam, choiceCountFor } from "@/types/exam";
-import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, CODE_BITS, codeMarkPos } from "@/lib/omr/layout";
+import { MARKS, ORIENT_MARK, BUBBLE_R, idBubble, questionBubble, CODE_BITS, codeMarkPos, PAGE_W, PAGE_H } from "@/lib/omr/layout";
 
 export interface OmrScanRaw {
   studentNumber: string;      // "" digits that were readable, in order
@@ -21,6 +21,12 @@ export interface OmrScanRaw {
   detectedExamCode: number;   // decoded from the sheet's exam-code marks — compare against examCode(exam.id)
   nameImageUrl?: string;      // rectified crop of the handwritten-name box
   civilIdImageUrl?: string;   // rectified crop of the civil-ID strip (written mode)
+  // The whole sheet, straightened upright, with a green ring drawn over
+  // every bubble the engine picked as the student's answer — lets the
+  // professor eyeball the full page at once and confirm every detected
+  // choice actually matches what the student marked, instead of trusting
+  // the per-question review crops alone (which only cover flagged ones).
+  annotatedImageUrl?: string;
   debug?: {
     threshold: number;
     corners: { x: number; y: number }[];
@@ -102,6 +108,32 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     return total > 0 ? darkCount / total : 0;
   };
 
+  // A bubble a student filled and then struck a big X/line through (a
+  // change of mind) still reads as "filled" by fillAt — the X's ink sits
+  // mostly on top of the circle. What distinguishes a strike from a plain
+  // fill is that its strokes run well PAST the circle's edge in a straight
+  // diagonal line. Check both ends of each diagonal, just outside the
+  // bubble: a continuous stroke reaching past the circle on both sides of
+  // a diagonal means it was crossed out, not just shaded.
+  const isCrossedOut = (mmX: number, mmY: number): boolean => {
+    const sampleOuterArm = (dx: number, dy: number): boolean => {
+      let darkCount = 0, total = 0;
+      for (let t = 1.05; t <= 1.7; t += 0.15) {
+        const [px, py] = applyH(H, mmX + dx * BUBBLE_R * t, mmY + dy * BUBBLE_R * t);
+        const ix = Math.round(px), iy = Math.round(py);
+        if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+        total++;
+        if (dark[iy * w + ix]) darkCount++;
+      }
+      return total > 0 && darkCount / total > 0.4;
+    };
+    const diagonals: [[number, number], [number, number]][] = [
+      [[-0.71, -0.71], [0.71, 0.71]],
+      [[-0.71, 0.71], [0.71, -0.71]],
+    ];
+    return diagonals.some(([a, b]) => sampleOuterArm(a[0], a[1]) && sampleOuterArm(b[0], b[1]));
+  };
+
   // student number (bubble grid only — "written" mode is read by eye/AI later)
   let studentNumber = "";
   if (exam.idMode !== "written")
@@ -109,7 +141,7 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     const ratios: number[] = [];
     for (let d = 0; d <= 9; d++) {
       const p = idBubble(exam, col, d);
-      ratios.push(fillAt(p.x, p.y));
+      ratios.push(isCrossedOut(p.x, p.y) ? 0 : fillAt(p.x, p.y));
     }
     const digit = pickOne(ratios);
     studentNumber += digit >= 0 ? String(digit) : "؟";
@@ -126,7 +158,10 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     for (let c = 0; c < qChoices; c++) {
       const p = questionBubble(exam, q, c);
       pts.push(p);
-      ratios.push(fillAt(p.x, p.y));
+      // A choice the student crossed out is excluded from candidates
+      // entirely (ratio forced to 0) — an X through a bubble means "not
+      // this one", not "ambiguous between this and another".
+      ratios.push(isCrossedOut(p.x, p.y) ? 0 : fillAt(p.x, p.y));
     }
     const picked = pickOne(ratios);
     answers.push(picked);
@@ -162,12 +197,65 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     debugRatios.push(fillAt(p.x, p.y));
   }
 
+  const annotatedImageUrl = buildAnnotatedSheet(srcRgba, w, h, H, exam, answers);
+
   return {
     studentNumber, answers, review, markQuality: bestDot,
     detectedExamCode,
-    nameImageUrl, civilIdImageUrl,
+    nameImageUrl, civilIdImageUrl, annotatedImageUrl,
     debug: { threshold: thr, corners, rotation: bestRotation, orientDot: bestDot, sampleRatios: debugRatios },
   };
+}
+
+// Straighten the whole sheet upright and ring every picked answer in green,
+// so the professor can confirm the full page at a glance instead of only
+// seeing crops of the questions that were flagged for review.
+function buildAnnotatedSheet(
+  src: Uint8ClampedArray, w: number, h: number, H: number[],
+  exam: OmrExam, answers: number[], pxPerMm = 4,
+): string | undefined {
+  try {
+    const ow = Math.round(PAGE_W * pxPerMm);
+    const oh = Math.round(PAGE_H * pxPerMm);
+    const out = document.createElement("canvas");
+    out.width = ow; out.height = oh;
+    const ctx = out.getContext("2d")!;
+    const img = ctx.createImageData(ow, oh);
+    for (let oy = 0; oy < oh; oy++) {
+      for (let ox = 0; ox < ow; ox++) {
+        const [sx, sy] = applyH(H, ox / pxPerMm, oy / pxPerMm);
+        const ix = Math.round(sx), iy = Math.round(sy);
+        const di = (oy * ow + ox) * 4;
+        if (ix >= 0 && iy >= 0 && ix < w && iy < h) {
+          const si = (iy * w + ix) * 4;
+          img.data[di] = src[si]; img.data[di + 1] = src[si + 1]; img.data[di + 2] = src[si + 2]; img.data[di + 3] = 255;
+        } else {
+          img.data[di] = img.data[di + 1] = img.data[di + 2] = 255; img.data[di + 3] = 255;
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+
+    ctx.lineWidth = Math.max(2, pxPerMm * 0.6);
+    for (let q = 0; q < exam.questionCount; q++) {
+      const c = answers[q];
+      if (c == null || c < 0) continue;
+      // Green ring = this pick matches the saved answer key (graded
+      // correct); red ring = it doesn't — so the professor can see, per
+      // question, exactly which mark the score was computed from and
+      // whether it was counted right or wrong.
+      const key = exam.answerKey?.[q];
+      ctx.strokeStyle = key != null && key >= 0 && c === key ? "#16a34a" : "#dc2626";
+      const p = questionBubble(exam, q, c);
+      const r = BUBBLE_R * pxPerMm * 1.15;
+      ctx.beginPath();
+      ctx.arc(p.x * pxPerMm, p.y * pxPerMm, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    return out.toDataURL("image/jpeg", 0.85);
+  } catch {
+    return undefined;
+  }
 }
 
 // Warp a sheet-mm rectangle out of the photo into an upright crop (data URL).
@@ -230,8 +318,14 @@ function sampleSquare(
 
 // pick the single filled bubble: index, or -1 blank, -2 ambiguous
 function pickOne(ratios: number[]): number {
-  const FILL_MIN = 0.45;
-  const MARGIN = 0.18;
+  // Students rarely shade a bubble solid — a light pencil fill, an X, or a
+  // quick scribble often covers well under half the circle's area, yet
+  // was still being flagged as "blank" and sent to manual review. Lowered
+  // from 0.45/0.18 so a clearly-intended mark (even a sparse one) is read
+  // automatically, while a near-empty circle (stray dot, eraser smudge)
+  // still falls below FILL_MIN and a real double-mark still trips MARGIN.
+  const FILL_MIN = 0.15;
+  const MARGIN = 0.10;
   let best = -1, bestV = 0, second = 0;
   ratios.forEach((v, i) => {
     if (v > bestV) { second = bestV; bestV = v; best = i; }
