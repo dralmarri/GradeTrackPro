@@ -265,8 +265,8 @@ function pickOne(ratios: number[]): number {
   // from 0.45/0.18 so a clearly-intended mark (even a sparse one) is read
   // automatically, while a near-empty circle (stray dot, eraser smudge)
   // still falls below FILL_MIN and a real double-mark still trips MARGIN.
-  const FILL_MIN = 0.22;
-  const MARGIN = 0.12;
+  const FILL_MIN = 0.15;
+  const MARGIN = 0.10;
   let best = -1, bestV = 0, second = 0;
   ratios.forEach((v, i) => {
     if (v > bestV) { second = bestV; bestV = v; best = i; }
