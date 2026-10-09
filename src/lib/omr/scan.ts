@@ -21,12 +21,11 @@ export interface OmrScanRaw {
   detectedExamCode: number;   // decoded from the sheet's exam-code marks — compare against examCode(exam.id)
   nameImageUrl?: string;      // rectified crop of the handwritten-name box
   civilIdImageUrl?: string;   // rectified crop of the civil-ID strip (written mode)
-  // The whole sheet, straightened upright, with a green ring drawn over
-  // every bubble the engine picked as the student's answer — lets the
-  // professor eyeball the full page at once and confirm every detected
-  // choice actually matches what the student marked, instead of trusting
-  // the per-question review crops alone (which only cover flagged ones).
-  annotatedImageUrl?: string;
+  // The whole sheet, straightened upright and cropped to the page (A4,
+  // PAGE_W × PAGE_H mm). Plain — the answer rings are drawn live on top
+  // by <AnnotatedSheet> from the answers array, so they follow any manual
+  // correction, and the same image is archived for later review/editing.
+  sheetImageUrl?: string;
   debug?: {
     threshold: number;
     corners: { x: number; y: number }[];
@@ -203,22 +202,20 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     debugRatios.push(fillAt(p.x, p.y));
   }
 
-  const annotatedImageUrl = buildAnnotatedSheet(srcRgba, w, h, H, exam, answers);
+  const sheetImageUrl = buildSheetImage(srcRgba, w, h, H);
 
   return {
     studentNumber, answers, review, markQuality: bestDot,
     detectedExamCode,
-    nameImageUrl, civilIdImageUrl, annotatedImageUrl,
+    nameImageUrl, civilIdImageUrl, sheetImageUrl,
     debug: { threshold: thr, corners, rotation: bestRotation, orientDot: bestDot, sampleRatios: debugRatios },
   };
 }
 
-// Straighten the whole sheet upright and ring every picked answer in green,
-// so the professor can confirm the full page at a glance instead of only
-// seeing crops of the questions that were flagged for review.
-function buildAnnotatedSheet(
-  src: Uint8ClampedArray, w: number, h: number, H: number[],
-  exam: OmrExam, answers: number[], pxPerMm = 4,
+// Straighten the whole sheet upright, cropped exactly to the A4 page, so
+// sheet-mm coordinates map linearly onto the image (x/PAGE_W, y/PAGE_H).
+function buildSheetImage(
+  src: Uint8ClampedArray, w: number, h: number, H: number[], pxPerMm = 5,
 ): string | undefined {
   try {
     const ow = Math.round(PAGE_W * pxPerMm);
@@ -241,23 +238,6 @@ function buildAnnotatedSheet(
       }
     }
     ctx.putImageData(img, 0, 0);
-
-    ctx.lineWidth = Math.max(2, pxPerMm * 0.6);
-    for (let q = 0; q < exam.questionCount; q++) {
-      const c = answers[q];
-      if (c == null || c < 0) continue;
-      // Green ring = this pick matches the saved answer key (graded
-      // correct); red ring = it doesn't — so the professor can see, per
-      // question, exactly which mark the score was computed from and
-      // whether it was counted right or wrong.
-      const key = exam.answerKey?.[q];
-      ctx.strokeStyle = key != null && key >= 0 && c === key ? "#16a34a" : "#dc2626";
-      const p = questionBubble(exam, q, c);
-      const r = BUBBLE_R * pxPerMm * 1.15;
-      ctx.beginPath();
-      ctx.arc(p.x * pxPerMm, p.y * pxPerMm, r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
     return out.toDataURL("image/jpeg", 0.85);
   } catch {
     return undefined;

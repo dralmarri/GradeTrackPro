@@ -1026,6 +1026,7 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
       {historyExam && (
         <OmrScansDialog
           exam={historyExam}
+          onApplyScore={onApplyScore}
           open={!!historyExam}
           onClose={() => setHistoryExam(null)}
         />

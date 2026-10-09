@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { OmrExam } from "@/types/exam";
-import { useOmrScans, OmrScanRecord } from "@/hooks/useOmrScans";
+import { OmrExam, gradeOmr } from "@/types/exam";
+import { useOmrScans, OmrScanRecord, isSheetImage } from "@/hooks/useOmrScans";
+import AnnotatedSheetViewer from "@/components/AnnotatedSheetViewer";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { X, Loader2, ImageIcon, Trash2, History, AlertTriangle, Download, CloudDownload } from "lucide-react";
@@ -11,12 +12,18 @@ interface Props {
   exam: OmrExam;
   open: boolean;
   onClose: () => void;
+  // re-records the student's grade after the professor corrects an
+  // archived sheet's answers
+  onApplyScore?: (studentId: string, targetComponent: string, score: number) => Promise<void>;
 }
 
-export default function OmrScansDialog({ exam, open, onClose }: Props) {
+export default function OmrScansDialog({ exam, open, onClose, onApplyScore }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { scans, loading, getImageUrl, deleteScan } = useOmrScans(open ? exam.id : null);
+  const { scans, loading, getImageUrl, deleteScan, updateScan } = useOmrScans(open ? exam.id : null);
+  // archived straightened sheet open with editable answer rings
+  const [sheetView, setSheetView] = useState<{ scan: OmrScanRecord; url: string; answers: number[]; score: number } | null>(null);
+  const [savingSheet, setSavingSheet] = useState(false);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [loadingImg, setLoadingImg] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -29,8 +36,37 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
     setLoadingImg(scan.id);
     const url = await getImageUrl(scan.imagePath);
     setLoadingImg(null);
-    if (url) setViewUrl(url);
-    else toast.error(ar ? "تعذّر فتح الصورة" : "Could not open image");
+    if (!url) { toast.error(ar ? "تعذّر فتح الصورة" : "Could not open image"); return; }
+    if (isSheetImage(scan.imagePath)) setSheetView({ scan, url, answers: [...scan.answers], score: scan.score });
+    else setViewUrl(url);
+  };
+
+  // Tap a bubble on an archived sheet → regrade, save the scan, and
+  // re-record the student's grade, so a correction made weeks later still
+  // reaches the gradebook.
+  const changeArchivedAnswer = async (q: number, c: number) => {
+    if (!sheetView || savingSheet) return;
+    const { scan } = sheetView;
+    const next = [...sheetView.answers];
+    next[q] = next[q] === c ? -1 : c;
+    const graded = gradeOmr(exam, next);
+    const essay = (scan.essayScores || []).reduce((a, b) => a + (Number(b) || 0), 0);
+    const finalScore = Math.round((graded.score + essay) * 100) / 100;
+    setSavingSheet(true);
+    try {
+      const ok = await updateScan(scan.id, { answers: next, score: finalScore, rawCorrect: graded.rawCorrect });
+      if (!ok) {
+        toast.error(ar
+          ? "تعذّر حفظ التعديل — تأكد من تشغيل ملف التحديث (migration) الخاص بتعديل الأرشيف في Supabase"
+          : "Couldn't save the change — make sure the archive-edit migration has been run in Supabase", { duration: 9000 });
+        return;
+      }
+      if (scan.studentId && onApplyScore) await onApplyScore(scan.studentId, exam.targetComponent, finalScore);
+      setSheetView((v) => v && { ...v, answers: next, score: finalScore });
+      toast.success(ar ? `عُدّلت الدرجة إلى ${finalScore}` : `Grade updated to ${finalScore}`);
+    } finally {
+      setSavingSheet(false);
+    }
   };
 
   // Saves the photo to the device's normal Downloads location — from there
@@ -195,6 +231,23 @@ export default function OmrScansDialog({ exam, open, onClose }: Props) {
               </div>
             ))}
           </div>
+        )}
+
+        {sheetView && (
+          <AnnotatedSheetViewer
+            imageUrl={sheetView.url}
+            exam={exam}
+            answers={sheetView.answers}
+            ar={ar}
+            busy={savingSheet}
+            onClose={() => setSheetView(null)}
+            onChange={changeArchivedAnswer}
+            footer={
+              <p className="text-sm font-bold">
+                {sheetView.scan.studentName} · {sheetView.score} / {exam.maxScore + (exam.essayQuestions || []).reduce((a, q) => a + (q.points ?? 1), 0)}
+              </p>
+            }
+          />
         )}
 
         {/* full image viewer */}

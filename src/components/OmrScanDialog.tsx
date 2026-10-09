@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Course, Student } from "@/types/student";
 import { OmrExam, gradeOmr, OmrScanResult, choiceLabelsFor } from "@/types/exam";
 import { scanAnswerSheet } from "@/lib/omr/scan";
+import AnnotatedSheetViewer from "@/components/AnnotatedSheetViewer";
 import { examCode } from "@/lib/omr/layout";
 import { useOmrScans } from "@/hooks/useOmrScans";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -41,6 +42,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [nameCrop, setNameCrop] = useState<string | null>(null);
   const [civilCrop, setCivilCrop] = useState<string | null>(null);
   const [annotatedSheet, setAnnotatedSheet] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   // questions the engine flagged (blank / double-marked) — professor sets the
   // intended answer from the row photo and the score is recomputed
@@ -58,7 +60,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [essayScores, setEssayScores] = useState<number[]>(() => (exam.essayQuestions || []).map(() => 0));
   const { addScan } = useOmrScans(null); // used for recording only
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setAnnotatedSheet(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setAnnotatedSheet(null); setSheetOpen(false); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
   const essayTotal = (exam.essayQuestions || []).reduce((a, q) => a + (q.points ?? 1), 0);
   const essayEarned = essayScores.reduce((a, s) => a + (s || 0), 0);
 
@@ -124,7 +126,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
       setReviewItems(raw.review || []);
       setNameCrop(raw.nameImageUrl || null);
       setCivilCrop(raw.civilIdImageUrl || null);
-      setAnnotatedSheet(raw.annotatedImageUrl || null);
+      setAnnotatedSheet(raw.sheetImageUrl || null);
       if (match) setSelectedStudentId(match.id);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : (ar ? "فشل المسح" : "Scan failed"));
@@ -226,6 +228,10 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         answers: result.answers,
         essayScores: (exam.essayQuestions || []).length ? essayScores : undefined,
         photo,
+        // the straightened sheet is archived instead of the raw photo when
+        // available, so the history can redraw the answer rings on it and
+        // let the professor correct answers later
+        sheetImage: annotatedSheet ? await fetch(annotatedSheet).then((r) => r.blob()).catch(() => null) : null,
         needsReview: unresolvedCount > 0,
         reviewCount: unresolvedCount,
       }).catch((e: unknown) => ({ ok: false, imageFailed: false, error: e instanceof Error ? e.message : String(e) }));
@@ -382,7 +388,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
               <div className="space-y-1.5">
                 <button
                   type="button"
-                  onClick={() => setZoomedImage(annotatedSheet)}
+                  onClick={() => setSheetOpen(true)}
                   className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-xs font-bold text-foreground hover:bg-muted"
                 >
                   <ScanLine size={14} />
@@ -681,6 +687,23 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
           fit the review list, which made ambiguous marks (a scribbled-over
           bubble right next to another one) hard to read; tapping any crop
           opens it here at full width so nothing is cut off. */}
+      {sheetOpen && annotatedSheet && result && (
+        <AnnotatedSheetViewer
+          imageUrl={annotatedSheet}
+          exam={exam}
+          answers={answers}
+          ar={ar}
+          onClose={() => setSheetOpen(false)}
+          onChange={overrideAnswer}
+          footer={
+            <p className="text-sm font-bold">
+              {ar ? "الدرجة: " : "Score: "}
+              {essayTotal > 0 ? Math.round((result.score + essayEarned) * 100) / 100 : result.score} / {exam.maxScore + essayTotal}
+            </p>
+          }
+        />
+      )}
+
       {zoomedImage && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
