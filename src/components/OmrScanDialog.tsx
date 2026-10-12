@@ -733,7 +733,10 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
           bubble right next to another one) hard to read; tapping any crop
           opens it here at full width so nothing is cut off. */}
       {pendingSwitch && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+        // stopPropagation: this sits outside the sheet's own click guard,
+        // so without it every tap here also hit the backdrop's onClose and
+        // closed the whole scan dialog right after switching forms
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" onClick={(e) => e.stopPropagation()}>
           <div className="w-full max-w-sm space-y-3 rounded-2xl bg-card p-5 shadow-xl">
             <p className="flex items-center gap-1.5 text-base font-bold text-foreground">
               <AlertTriangle size={18} className="text-amber-600" />

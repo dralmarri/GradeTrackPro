@@ -177,7 +177,11 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
   const scannableExams = [...exams]
     .filter((e) => e.answerKey.some((k) => k >= 0))
     .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
-  const quickScanExam = scannableExams[0] || null;
+  // Reopening the camera continues with the form last used for scanning
+  // (e.g. after confirming a switch to نموذج أ), instead of jumping back to
+  // the most recently edited exam and re-asking on every sheet.
+  const [lastScanExamId, setLastScanExamId] = useState<string | null>(null);
+  const quickScanExam = scannableExams.find((e) => e.id === lastScanExamId) || scannableExams[0] || null;
 
   // Always just starts scanning — OmrScanDialog reads the exam code printed
   // on the sheet itself and switches to whichever exam it actually belongs
@@ -187,6 +191,7 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
   const handleStartScan = () => {
     if (!quickScanExam) return;
     setScanExam(quickScanExam);
+    setLastScanExamId(quickScanExam.id);
   };
 
   const sheetHeader = () => ({
@@ -903,6 +908,7 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
                   return;
                 }
                 setScanExam(exam);
+                setLastScanExamId(exam.id);
               }}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary/10 py-2.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
             >
@@ -1041,7 +1047,7 @@ export default function OmrExamsPage({ course, bankId, banks, bankCounts, onCrea
           onApplyScore={onApplyScore}
           onLearnNumber={onLearnNumber}
           allExams={exams}
-          onSwitchExam={(e) => setScanExam(e)}
+          onSwitchExam={(e) => { setScanExam(e); setLastScanExamId(e.id); }}
         />
       )}
 
