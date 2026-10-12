@@ -19,6 +19,11 @@ export interface OmrScanRaw {
   review: { q: number; imageUrl?: string; reason: "blank" | "multiple" }[];
   markQuality: number;        // 0..1 how well the corner marks were found
   detectedExamCode: number;   // decoded from the sheet's exam-code marks — compare against examCode(exam.id)
+  // The printed "النموذج" marker (the solid circle among أ/ب/ج in the
+  // header, see sheet.ts) — an independent, much larger second signal for
+  // which form this is, in case the small code marks misread. null if no
+  // single circle reads clearly solid.
+  detectedVersion: string | null;
   nameImageUrl?: string;      // rectified crop of the handwritten-name box
   civilIdImageUrl?: string;   // rectified crop of the civil-ID strip (written mode)
   // The whole sheet, straightened upright and cropped to the page (A4,
@@ -86,6 +91,14 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     const dot = sampleSquare(dark, w, h, H, p.x, p.y, p.size * 0.35);
     if (dot > 0.5) detectedExamCode |= (1 << b);
   }
+
+  // --- read the printed form-version marker (sheet.ts: circles at
+  // x = 72/61/50, y = 64, r = 2.7; the active one is printed solid) ---
+  const VERSIONS = ["أ", "ب", "ج"];
+  const vRatios = VERSIONS.map((_, i) => sampleSquare(dark, w, h, H, 72 - i * 11, 64, 1.6));
+  const vBest = vRatios.indexOf(Math.max(...vRatios));
+  const vOthers = vRatios.filter((_, i) => i !== vBest);
+  const detectedVersion = vRatios[vBest] > 0.55 && vOthers.every((v) => v < 0.35) ? VERSIONS[vBest] : null;
 
   // --- sample bubbles ---
   const fillAt = (mmX: number, mmY: number): number => {
@@ -206,7 +219,7 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
 
   return {
     studentNumber, answers, review, markQuality: bestDot,
-    detectedExamCode,
+    detectedExamCode, detectedVersion,
     nameImageUrl, civilIdImageUrl, sheetImageUrl,
     debug: { threshold: thr, corners, rotation: bestRotation, orientDot: bestDot, sampleRatios: debugRatios },
   };

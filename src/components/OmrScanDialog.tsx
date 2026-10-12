@@ -107,6 +107,30 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
             { duration: 10000 },
           );
         }
+      } else if (raw.detectedVersion && examForScan.version && raw.detectedVersion !== examForScan.version && allExams) {
+        // The code marks agree with the selected exam, but the big printed
+        // form marker says a different form (e.g. sheet is نموذج ج, exam
+        // selected is نموذج أ). The marker is far larger and harder to
+        // misread than the code dots, so trust it and switch to the same
+        // exam's other form.
+        const sibling = allExams.find((e) => e.id !== examForScan.id && e.title === examForScan.title && e.version === raw.detectedVersion);
+        if (sibling && onSwitchExam) {
+          toast.success(
+            ar
+              ? `هذه الورقة نموذج (${raw.detectedVersion}) — تم التبديل إلى مفتاحه وإعادة التصحيح`
+              : `This sheet is form ${raw.detectedVersion} — switched to its key and re-grading`,
+            { duration: 5000 },
+          );
+          onSwitchExam(sibling);
+          return;
+        }
+        setWrongExamMatch(null);
+        toast.warning(
+          ar
+            ? `الورقة مطبوع عليها نموذج (${raw.detectedVersion}) لكن التصحيح بمفتاح نموذج (${examForScan.version}) — تأكد قبل الرصد`
+            : `Sheet says form ${raw.detectedVersion} but it's being graded with form ${examForScan.version}'s key — check before applying`,
+          { duration: 10000 },
+        );
       } else {
         setWrongExamMatch(null);
       }
@@ -287,7 +311,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
               {ar ? "تصحيح بالكاميرا" : "Scan & grade"}
             </h3>
             <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              OMR · {exam.title}
+              OMR · {exam.title}{exam.version ? (ar ? ` · نموذج (${exam.version})` : ` · Form ${exam.version}`) : ""}
             </p>
           </div>
           <button onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/70">
@@ -621,8 +645,9 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                       >
                         <span>{r.questionIndex + 1}</span>
                         <span>
+                          {ar ? "الطالب: " : "Student: "}
                           {r.marked >= 0 ? choiceLabelsFor(exam, r.questionIndex)[r.marked] : r.marked === -1 ? "—" : "؟"}
-                          {" / "}
+                          {ar ? " · الصحيح: " : " · Key: "}
                           {exam.answerKey[r.questionIndex] >= 0 ? choiceLabelsFor(exam, r.questionIndex)[exam.answerKey[r.questionIndex]] : "؟"}
                         </span>
                       </button>
