@@ -97,6 +97,21 @@ export default function Index() {
 
   const activeCourse = courses.find((c) => c.id === activeCourseId);
 
+  // records an OMR score into the student's gradebook component — used by
+  // the scanner and by corrections made later to an archived sheet
+  const applyOmrScore = async (studentId: string, targetComponent: string, score: number) => {
+    if (!activeCourse) return;
+    const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
+    if (standard.includes(targetComponent)) {
+      await updateStudent(activeCourse.id, studentId, { [targetComponent]: score } as any);
+    } else {
+      const st = activeCourse.students.find((s) => s.id === studentId);
+      await updateStudent(activeCourse.id, studentId, {
+        customScores: { ...(st?.customScores || {}), [targetComponent]: score },
+      } as any);
+    }
+  };
+
   const toggleDay = (day: number) => {
     setSelectedDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
@@ -620,17 +635,7 @@ export default function Index() {
             onCreateBank={createBank}
             onDeleteBank={deleteBank}
             onLearnNumber={(sid, num) => updateStudent(activeCourse.id, sid, { studentNumber: num } as any)}
-            onApplyScore={async (studentId, targetComponent, score) => {
-              const standard = ["exam1", "exam2", "finalExam", "participation", "homework"];
-              if (standard.includes(targetComponent)) {
-                await updateStudent(activeCourse.id, studentId, { [targetComponent]: score } as any);
-              } else {
-                const st = activeCourse.students.find((s) => s.id === studentId);
-                await updateStudent(activeCourse.id, studentId, {
-                  customScores: { ...(st?.customScores || {}), [targetComponent]: score },
-                } as any);
-              }
-            }}
+            onApplyScore={applyOmrScore}
           />
         )}
 
@@ -663,6 +668,7 @@ export default function Index() {
           <StudentStatus
             students={activeCourse.students}
             course={activeCourse}
+            onApplyScore={applyOmrScore}
           />
         )}
 

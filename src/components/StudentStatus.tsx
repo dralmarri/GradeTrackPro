@@ -2,20 +2,24 @@ import { useState, useEffect } from "react";
 import { Student, Course, getLabel } from "@/types/student";
 import { getBonusTotal, getMaxTotal, getPercentage, getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
-import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy, ChevronDown, ImageIcon, Loader2 } from "lucide-react";
+import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy, ChevronDown, ImageIcon } from "lucide-react";
 import { GradeTier, LetterTier, loadGradeTiers, loadLetterTiers, getTierFor, getLetterFor } from "@/lib/gradeTiers";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts";
 import { useOmrExams } from "@/hooks/useOmrExams";
-import { useStudentScans } from "@/hooks/useOmrScans";
+import { useStudentScans, OmrScanRecord } from "@/hooks/useOmrScans";
+import ArchivedScanViewer from "@/components/ArchivedScanViewer";
+import type { OmrExam } from "@/types/exam";
 import { toast } from "sonner";
 
 interface StudentStatusProps {
   students: Student[];
   course: Course;
+  // re-records a grade after an archived sheet's answers are corrected
+  onApplyScore?: (studentId: string, targetComponent: string, score: number) => Promise<void>;
 }
 
-export default function StudentStatus({ students, course }: StudentStatusProps) {
+export default function StudentStatus({ students, course, onApplyScore }: StudentStatusProps) {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [tiers, setTiers] = useState<GradeTier[]>(loadGradeTiers());
@@ -503,7 +507,7 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
                   {/* Scanned OMR papers — every exam form for this student in
                       one place, instead of opening each exam's own scan
                       history separately to find which one has his sheet. */}
-                  <StudentScansSection studentId={student.id} examTitles={examTitles} />
+                  <StudentScansSection studentId={student.id} examTitles={examTitles} exams={exams} onApplyScore={onApplyScore} />
                 </div>
               )}
             </motion.div>
@@ -518,9 +522,14 @@ export default function StudentStatus({ students, course }: StudentStatusProps) 
 // Fetched only while its card is expanded (studentId is only non-null
 // then in the parent), matching the lazy pattern used for the rest of the
 // expanded-card content.
-function StudentScansSection({ studentId, examTitles }: { studentId: string; examTitles: Record<string, string> }) {
-  const { scans, loading, getImageUrl } = useStudentScans(studentId);
-  const [openingId, setOpeningId] = useState<string | null>(null);
+function StudentScansSection({ studentId, examTitles, exams, onApplyScore }: {
+  studentId: string;
+  examTitles: Record<string, string>;
+  exams: OmrExam[];
+  onApplyScore?: (studentId: string, targetComponent: string, score: number) => Promise<void>;
+}) {
+  const { scans, loading, getImageUrl, refetch } = useStudentScans(studentId);
+  const [openScan, setOpenScan] = useState<OmrScanRecord | null>(null);
 
   const fmtDate = (iso: string) => {
     try {
@@ -530,13 +539,11 @@ function StudentScansSection({ studentId, examTitles }: { studentId: string; exa
     }
   };
 
-  const openImage = async (scan: { id: string; imagePath: string | null }) => {
+  // opens the sheet with the answer rings (editable); needs the scan's exam
+  const openImage = (scan: OmrScanRecord) => {
     if (!scan.imagePath) { toast.error("لا توجد صورة محفوظة لهذه الورقة"); return; }
-    setOpeningId(scan.id);
-    const url = await getImageUrl(scan.imagePath);
-    setOpeningId(null);
-    if (url) window.open(url, "_blank");
-    else toast.error("تعذّر فتح الصورة");
+    if (!exams.some((e) => e.id === scan.examId)) { toast.error("الاختبار الخاص بهذه الورقة لم يعد موجوداً"); return; }
+    setOpenScan(scan);
   };
 
   if (loading || scans.length === 0) return null;
@@ -561,15 +568,26 @@ function StudentScansSection({ studentId, examTitles }: { studentId: string; exa
             <button
               type="button"
               onClick={() => openImage(s)}
-              disabled={!s.imagePath || openingId === s.id}
+              disabled={!s.imagePath}
               className="flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-40"
             >
-              {openingId === s.id ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
+              <ImageIcon size={12} />
               عرض
             </button>
           </div>
         ))}
       </div>
+      {openScan && (
+        <ArchivedScanViewer
+          scan={openScan}
+          exam={exams.find((e) => e.id === openScan.examId)!}
+          ar
+          getImageUrl={getImageUrl}
+          onClose={() => setOpenScan(null)}
+          onSaved={refetch}
+          onApplyScore={onApplyScore}
+        />
+      )}
     </div>
   );
 }

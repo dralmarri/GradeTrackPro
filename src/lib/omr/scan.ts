@@ -53,7 +53,18 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   for (let i = 0; i < gray.length; i++) dark[i] = gray[i] < thr ? 1 : 0;
 
   // --- find corner marks ---
-  const corners = findCornerMarks(dark, w, h);
+  // A corner mark touching a dark background (carpet, table edge, shadow)
+  // merges with it into one huge blob and fails the square check. The marks
+  // are near-black while such backgrounds are usually mid-dark, so retry
+  // with progressively stricter "black only" thresholds before giving up.
+  let corners = findCornerMarks(dark, w, h);
+  for (const f of [0.75, 0.55]) {
+    if (corners) break;
+    const strict = new Uint8Array(w * h);
+    const t = thr * f;
+    for (let i = 0; i < gray.length; i++) strict[i] = gray[i] < t ? 1 : 0;
+    corners = findCornerMarks(strict, w, h);
+  }
   if (!corners) throw new Error("لم يتم العثور على علامات المحاذاة الأربع — صوّر الورقة كاملة بإضاءة جيدة");
 
   // --- resolve orientation ---
