@@ -44,6 +44,23 @@ function rowToScan(row: any): OmrScanRecord {
 export const SHEET_IMAGE_SUFFIX = "-sheet.jpg";
 export const isSheetImage = (path: string | null) => !!path && path.endsWith(SHEET_IMAGE_SUFFIX);
 
+// Re-grade an archived scan after the professor corrects its answers.
+export async function updateScanRow(scanId: string, updates: {
+  answers: number[]; score: number; rawCorrect: number;
+}): Promise<boolean> {
+  const { data, error } = await db.from("omr_scans").update({
+    answers: updates.answers,
+    score: updates.score,
+    raw_correct: updates.rawCorrect,
+    needs_review: false,
+    review_count: 0,
+  }).eq("id", scanId).select("id");
+  // RLS without an UPDATE policy fails silently (0 rows, no error) —
+  // treat that as a failure instead of pretending it saved
+  if (error || !data?.length) { console.error("Error updating scan:", error || "no rows updated"); return false; }
+  return true;
+}
+
 // compress a photo to a reasonable JPEG before archiving
 async function compressImage(file: Blob, maxDim = 1600, quality = 0.72): Promise<Blob> {
   const url = URL.createObjectURL(file);
@@ -139,22 +156,10 @@ export function useOmrScans(examId: string | null) {
     return { ok: true, imageFailed };
   }, [user, fetchScans]);
 
-  // Re-grade an archived scan after the professor corrects its answers.
-  const updateScan = useCallback(async (scanId: string, updates: {
-    answers: number[]; score: number; rawCorrect: number;
-  }): Promise<boolean> => {
-    const { data, error } = await db.from("omr_scans").update({
-      answers: updates.answers,
-      score: updates.score,
-      raw_correct: updates.rawCorrect,
-      needs_review: false,
-      review_count: 0,
-    }).eq("id", scanId).select("id");
-    // RLS without an UPDATE policy fails silently (0 rows, no error) —
-    // treat that as a failure instead of pretending it saved
-    if (error || !data?.length) { console.error("Error updating scan:", error || "no rows updated"); return false; }
-    await fetchScans();
-    return true;
+  const updateScan = useCallback(async (scanId: string, updates: Parameters<typeof updateScanRow>[1]) => {
+    const ok = await updateScanRow(scanId, updates);
+    if (ok) await fetchScans();
+    return ok;
   }, [fetchScans]);
 
   const getImageUrl = useCallback(async (imagePath: string): Promise<string | null> => {
@@ -209,5 +214,5 @@ export function useStudentScans(studentId: string | null) {
     return data.signedUrl;
   }, []);
 
-  return { scans, loading, getImageUrl };
+  return { scans, loading, getImageUrl, refetch: fetchScans };
 }

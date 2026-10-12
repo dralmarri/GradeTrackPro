@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { OmrExam, gradeOmr } from "@/types/exam";
-import { useOmrScans, OmrScanRecord, isSheetImage } from "@/hooks/useOmrScans";
-import AnnotatedSheetViewer from "@/components/AnnotatedSheetViewer";
+import { OmrExam } from "@/types/exam";
+import { useOmrScans, OmrScanRecord } from "@/hooks/useOmrScans";
+import ArchivedScanViewer from "@/components/ArchivedScanViewer";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { X, Loader2, ImageIcon, Trash2, History, AlertTriangle, Download, CloudDownload } from "lucide-react";
@@ -20,53 +20,17 @@ interface Props {
 export default function OmrScansDialog({ exam, open, onClose, onApplyScore }: Props) {
   const { lang } = useLanguage();
   const ar = lang === "ar";
-  const { scans, loading, getImageUrl, deleteScan, updateScan } = useOmrScans(open ? exam.id : null);
-  // archived straightened sheet open with editable answer rings
-  const [sheetView, setSheetView] = useState<{ scan: OmrScanRecord; url: string; answers: number[]; score: number } | null>(null);
-  const [savingSheet, setSavingSheet] = useState(false);
-  const [viewUrl, setViewUrl] = useState<string | null>(null);
-  const [loadingImg, setLoadingImg] = useState<string | null>(null);
+  const { scans, loading, getImageUrl, deleteScan, refetch } = useOmrScans(open ? exam.id : null);
+  // archived sheet open with editable answer rings
+  const [sheetScan, setSheetScan] = useState<OmrScanRecord | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [bulkDownloading, setBulkDownloading] = useState(false);
 
   if (!open) return null;
 
-  const openImage = async (scan: OmrScanRecord) => {
+  const openImage = (scan: OmrScanRecord) => {
     if (!scan.imagePath) { toast.error(ar ? "لا توجد صورة محفوظة لهذا المسح" : "No image saved"); return; }
-    setLoadingImg(scan.id);
-    const url = await getImageUrl(scan.imagePath);
-    setLoadingImg(null);
-    if (!url) { toast.error(ar ? "تعذّر فتح الصورة" : "Could not open image"); return; }
-    if (isSheetImage(scan.imagePath)) setSheetView({ scan, url, answers: [...scan.answers], score: scan.score });
-    else setViewUrl(url);
-  };
-
-  // Tap a bubble on an archived sheet → regrade, save the scan, and
-  // re-record the student's grade, so a correction made weeks later still
-  // reaches the gradebook.
-  const changeArchivedAnswer = async (q: number, c: number) => {
-    if (!sheetView || savingSheet) return;
-    const { scan } = sheetView;
-    const next = [...sheetView.answers];
-    next[q] = next[q] === c ? -1 : c;
-    const graded = gradeOmr(exam, next);
-    const essay = (scan.essayScores || []).reduce((a, b) => a + (Number(b) || 0), 0);
-    const finalScore = Math.round((graded.score + essay) * 100) / 100;
-    setSavingSheet(true);
-    try {
-      const ok = await updateScan(scan.id, { answers: next, score: finalScore, rawCorrect: graded.rawCorrect });
-      if (!ok) {
-        toast.error(ar
-          ? "تعذّر حفظ التعديل — تأكد من تشغيل ملف التحديث (migration) الخاص بتعديل الأرشيف في Supabase"
-          : "Couldn't save the change — make sure the archive-edit migration has been run in Supabase", { duration: 9000 });
-        return;
-      }
-      if (scan.studentId && onApplyScore) await onApplyScore(scan.studentId, exam.targetComponent, finalScore);
-      setSheetView((v) => v && { ...v, answers: next, score: finalScore });
-      toast.success(ar ? `عُدّلت الدرجة إلى ${finalScore}` : `Grade updated to ${finalScore}`);
-    } finally {
-      setSavingSheet(false);
-    }
+    setSheetScan(scan);
   };
 
   // Saves the photo to the device's normal Downloads location — from there
@@ -181,11 +145,10 @@ export default function OmrScansDialog({ exam, open, onClose, onApplyScore }: Pr
               >
                 <button
                   onClick={() => openImage(s)}
-                  disabled={loadingImg === s.id}
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary/20"
                   title={ar ? "عرض صورة الورقة" : "View sheet photo"}
                 >
-                  {loadingImg === s.id ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={17} />}
+                  <ImageIcon size={17} />
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 truncate text-sm font-bold text-foreground">
@@ -233,35 +196,18 @@ export default function OmrScansDialog({ exam, open, onClose, onApplyScore }: Pr
           </div>
         )}
 
-        {sheetView && (
-          <AnnotatedSheetViewer
-            imageUrl={sheetView.url}
+        {sheetScan && (
+          <ArchivedScanViewer
+            scan={sheetScan}
             exam={exam}
-            answers={sheetView.answers}
             ar={ar}
-            busy={savingSheet}
-            onClose={() => setSheetView(null)}
-            onChange={changeArchivedAnswer}
-            footer={
-              <p className="text-sm font-bold">
-                {sheetView.scan.studentName} · {sheetView.score} / {exam.maxScore + (exam.essayQuestions || []).reduce((a, q) => a + (q.points ?? 1), 0)}
-              </p>
-            }
+            getImageUrl={getImageUrl}
+            onClose={() => setSheetScan(null)}
+            onSaved={refetch}
+            onApplyScore={onApplyScore}
           />
         )}
 
-        {/* full image viewer */}
-        {viewUrl && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4" onClick={() => setViewUrl(null)}>
-            <img src={viewUrl} alt="scan" className="max-h-full max-w-full rounded-xl object-contain" />
-            <button
-              onClick={() => setViewUrl(null)}
-              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
