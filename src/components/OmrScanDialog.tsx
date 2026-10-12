@@ -655,7 +655,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                           className={cn(
                             "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold",
                             r.correct ? "border-green-600 bg-green-600/10 text-green-700" :
-                            r.marked === -1 ? "border-muted-foreground/40 text-muted-foreground" :
+                            r.marked === -1 ? "border-red-600 bg-red-600/10 text-red-700" :
                             r.marked === -2 ? "border-amber-500 bg-amber-500/10 text-amber-600" :
                             "border-red-600 bg-red-600/10 text-red-700",
                           )}
