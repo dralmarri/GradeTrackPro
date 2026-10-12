@@ -643,21 +643,30 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                         type="button"
                         onClick={() => setEditingQ((v) => (v === r.questionIndex ? null : r.questionIndex))}
                         className={cn(
-                          "flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors",
+                          "flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors hover:bg-muted/50",
                           isEditing ? "ring-1 ring-primary" : "",
-                          r.correct ? "bg-success/10 text-success" :
-                          r.marked === -1 ? "bg-muted text-muted-foreground" :
-                          r.marked === -2 ? "bg-amber-500/10 text-amber-600" :
-                          "bg-destructive/10 text-destructive",
                         )}
                       >
-                        <span>{r.questionIndex + 1}</span>
-                        <span>
-                          {ar ? "الطالب: " : "Student: "}
+                        {/* question number, then the student's choice ringed
+                            green (correct) or red (wrong) — same look as the
+                            rings on the full-sheet view */}
+                        <span className="w-6 shrink-0 text-center text-muted-foreground">{r.questionIndex + 1}</span>
+                        <span
+                          className={cn(
+                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold",
+                            r.correct ? "border-green-600 bg-green-600/10 text-green-700" :
+                            r.marked === -1 ? "border-muted-foreground/40 text-muted-foreground" :
+                            r.marked === -2 ? "border-amber-500 bg-amber-500/10 text-amber-600" :
+                            "border-red-600 bg-red-600/10 text-red-700",
+                          )}
+                        >
                           {r.marked >= 0 ? choiceLabelsFor(exam, r.questionIndex)[r.marked] : r.marked === -1 ? "—" : "؟"}
-                          {ar ? " · الصحيح: " : " · Key: "}
-                          {exam.answerKey[r.questionIndex] >= 0 ? choiceLabelsFor(exam, r.questionIndex)[exam.answerKey[r.questionIndex]] : "؟"}
                         </span>
+                        {!r.correct && exam.answerKey[r.questionIndex] >= 0 && (
+                          <span className="text-[11px] font-normal text-muted-foreground">
+                            {ar ? "الصحيح: " : "Key: "}{choiceLabelsFor(exam, r.questionIndex)[exam.answerKey[r.questionIndex]]}
+                          </span>
+                        )}
                       </button>
                       {isEditing && (
                         <div dir="ltr" className="mt-1 flex flex-wrap justify-center gap-1.5 rounded-lg bg-muted/40 p-2">
