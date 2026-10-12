@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Course, Student } from "@/types/student";
 import { OmrExam, gradeOmr, OmrScanResult, choiceLabelsFor } from "@/types/exam";
 import { scanAnswerSheet } from "@/lib/omr/scan";
+import AnnotatedSheetViewer from "@/components/AnnotatedSheetViewer";
 import { examCode } from "@/lib/omr/layout";
 import { useOmrScans } from "@/hooks/useOmrScans";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -41,6 +42,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [nameCrop, setNameCrop] = useState<string | null>(null);
   const [civilCrop, setCivilCrop] = useState<string | null>(null);
   const [annotatedSheet, setAnnotatedSheet] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   // questions the engine flagged (blank / double-marked) — professor sets the
   // intended answer from the row photo and the score is recomputed
@@ -58,79 +60,111 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [essayScores, setEssayScores] = useState<number[]>(() => (exam.essayQuestions || []).map(() => 0));
   const { addScan } = useOmrScans(null); // used for recording only
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setAnnotatedSheet(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setAnnotatedSheet(null); setSheetOpen(false); setPendingSwitch(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
   const essayTotal = (exam.essayQuestions || []).reduce((a, q) => a + (q.points ?? 1), 0);
   const essayEarned = essayScores.reduce((a, s) => a + (s || 0), 0);
 
+  // Sheet belongs to a different exam/form than the one open: grading is
+  // held back until the professor confirms which key to use.
+  const [pendingSwitch, setPendingSwitch] = useState<{
+    target: OmrExam; reason: string; raw: Awaited<ReturnType<typeof scanAnswerSheet>>; examForScan: OmrExam;
+  } | null>(null);
+  // the exam the professor just confirmed switching to — its re-scan must
+  // not prompt again even if the small code dots still misread
+  const confirmedExamId = useRef<string | null>(null);
+
+  const showResult = (raw: Awaited<ReturnType<typeof scanAnswerSheet>>, examForScan: OmrExam) => {
+    const graded = gradeOmr(examForScan, raw.answers);
+    // auto-match by bubbled number against learned student numbers
+    const clean = raw.studentNumber && !raw.studentNumber.includes("؟") ? raw.studentNumber : "";
+    const match = clean ? course.students.find((st) => st.studentNumber === clean) : undefined;
+    const res: OmrScanResult = {
+      studentNumber: raw.studentNumber,
+      matchedStudentId: match?.id ?? null,
+      ...graded,
+    };
+    setResult(res);
+    setAnswers(raw.answers);
+    setReviewItems(raw.review || []);
+    setNameCrop(raw.nameImageUrl || null);
+    setCivilCrop(raw.civilIdImageUrl || null);
+    setAnnotatedSheet(raw.sheetImageUrl || null);
+    if (match) setSelectedStudentId(match.id);
+  };
+
+  const formLabel = (e: OmrExam) => (e.version ? (ar ? `${e.title} — نموذج (${e.version})` : `${e.title} — form ${e.version}`) : e.title);
+
   // Shared by the initial photo upload AND by re-analysing the same photo
-  // after switching to the exam the sheet's printed code actually matches —
-  // no need to make the professor re-take/re-upload the picture.
+  // after switching to the exam the sheet actually belongs to — no need to
+  // re-take the picture. If the sheet's printed code or form marker points
+  // at a different exam than the one open, nothing is graded until the
+  // professor confirms the switch (or chooses to keep the current key).
   const runScan = async (file: File | Blob, examForScan: OmrExam) => {
     setScanning(true);
     try {
       const raw = await scanAnswerSheet(file, examForScan);
+      setWrongExamMatch(null);
+      const skipChecks = confirmedExamId.current === examForScan.id;
+      confirmedExamId.current = null;
 
-      // The sheet's machine-readable code doesn't match the exam currently
-      // selected — most likely the professor scanned a different exam
-      // version's sheet than the one they had open. Look for the exam it
-      // actually belongs to among the course's other exams and switch to
-      // it automatically (no sorting sheets by version, no manual tap
-      // needed) instead of silently grading it against the wrong answer
-      // key. Only when the printed code doesn't match ANY known exam do we
-      // fall back to just warning — there's nothing to auto-switch to.
-      if (raw.detectedExamCode !== examCode(examForScan.id) && allExams) {
-        const match = allExams.find((e) => e.id !== examForScan.id && examCode(e.id) === raw.detectedExamCode);
-        if (match && onSwitchExam) {
-          setWrongExamMatch(null);
-          toast.success(
-            ar
-              ? `تم التعرّف على النموذج تلقائياً: «${match.title}» — جارٍ إعادة التصحيح به`
-              : `Form version detected automatically: "${match.title}" — re-grading with it`,
-            { duration: 5000 },
-          );
-          onSwitchExam(match);
+      if (!skipChecks && allExams) {
+        let target: OmrExam | undefined;
+        let reason = "";
+        // the large printed form circle (أ/ب/ج) is checked first — it's
+        // far harder to misread than the small code dots
+        if (raw.detectedVersion && examForScan.version && raw.detectedVersion !== examForScan.version) {
+          target = allExams.find((e) => e.id !== examForScan.id && e.title === examForScan.title && e.version === raw.detectedVersion);
+          reason = ar
+            ? `الورقة مطبوع عليها نموذج (${raw.detectedVersion})، والمفتوح الآن نموذج (${examForScan.version}).`
+            : `The sheet is printed as form ${raw.detectedVersion}; form ${examForScan.version} is open.`;
+          if (!target) {
+            toast.warning(
+              ar
+                ? `الورقة نموذج (${raw.detectedVersion}) ولا يوجد مفتاح محفوظ لهذا النموذج — التصحيح الحالي بمفتاح نموذج (${examForScan.version})، تأكد قبل الرصد`
+                : `Sheet is form ${raw.detectedVersion} but no saved key exists for it — graded with form ${examForScan.version}; check before applying`,
+              { duration: 10000 },
+            );
+          }
+        } else if (raw.detectedExamCode !== examCode(examForScan.id)) {
+          target = allExams.find((e) => e.id !== examForScan.id && examCode(e.id) === raw.detectedExamCode);
+          reason = ar ? "رمز الورقة المطبوع يخص اختباراً آخر." : "The sheet's printed code belongs to another exam.";
+          if (!target) {
+            toast.warning(
+              ar
+                ? "رمز الورقة لا يطابق أي اختبار محفوظ — تحقق من أن هذه الورقة تخص هذا الاختبار قبل اعتماد الدرجة"
+                : "The sheet's code doesn't match any saved exam — double-check this sheet belongs to this exam before applying the score",
+              { duration: 10000 },
+            );
+          }
+        }
+        if (target && onSwitchExam) {
+          setPendingSwitch({ target, reason, raw, examForScan });
           return;
         }
-        setWrongExamMatch(match || null);
-        if (!match) {
-          // The code doesn't belong to ANY exam we know of — could be a
-          // sheet for an exam that was since deleted, a bad print, or a
-          // misread. There's nothing to auto-switch to, so grade with
-          // what's selected but say so plainly instead of silently scoring
-          // against a key that's very possibly wrong.
-          toast.warning(
-            ar
-              ? "رمز الورقة لا يطابق أي اختبار محفوظ — تحقق من أن هذه الورقة تخص هذا الاختبار قبل اعتماد الدرجة"
-              : "The sheet's code doesn't match any saved exam — double-check this sheet belongs to this exam before applying the score",
-            { duration: 10000 },
-          );
-        }
-      } else {
-        setWrongExamMatch(null);
       }
 
-      const graded = gradeOmr(examForScan, raw.answers);
-
-      // auto-match by bubbled number against learned student numbers
-      const clean = raw.studentNumber && !raw.studentNumber.includes("؟") ? raw.studentNumber : "";
-      const match = clean ? course.students.find((st) => st.studentNumber === clean) : undefined;
-      const res: OmrScanResult = {
-        studentNumber: raw.studentNumber,
-        matchedStudentId: match?.id ?? null,
-        ...graded,
-      };
-      setResult(res);
-      setAnswers(raw.answers);
-      setReviewItems(raw.review || []);
-      setNameCrop(raw.nameImageUrl || null);
-      setCivilCrop(raw.civilIdImageUrl || null);
-      setAnnotatedSheet(raw.annotatedImageUrl || null);
-      if (match) setSelectedStudentId(match.id);
+      showResult(raw, examForScan);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : (ar ? "فشل المسح" : "Scan failed"));
     } finally {
       setScanning(false);
     }
+  };
+
+  const confirmSwitch = () => {
+    if (!pendingSwitch || !onSwitchExam) return;
+    confirmedExamId.current = pendingSwitch.target.id;
+    const target = pendingSwitch.target;
+    setPendingSwitch(null);
+    onSwitchExam(target); // the effect below re-scans the same photo with it
+  };
+
+  const keepCurrent = () => {
+    if (!pendingSwitch) return;
+    const { raw, examForScan, target } = pendingSwitch;
+    setPendingSwitch(null);
+    setWrongExamMatch(target);
+    showResult(raw, examForScan);
   };
 
   // A "switch to the matched exam" click updates the parent's selected exam
@@ -226,6 +260,10 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         answers: result.answers,
         essayScores: (exam.essayQuestions || []).length ? essayScores : undefined,
         photo,
+        // the straightened sheet is archived instead of the raw photo when
+        // available, so the history can redraw the answer rings on it and
+        // let the professor correct answers later
+        sheetImage: annotatedSheet ? await fetch(annotatedSheet).then((r) => r.blob()).catch(() => null) : null,
         needsReview: unresolvedCount > 0,
         reviewCount: unresolvedCount,
       }).catch((e: unknown) => ({ ok: false, imageFailed: false, error: e instanceof Error ? e.message : String(e) }));
@@ -281,7 +319,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
               {ar ? "تصحيح بالكاميرا" : "Scan & grade"}
             </h3>
             <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              OMR · {exam.title}
+              OMR · {exam.title}{exam.version ? (ar ? ` · نموذج (${exam.version})` : ` · Form ${exam.version}`) : ""}
             </p>
           </div>
           <button onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/70">
@@ -345,7 +383,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                     : `The sheet's printed code matches "${wrongExamMatch.title}" — the score below was graded with the wrong answer key.`}
                 </p>
                 <button
-                  onClick={() => { onSwitchExam(wrongExamMatch); }}
+                  onClick={() => { confirmedExamId.current = wrongExamMatch.id; onSwitchExam(wrongExamMatch); }}
                   className="w-full rounded-xl bg-destructive py-2.5 text-sm font-bold text-destructive-foreground hover:brightness-110"
                 >
                   {ar ? `التبديل إلى «${wrongExamMatch.title}» وإعادة القراءة` : `Switch to "${wrongExamMatch.title}" and re-read`}
@@ -382,7 +420,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
               <div className="space-y-1.5">
                 <button
                   type="button"
-                  onClick={() => setZoomedImage(annotatedSheet)}
+                  onClick={() => setSheetOpen(true)}
                   className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2.5 text-xs font-bold text-foreground hover:bg-muted"
                 >
                   <ScanLine size={14} />
@@ -468,7 +506,10 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                         </span>
                       </button>
                     )}
-                    <div className="flex flex-wrap gap-1.5">
+                    {/* dir="ltr": the printed sheet lays choices out left→right
+                        (number, then أ/ص, ب/خ…), so the buttons follow the
+                        same order as the row photo above them */}
+                    <div dir="ltr" className="flex flex-wrap justify-center gap-1.5">
                       {choiceLabelsFor(exam, it.q).map((label, ci) => (
                         <button
                           key={ci}
@@ -602,23 +643,33 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
                         type="button"
                         onClick={() => setEditingQ((v) => (v === r.questionIndex ? null : r.questionIndex))}
                         className={cn(
-                          "flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors",
+                          "flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors hover:bg-muted/50",
                           isEditing ? "ring-1 ring-primary" : "",
-                          r.correct ? "bg-success/10 text-success" :
-                          r.marked === -1 ? "bg-muted text-muted-foreground" :
-                          r.marked === -2 ? "bg-amber-500/10 text-amber-600" :
-                          "bg-destructive/10 text-destructive",
                         )}
                       >
-                        <span>{r.questionIndex + 1}</span>
-                        <span>
+                        {/* question number, then the student's choice ringed
+                            green (correct) or red (wrong) — same look as the
+                            rings on the full-sheet view */}
+                        <span className="w-6 shrink-0 text-center text-muted-foreground">{r.questionIndex + 1}</span>
+                        <span
+                          className={cn(
+                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold",
+                            r.correct ? "border-green-600 bg-green-600/10 text-green-700" :
+                            r.marked === -1 ? "border-red-600 bg-red-600/10 text-red-700" :
+                            r.marked === -2 ? "border-amber-500 bg-amber-500/10 text-amber-600" :
+                            "border-red-600 bg-red-600/10 text-red-700",
+                          )}
+                        >
                           {r.marked >= 0 ? choiceLabelsFor(exam, r.questionIndex)[r.marked] : r.marked === -1 ? "—" : "؟"}
-                          {" / "}
-                          {exam.answerKey[r.questionIndex] >= 0 ? choiceLabelsFor(exam, r.questionIndex)[exam.answerKey[r.questionIndex]] : "؟"}
                         </span>
+                        {!r.correct && exam.answerKey[r.questionIndex] >= 0 && (
+                          <span className="text-[11px] font-normal text-muted-foreground">
+                            {ar ? "الصحيح: " : "Key: "}{choiceLabelsFor(exam, r.questionIndex)[exam.answerKey[r.questionIndex]]}
+                          </span>
+                        )}
                       </button>
                       {isEditing && (
-                        <div className="mt-1 flex flex-wrap gap-1.5 rounded-lg bg-muted/40 p-2">
+                        <div dir="ltr" className="mt-1 flex flex-wrap justify-center gap-1.5 rounded-lg bg-muted/40 p-2">
                           {choiceLabelsFor(exam, r.questionIndex).map((label, ci) => (
                             <button
                               key={ci}
@@ -681,6 +732,51 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
           fit the review list, which made ambiguous marks (a scribbled-over
           bubble right next to another one) hard to read; tapping any crop
           opens it here at full width so nothing is cut off. */}
+      {pendingSwitch && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm space-y-3 rounded-2xl bg-card p-5 shadow-xl">
+            <p className="flex items-center gap-1.5 text-base font-bold text-foreground">
+              <AlertTriangle size={18} className="text-amber-600" />
+              {ar ? "هذه الورقة لنموذج آخر" : "This sheet is for another form"}
+            </p>
+            <p className="text-sm text-muted-foreground">{pendingSwitch.reason}</p>
+            <p className="text-sm text-foreground">
+              {ar ? "التصحيح بمفتاح: " : "Grade with the key of: "}
+              <b>{formLabel(pendingSwitch.target)}</b>{ar ? "؟" : "?"}
+            </p>
+            <button
+              onClick={confirmSwitch}
+              className="w-full rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground hover:brightness-110"
+            >
+              {ar ? "موافق — صحّح بهذا النموذج" : "OK — grade with this form"}
+            </button>
+            <button
+              onClick={keepCurrent}
+              className="w-full rounded-xl border border-border py-2.5 text-sm font-bold text-foreground hover:bg-muted"
+            >
+              {ar ? `لا، صحّح بـ ${formLabel(pendingSwitch.examForScan)}` : `No, grade with ${formLabel(pendingSwitch.examForScan)}`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sheetOpen && annotatedSheet && result && (
+        <AnnotatedSheetViewer
+          imageUrl={annotatedSheet}
+          exam={exam}
+          answers={answers}
+          ar={ar}
+          onClose={() => setSheetOpen(false)}
+          onChange={overrideAnswer}
+          footer={
+            <p className="text-sm font-bold">
+              {ar ? "الدرجة: " : "Score: "}
+              {essayTotal > 0 ? Math.round((result.score + essayEarned) * 100) / 100 : result.score} / {exam.maxScore + essayTotal}
+            </p>
+          }
+        />
+      )}
+
       {zoomedImage && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
