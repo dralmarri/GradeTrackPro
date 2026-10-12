@@ -38,6 +38,12 @@ function rowToScan(row: any): OmrScanRecord {
   };
 }
 
+// Archived images whose path ends in this suffix are the straightened,
+// page-cropped sheet (see buildSheetImage in scan.ts), not a raw photo —
+// answer rings can be drawn on them at fixed sheet coordinates.
+export const SHEET_IMAGE_SUFFIX = "-sheet.jpg";
+export const isSheetImage = (path: string | null) => !!path && path.endsWith(SHEET_IMAGE_SUFFIX);
+
 // compress a photo to a reasonable JPEG before archiving
 async function compressImage(file: Blob, maxDim = 1600, quality = 0.72): Promise<Blob> {
   const url = URL.createObjectURL(file);
@@ -87,16 +93,17 @@ export function useOmrScans(examId: string | null) {
     answers: number[];
     essayScores?: number[];
     photo: Blob | null;
+    sheetImage?: Blob | null;
     needsReview?: boolean;
     reviewCount?: number;
   }): Promise<{ ok: boolean; imageFailed?: boolean; error?: string }> => {
     if (!user) return { ok: false, error: "not signed in" };
     let imagePath: string | null = null;
     let imageFailed = false;
-    if (input.photo) {
+    if (input.sheetImage || input.photo) {
       try {
-        const compressed = await compressImage(input.photo);
-        imagePath = `${user.id}/${input.examId}/${crypto.randomUUID()}.jpg`;
+        const compressed = input.sheetImage ?? await compressImage(input.photo!);
+        imagePath = `${user.id}/${input.examId}/${crypto.randomUUID()}${input.sheetImage ? SHEET_IMAGE_SUFFIX : ".jpg"}`;
         const { error: upErr } = await supabase.storage
           .from("scans")
           .upload(imagePath, compressed, { contentType: "image/jpeg" });
@@ -132,6 +139,24 @@ export function useOmrScans(examId: string | null) {
     return { ok: true, imageFailed };
   }, [user, fetchScans]);
 
+  // Re-grade an archived scan after the professor corrects its answers.
+  const updateScan = useCallback(async (scanId: string, updates: {
+    answers: number[]; score: number; rawCorrect: number;
+  }): Promise<boolean> => {
+    const { data, error } = await db.from("omr_scans").update({
+      answers: updates.answers,
+      score: updates.score,
+      raw_correct: updates.rawCorrect,
+      needs_review: false,
+      review_count: 0,
+    }).eq("id", scanId).select("id");
+    // RLS without an UPDATE policy fails silently (0 rows, no error) —
+    // treat that as a failure instead of pretending it saved
+    if (error || !data?.length) { console.error("Error updating scan:", error || "no rows updated"); return false; }
+    await fetchScans();
+    return true;
+  }, [fetchScans]);
+
   const getImageUrl = useCallback(async (imagePath: string): Promise<string | null> => {
     const { data, error } = await supabase.storage
       .from("scans")
@@ -151,7 +176,7 @@ export function useOmrScans(examId: string | null) {
     await fetchScans();
   }, [fetchScans]);
 
-  return { scans, loading, addScan, getImageUrl, deleteScan, refetch: fetchScans };
+  return { scans, loading, addScan, updateScan, getImageUrl, deleteScan, refetch: fetchScans };
 }
 
 // All archived scans for one student across every exam in the course — used
