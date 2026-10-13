@@ -107,8 +107,14 @@ export default function StudentStatus({ students, course, onApplyScore }: Studen
     .filter((x) => x.completeness.hasAnyGrade);
   const pcts = gradedStudents.map((x) => x.completeness.percentage);
   const avg = pcts.length > 0 ? pcts.reduce((a, b) => a + b, 0) / pcts.length : 0;
-  const highest = pcts.length > 0 ? Math.max(...pcts) : 0;
-  const lowest = pcts.length > 0 ? Math.min(...pcts) : 0;
+  // the actual students behind highest/lowest — shown as their real score
+  // (e.g. 24 / 25) rather than only a percentage
+  const byPct = [...gradedStudents].sort((a, b) => b.completeness.percentage - a.completeness.percentage);
+  const top = byPct[0];
+  const bottom = byPct[byPct.length - 1];
+  const fmtNum = (n: number) => String(Math.round(n * 100) / 100);
+  const scoreOf = (x: typeof top) => (x ? `${fmtNum(x.completeness.gradedSum)} / ${fmtNum(x.completeness.gradedMax)}` : "—");
+  const subOf = (x: typeof top) => (x ? `${x.completeness.percentage.toFixed(0)}% · ${x.student.name}` : "");
   const passCount = pcts.filter((p) => p >= 60).length;
   const fullyGradedCount = gradedStudents.filter((x) => x.completeness.isFullyGraded).length;
 
@@ -158,22 +164,24 @@ export default function StudentStatus({ students, course, onApplyScore }: Studen
               الإحصائيات أدناه مبنية على النسبة الحالية من الدرجات المُدخلة لكل طالب — {fullyGradedCount} من {gradedStudents.length} طالباً فقط اكتملت درجاتهم النهائية
             </p>
           )}
-          {/* Stats — average/highest/lowest are PERCENTAGES of what's been
-              graded so far for each student, not raw scores, since
-              students may have very different amounts graded */}
+          {/* Stats — average/pass rate are percentages of what's been
+              graded so far (students may have different amounts graded);
+              highest/lowest show that student's actual score out of what's
+              been graded for them, with the percentage and name below */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: t("average"), value: `${avg.toFixed(0)}%`, icon: TrendingUp, color: "bg-primary/10 text-primary" },
-              { label: t("highestGrade"), value: `${highest.toFixed(0)}%`, icon: Award, color: "bg-success/10 text-success" },
-              { label: t("lowestGrade"), value: `${lowest.toFixed(0)}%`, icon: TrendingDown, color: "bg-destructive/10 text-destructive" },
-              { label: t("passRate"), value: `${((passCount / gradedStudents.length) * 100).toFixed(0)}%`, icon: User, color: "bg-accent/10 text-accent" },
+              { label: t("average"), value: `${avg.toFixed(0)}%`, sub: "", icon: TrendingUp, color: "bg-primary/10 text-primary" },
+              { label: t("highestGrade"), value: scoreOf(top), sub: subOf(top), icon: Award, color: "bg-success/10 text-success" },
+              { label: t("lowestGrade"), value: scoreOf(bottom), sub: subOf(bottom), icon: TrendingDown, color: "bg-destructive/10 text-destructive" },
+              { label: t("passRate"), value: `${((passCount / gradedStudents.length) * 100).toFixed(0)}%`, sub: "", icon: User, color: "bg-accent/10 text-accent" },
             ].map((stat) => (
               <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                 <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-xl ${stat.color}`}>
                   <stat.icon size={16} />
                 </div>
-                <p className="font-display text-xl font-bold text-foreground">{stat.value}</p>
+                <p className="font-display text-xl font-bold text-foreground"><span dir="ltr">{stat.value}</span></p>
                 <p className="text-xs text-muted-foreground">{stat.label}</p>
+                {stat.sub && <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{stat.sub}</p>}
               </div>
             ))}
           </div>
