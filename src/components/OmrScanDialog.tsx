@@ -4,7 +4,7 @@ import { OmrExam, gradeOmr, OmrScanResult, choiceLabelsFor } from "@/types/exam"
 import { scanAnswerSheet } from "@/lib/omr/scan";
 import AnnotatedSheetViewer from "@/components/AnnotatedSheetViewer";
 import { examCode } from "@/lib/omr/layout";
-import { useOmrScans } from "@/hooks/useOmrScans";
+import { useOmrScans, findStudentScans, deleteScanRow, OmrScanRecord } from "@/hooks/useOmrScans";
 import { useLanguage } from "@/hooks/useLanguage";
 import { isNativeApp } from "@/lib/platform";
 import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
@@ -43,6 +43,9 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [civilCrop, setCivilCrop] = useState<string | null>(null);
   const [annotatedSheet, setAnnotatedSheet] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // the student already has a sheet archived for this test (any form) —
+  // ask whether this one replaces it or both are kept
+  const [dupScans, setDupScans] = useState<OmrScanRecord[] | null>(null);
   const [sheetOffsets, setSheetOffsets] = useState<{ dx: number; dy: number }[] | undefined>(undefined);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   // questions the engine flagged (blank / double-marked) — professor sets the
@@ -61,7 +64,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [essayScores, setEssayScores] = useState<number[]>(() => (exam.essayQuestions || []).map(() => 0));
   const { addScan } = useOmrScans(null); // used for recording only
 
-  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setAnnotatedSheet(null); setSheetOpen(false); setPendingSwitch(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
+  const reset = () => { setResult(null); setSelectedStudentId(""); setPhoto(null); setNameCrop(null); setCivilCrop(null); setAnnotatedSheet(null); setSheetOpen(false); setPendingSwitch(null); setDupScans(null); setReviewItems([]); setAnswers([]); setResolvedQs(new Set()); setStudentSearch(""); setWrongExamMatch(null); setEditingQ(null); setEssayScores((exam.essayQuestions || []).map(() => 0)); };
   const essayTotal = (exam.essayQuestions || []).reduce((a, q) => a + (q.points ?? 1), 0);
   const essayEarned = essayScores.reduce((a, s) => a + (s || 0), 0);
 
@@ -236,13 +239,26 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   // archived with a "needs review" flag so they can be found later
   const unresolvedCount = reviewItems.filter((it) => !resolvedQs.has(it.q)).length;
 
+
   const apply = async () => {
     if (!result || !selectedStudentId) {
       toast.error(ar ? "اختر الطالب أولاً" : "Select the student first");
       return;
     }
+    const sameTest = (allExams || [exam]).filter((e) => e.title === exam.title && e.targetComponent === exam.targetComponent).map((e) => e.id);
+    setApplying(true);
+    const existing = await findStudentScans(selectedStudentId, sameTest.length ? sameTest : [exam.id]);
+    setApplying(false);
+    if (existing.length) { setDupScans(existing); return; }
+    await doApply([]);
+  };
+
+  const doApply = async (replace: OmrScanRecord[]) => {
+    if (!result || !selectedStudentId) return;
+    setDupScans(null);
     setApplying(true);
     try {
+      for (const old of replace) await deleteScanRow(old);
       const finalScore = Math.round((result.score + essayEarned) * 100) / 100;
       await onApplyScore(selectedStudentId, exam.targetComponent, finalScore);
       const s = course.students.find((st) => st.id === selectedStudentId);
@@ -766,6 +782,48 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
           fit the review list, which made ambiguous marks (a scribbled-over
           bubble right next to another one) hard to read; tapping any crop
           opens it here at full width so nothing is cut off. */}
+      {dupScans && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-sm space-y-3 rounded-2xl bg-card p-5 shadow-xl">
+            <p className="flex items-center gap-1.5 text-base font-bold text-foreground">
+              <AlertTriangle size={18} className="text-amber-600" />
+              {ar ? "للطالب ورقة محفوظة لهذا الاختبار" : "This student already has a sheet for this test"}
+            </p>
+            <div className="space-y-1">
+              {dupScans.map((d) => {
+                const e = (allExams || []).find((x) => x.id === d.examId);
+                return (
+                  <p key={d.id} className="rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs text-foreground">
+                    {e ? formLabel(e) : (ar ? "اختبار" : "Exam")} · {d.score} {ar ? "درجة" : "pts"} · {new Date(d.createdAt).toLocaleDateString("en-GB")}
+                  </p>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {ar ? "الدرجة المرصودة في كشف الدرجات ستكون درجة هذه الورقة في الحالتين." : "Either way, the gradebook will hold this sheet's score."}
+            </p>
+            <button
+              onClick={() => doApply(dupScans)}
+              className="w-full rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground hover:brightness-110"
+            >
+              {ar ? "استبدال الورقة السابقة بهذه" : "Replace the previous sheet"}
+            </button>
+            <button
+              onClick={() => doApply([])}
+              className="w-full rounded-xl border border-border py-2.5 text-sm font-bold text-foreground hover:bg-muted"
+            >
+              {ar ? "الاحتفاظ بالورقتين" : "Keep both"}
+            </button>
+            <button
+              onClick={() => setDupScans(null)}
+              className="w-full py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground"
+            >
+              {ar ? "إلغاء — لا ترصد الآن" : "Cancel — don't apply yet"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {pendingSwitch && (
         // stopPropagation: this sits outside the sheet's own click guard,
         // so without it every tap here also hit the backdrop's onClose and
