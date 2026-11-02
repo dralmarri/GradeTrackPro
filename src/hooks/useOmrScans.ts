@@ -61,6 +61,26 @@ export async function updateScanRow(scanId: string, updates: {
   return true;
 }
 
+export async function deleteScanRow(scan: Pick<OmrScanRecord, "id" | "imagePath">): Promise<boolean> {
+  // delete the row FIRST — removing the image before a failed row delete
+  // would leave a record pointing at a missing file
+  const { error } = await db.from("omr_scans").delete().eq("id", scan.id);
+  if (error) { console.error("Error deleting scan:", error); return false; }
+  if (scan.imagePath) {
+    await supabase.storage.from("scans").remove([scan.imagePath]).catch(() => {});
+  }
+  return true;
+}
+
+// A student's archived scans for any of the given exams (e.g. every form
+// of one test) — used to catch a second sheet for the same test.
+export async function findStudentScans(studentId: string, examIds: string[]): Promise<OmrScanRecord[]> {
+  if (!studentId || !examIds.length) return [];
+  const { data, error } = await db.from("omr_scans").select("*").eq("student_id", studentId).in("exam_id", examIds);
+  if (error) { console.error("Error looking up scans:", error); return []; }
+  return (data || []).map(rowToScan);
+}
+
 // compress a photo to a reasonable JPEG before archiving
 async function compressImage(file: Blob, maxDim = 1600, quality = 0.72): Promise<Blob> {
   const url = URL.createObjectURL(file);
@@ -171,14 +191,7 @@ export function useOmrScans(examId: string | null) {
   }, []);
 
   const deleteScan = useCallback(async (scan: OmrScanRecord) => {
-    // delete the row FIRST — removing the image before a failed row delete
-    // would leave a record pointing at a missing file
-    const { error } = await db.from("omr_scans").delete().eq("id", scan.id);
-    if (error) { console.error("Error deleting scan:", error); return; }
-    if (scan.imagePath) {
-      await supabase.storage.from("scans").remove([scan.imagePath]).catch(() => {});
-    }
-    await fetchScans();
+    if (await deleteScanRow(scan)) await fetchScans();
   }, [fetchScans]);
 
   return { scans, loading, addScan, updateScan, getImageUrl, deleteScan, refetch: fetchScans };
@@ -214,5 +227,9 @@ export function useStudentScans(studentId: string | null) {
     return data.signedUrl;
   }, []);
 
-  return { scans, loading, getImageUrl, refetch: fetchScans };
+  const deleteScan = useCallback(async (scan: OmrScanRecord) => {
+    if (await deleteScanRow(scan)) await fetchScans();
+  }, [fetchScans]);
+
+  return { scans, loading, getImageUrl, deleteScan, refetch: fetchScans };
 }

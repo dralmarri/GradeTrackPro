@@ -20,11 +20,14 @@ interface Props {
   onChange?: (q: number, c: number) => void;
   busy?: boolean;
   footer?: React.ReactNode;
+  // per-question correction (mm) for sheets that weren't flat — see
+  // questionOffsets in scan.ts
+  offsets?: { dx: number; dy: number }[];
 }
 
 const pct = (v: number, total: number) => `${(v / total) * 100}%`;
 
-export default function AnnotatedSheetViewer({ imageUrl, exam, answers, ar, onClose, onChange, busy, footer }: Props) {
+export default function AnnotatedSheetViewer({ imageUrl, exam, answers, ar, onClose, onChange, busy, footer, offsets }: Props) {
   const [zoomed, setZoomed] = useState(false);
   const ringW = pct(BUBBLE_R * 2 * 1.3, PAGE_W);
   const hitW = pct(BUBBLE_R * 2, PAGE_W);
@@ -62,7 +65,9 @@ export default function AnnotatedSheetViewer({ imageUrl, exam, answers, ar, onCl
             const picked = answers[q];
             const key = exam.answerKey?.[q];
             return Array.from({ length: choiceCountFor(exam, q) }, (_, c) => {
-              const p = questionBubble(exam, q, c);
+              const b = questionBubble(exam, q, c);
+              const o = offsets?.[q];
+              const p = { x: b.x + (o?.dx ?? 0), y: b.y + (o?.dy ?? 0) };
               const isPicked = picked === c;
               const correct = key != null && key >= 0 && c === key;
               return (
