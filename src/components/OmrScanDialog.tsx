@@ -118,7 +118,12 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         // the large printed form circle (أ/ب/ج) is checked first — it's
         // far harder to misread than the small code dots
         if (raw.detectedVersion && examForScan.version && raw.detectedVersion !== examForScan.version) {
-          target = allExams.find((e) => e.id !== examForScan.id && e.title === examForScan.title && e.version === raw.detectedVersion);
+          // same test, detected form letter; if it was generated more than
+          // once, the form from the open exam's batch (created closest to it)
+          const t0 = new Date(examForScan.createdAt).getTime() || 0;
+          target = allExams
+            .filter((e) => e.id !== examForScan.id && e.title === examForScan.title && e.version === raw.detectedVersion)
+            .sort((a, b) => Math.abs((new Date(a.createdAt).getTime() || 0) - t0) - Math.abs((new Date(b.createdAt).getTime() || 0) - t0))[0];
           reason = ar
             ? `الورقة مطبوع عليها نموذج (${raw.detectedVersion})، والمفتوح الآن نموذج (${examForScan.version}).`
             : `The sheet is printed as form ${raw.detectedVersion}; form ${examForScan.version} is open.`;
@@ -348,9 +353,19 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
         {/* manual form choice — the professor can always override which
             form's key grades this sheet; switching re-grades the same photo */}
         {allExams && onSwitchExam && (() => {
-          const forms = allExams
-            .filter((e) => e.title === exam.title && e.answerKey.some((k) => k >= 0))
-            .sort((a, b) => (a.version || "").localeCompare(b.version || "", "ar"));
+          // One button per form letter. If the test was generated more than
+          // once (several أ/ب/ج sets with the same title), use the form from
+          // the same batch as the open exam — the one created closest to it.
+          const t0 = new Date(exam.createdAt).getTime() || 0;
+          const byVersion = new Map<string, OmrExam>();
+          for (const e of allExams) {
+            if (e.title !== exam.title || !e.answerKey.some((k) => k >= 0)) continue;
+            const v = e.version || "";
+            const cur = byVersion.get(v);
+            const dist = (x: OmrExam) => (x.id === exam.id ? -1 : Math.abs((new Date(x.createdAt).getTime() || 0) - t0));
+            if (!cur || dist(e) < dist(cur)) byVersion.set(v, e);
+          }
+          const forms = [...byVersion.values()].sort((a, b) => (a.version || "").localeCompare(b.version || "", "ar"));
           if (forms.length < 2) return null;
           return (
             <div className="-mt-1 mb-4 flex flex-wrap items-center gap-1.5">
