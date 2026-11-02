@@ -25,6 +25,7 @@ export default function ArchivedScanViewer({ scan, exam, ar, getImageUrl, onClos
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [rawFallback, setRawFallback] = useState<string | null>(null);
   const [answers, setAnswers] = useState<number[]>(scan.answers);
+  const [offsets, setOffsets] = useState<{ dx: number; dy: number }[] | undefined>(undefined);
   const [score, setScore] = useState(scan.score);
   const [saving, setSaving] = useState(false);
 
@@ -34,16 +35,24 @@ export default function ArchivedScanViewer({ scan, exam, ar, getImageUrl, onClos
       if (!scan.imagePath) { toast.error(ar ? "لا توجد صورة محفوظة لهذه الورقة" : "No image saved"); onClose(); return; }
       const url = await getImageUrl(scan.imagePath);
       if (!url) { toast.error(ar ? "تعذّر فتح الصورة" : "Could not open image"); onClose(); return; }
-      if (isSheetImage(scan.imagePath)) { if (!cancelled) setImageUrl(url); return; }
       try {
+        // Re-read the image to locate the rows (a non-flat sheet's rows sit
+        // a little off the layout). A stored straightened sheet is shown
+        // as-is; a raw photo from before those were stored is straightened
+        // now. Only positions are used — the saved answers stay as graded.
         const blob = await (await fetch(url)).blob();
         const raw = await scanAnswerSheet(blob, exam);
         if (cancelled) return;
-        if (raw.sheetImageUrl) setImageUrl(raw.sheetImageUrl);
+        setOffsets(raw.questionOffsets);
+        if (isSheetImage(scan.imagePath)) setImageUrl(url);
+        else if (raw.sheetImageUrl) setImageUrl(raw.sheetImageUrl);
         else setRawFallback(url);
       } catch {
-        // corners not found etc. — still show the photo itself
-        if (!cancelled) setRawFallback(url);
+        // corners not found etc. — a stored straightened sheet still shows
+        // (rings at layout positions); a raw photo is shown as taken
+        if (cancelled) return;
+        if (isSheetImage(scan.imagePath)) setImageUrl(url);
+        else setRawFallback(url);
       }
     })();
     return () => { cancelled = true; };
@@ -106,6 +115,7 @@ export default function ArchivedScanViewer({ scan, exam, ar, getImageUrl, onClos
       busy={saving}
       onClose={onClose}
       onChange={change}
+      offsets={offsets}
       footer={<p className="text-sm font-bold">{scan.studentName} · {score} / {maxTotal}</p>}
     />
   );

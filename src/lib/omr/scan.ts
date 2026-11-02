@@ -31,6 +31,11 @@ export interface OmrScanRaw {
   // by <AnnotatedSheet> from the answers array, so they follow any manual
   // correction, and the same image is archived for later review/editing.
   sheetImageUrl?: string;
+  // Per-question correction (mm) between where the layout says a row is and
+  // where it actually is in this photo — non-zero when the sheet isn't flat
+  // (curled, folded, bulging over a stack). Lets the answer rings drawn on
+  // sheetImageUrl sit on the real bubbles.
+  questionOffsets: { dx: number; dy: number }[];
   debug?: {
     threshold: number;
     corners: { x: number; y: number }[];
@@ -95,21 +100,104 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     throw new Error("تعذّر تحديد اتجاه الورقة — تأكد أن المربع الصغير بجانب علامة الزاوية ظاهر");
   }
 
+  // --- local refinement for sheets that aren't flat ---
+  // The homography from the 4 corner marks is exact only for a flat page.
+  // A curled or folded sheet (e.g. photographed on top of a stack) bends
+  // between the corners, so rows can sit a few mm away from where the
+  // layout puts them — enough to sample just above a filled bubble and
+  // read it as blank. Each row of circles is therefore re-located around
+  // its expected position by matching the printed circle outlines, which
+  // are there whether a bubble is filled or not.
+  const darkAt = (mmX: number, mmY: number): number => {
+    const [px, py] = applyH(H!, mmX, mmY);
+    const ix = Math.round(px), iy = Math.round(py);
+    if (ix < 0 || iy < 0 || ix >= w || iy >= h) return 0;
+    return dark[iy * w + ix];
+  };
+  const ringScore = (pts: { x: number; y: number }[], r: number, dx: number, dy: number): number => {
+    let sc = 0;
+    for (const p of pts) {
+      for (let a = 0; a < 24; a++) {
+        const c = Math.cos((a * Math.PI) / 12), sn = Math.sin((a * Math.PI) / 12);
+        const cx = p.x + dx, cy = p.y + dy;
+        const on = Math.max(darkAt(cx + c * r, cy + sn * r), darkAt(cx + c * r * 0.9, cy + sn * r * 0.9), darkAt(cx + c * r * 1.1, cy + sn * r * 1.1));
+        const off = darkAt(cx + c * r * 1.5, cy + sn * r * 1.5);
+        sc += on - off;
+      }
+    }
+    return sc;
+  };
+  const refine = (pts: { x: number; y: number }[], r: number, range = 3, step = 0.5, cx0 = 0, cy0 = 0) => {
+    let best = { dx: cx0, dy: cy0, sc: ringScore(pts, r, cx0, cy0) };
+    for (let dy = cy0 - range; dy <= cy0 + range + 1e-9; dy += step) {
+      for (let dx = cx0 - range; dx <= cx0 + range + 1e-9; dx += step) {
+        const sc = ringScore(pts, r, dx, dy);
+        // strictly better only — ties keep the smaller correction
+        if (sc > best.sc + 1 || (sc > best.sc && Math.hypot(dx - cx0, dy - cy0) < Math.hypot(best.dx - cx0, best.dy - cy0))) best = { dx, dy, sc };
+      }
+    }
+    return { dx: best.dx, dy: best.dy };
+  };
+  const anchors: { x: number; y: number; dx: number; dy: number }[] = [];
+  // Rows look identical, so a wide search could lock onto the neighbouring
+  // row (7.8mm away). Instead track the bend: walk each column from its
+  // bottom row (nearest the bottom corner marks, so least displaced) up,
+  // searching each row only around the previous row's correction.
+  const questionOffsets: { dx: number; dy: number }[] = new Array(exam.questionCount).fill(null).map(() => ({ dx: 0, dy: 0 }));
+  const rowPts = Array.from({ length: exam.questionCount }, (_, q) =>
+    Array.from({ length: choiceCountFor(exam, q) }, (_, c) => questionBubble(exam, q, c)));
+  const columns = new Map<number, number[]>();
+  rowPts.forEach((pts, q) => {
+    const key = Math.round(pts[0].x / 20);
+    columns.set(key, [...(columns.get(key) || []), q]);
+  });
+  for (const qs of columns.values()) {
+    qs.sort((a, b) => rowPts[b][0].y - rowPts[a][0].y);
+    let prev = { dx: 0, dy: 0 };
+    qs.forEach((q, i) => {
+      const o = i === 0 ? refine(rowPts[q], BUBBLE_R, 3) : refine(rowPts[q], BUBBLE_R, 2, 0.5, prev.dx, prev.dy);
+      questionOffsets[q] = o;
+      anchors.push({ x: rowPts[q][0].x, y: rowPts[q][0].y, ...o });
+      prev = o;
+    });
+  }
+  const idOffsets = exam.idMode === "written" ? [] : Array.from({ length: exam.studentIdDigits }, (_, col) =>
+    refine(Array.from({ length: 10 }, (_, d) => idBubble(exam, col, d)), BUBBLE_R));
+  // offset anywhere else (the code marks) = inverse-distance blend of the
+  // nearest refined anchors — the bend varies smoothly across the page
+  const offsetAt = (x: number, y: number) => {
+    const near = anchors.map((a) => ({ a, d: Math.hypot(a.x - x, a.y - y) + 1 })).sort((m, n) => m.d - n.d).slice(0, 4);
+    const W = near.reduce((t, n) => t + 1 / n.d, 0);
+    return {
+      dx: near.reduce((t, n) => t + n.a.dx / n.d, 0) / W,
+      dy: near.reduce((t, n) => t + n.a.dy / n.d, 0) / W,
+    };
+  };
+
+  // the form marker sits above the question rows: search around the bend
+  // extrapolated from the rows nearest it
+  const versionPts = [0, 1, 2].map((i) => ({ x: 72 - i * 11, y: 64 }));
+  const vGuess = offsetAt(61, 64);
+  const vOff = refine(versionPts, 2.7, 2.5, 0.5, vGuess.dx, vGuess.dy);
+
   // --- decode the exam-code marks (which exam this printed sheet is) ---
   let detectedExamCode = 0;
   for (let b = 0; b < CODE_BITS; b++) {
     const p = codeMarkPos(b);
-    const dot = sampleSquare(dark, w, h, H, p.x, p.y, p.size * 0.35);
+    const o = offsetAt(p.x, p.y);
+    const dot = sampleSquare(dark, w, h, H, p.x + o.dx, p.y + o.dy, p.size * 0.35);
     if (dot > 0.5) detectedExamCode |= (1 << b);
   }
 
   // --- read the printed form-version marker (sheet.ts: circles at
   // x = 72/61/50, y = 64, r = 2.7; the active one is printed solid) ---
   const VERSIONS = ["أ", "ب", "ج"];
-  const vRatios = VERSIONS.map((_, i) => sampleSquare(dark, w, h, H, 72 - i * 11, 64, 1.6));
+  const vRatios = VERSIONS.map((_, i) => sampleSquare(dark, w, h, H, versionPts[i].x + vOff.dx, versionPts[i].y + vOff.dy, 1.6));
   const vBest = vRatios.indexOf(Math.max(...vRatios));
-  const vOthers = vRatios.filter((_, i) => i !== vBest);
-  const detectedVersion = vRatios[vBest] > 0.55 && vOthers.every((v) => v < 0.35) ? VERSIONS[vBest] : null;
+  const vSecond = Math.max(...vRatios.filter((_, i) => i !== vBest));
+  // relative test: unfilled circles still carry their printed letter, which
+  // can read fairly dark in a blurry photo
+  const detectedVersion = vRatios[vBest] > 0.5 && vRatios[vBest] - vSecond > 0.3 ? VERSIONS[vBest] : null;
 
   // --- sample bubbles ---
   const fillAt = (mmX: number, mmY: number): number => {
@@ -169,7 +257,8 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   for (let col = 0; col < exam.studentIdDigits; col++) {
     const ratios: number[] = [];
     for (let d = 0; d <= 9; d++) {
-      const p = idBubble(exam, col, d);
+      const b = idBubble(exam, col, d);
+      const p = { x: b.x + idOffsets[col].dx, y: b.y + idOffsets[col].dy };
       ratios.push(isCrossedOut(p.x, p.y) ? -1 : fillAt(p.x, p.y));
     }
     const digit = pickOne(ratios);
@@ -185,7 +274,8 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
     const qChoices = choiceCountFor(exam, q);
     const pts = [];
     for (let c = 0; c < qChoices; c++) {
-      const p = questionBubble(exam, q, c);
+      const b = questionBubble(exam, q, c);
+      const p = { x: b.x + questionOffsets[q].dx, y: b.y + questionOffsets[q].dy };
       pts.push(p);
       // A choice the student crossed out is excluded from candidates
       // entirely (marked -1, see pickOne) — an X through a bubble means "not
@@ -223,7 +313,7 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   const debugRatios: number[] = [];
   for (let c = 0; c < exam.choiceCount; c++) {
     const p = questionBubble(exam, 0, c);
-    debugRatios.push(fillAt(p.x, p.y));
+    debugRatios.push(fillAt(p.x + questionOffsets[0].dx, p.y + questionOffsets[0].dy));
   }
 
   const sheetImageUrl = buildSheetImage(srcRgba, w, h, H);
@@ -231,7 +321,7 @@ export async function scanAnswerSheet(file: File | Blob, exam: OmrExam): Promise
   return {
     studentNumber, answers, review, markQuality: bestDot,
     detectedExamCode, detectedVersion,
-    nameImageUrl, civilIdImageUrl, sheetImageUrl,
+    nameImageUrl, civilIdImageUrl, sheetImageUrl, questionOffsets,
     debug: { threshold: thr, corners, rotation: bestRotation, orientDot: bestDot, sampleRatios: debugRatios },
   };
 }

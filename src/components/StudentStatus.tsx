@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Student, Course, getLabel } from "@/types/student";
 import { getBonusTotal, getMaxTotal, getPercentage, getTotal } from "@/lib/excel";
 import { motion } from "framer-motion";
-import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy, ChevronDown, ImageIcon } from "lucide-react";
+import { User, TrendingUp, TrendingDown, Award, Search, BarChart3, Trophy, ChevronDown, ImageIcon, Trash2 } from "lucide-react";
 import { GradeTier, LetterTier, loadGradeTiers, loadLetterTiers, getTierFor, getLetterFor } from "@/lib/gradeTiers";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts";
@@ -536,7 +536,7 @@ function StudentScansSection({ studentId, examTitles, exams, onApplyScore }: {
   exams: OmrExam[];
   onApplyScore?: (studentId: string, targetComponent: string, score: number) => Promise<void>;
 }) {
-  const { scans, loading, getImageUrl, refetch } = useStudentScans(studentId);
+  const { scans, loading, getImageUrl, deleteScan, refetch } = useStudentScans(studentId);
   const [openScan, setOpenScan] = useState<OmrScanRecord | null>(null);
 
   const fmtDate = (iso: string) => {
@@ -581,6 +581,18 @@ function StudentScansSection({ studentId, examTitles, exams, onApplyScore }: {
             >
               <ImageIcon size={12} />
               عرض
+            </button>
+            <button
+              type="button"
+              title="حذف هذه الورقة من الأرشيف"
+              onClick={async () => {
+                if (!window.confirm(`حذف ورقة «${examTitles[s.examId] || "—"}» من الأرشيف؟ لن تتغير الدرجة المرصودة في كشف الدرجات.`)) return;
+                await deleteScan(s);
+                toast.success("حُذفت الورقة من الأرشيف");
+              }}
+              className="flex shrink-0 items-center rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10"
+            >
+              <Trash2 size={12} />
             </button>
           </div>
         ))}
