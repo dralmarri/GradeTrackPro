@@ -43,6 +43,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
   const [civilCrop, setCivilCrop] = useState<string | null>(null);
   const [annotatedSheet, setAnnotatedSheet] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetOffsets, setSheetOffsets] = useState<{ dx: number; dy: number }[] | undefined>(undefined);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   // questions the engine flagged (blank / double-marked) — professor sets the
   // intended answer from the row photo and the score is recomputed
@@ -89,6 +90,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
     setNameCrop(raw.nameImageUrl || null);
     setCivilCrop(raw.civilIdImageUrl || null);
     setAnnotatedSheet(raw.sheetImageUrl || null);
+    setSheetOffsets(raw.questionOffsets);
     if (match) setSelectedStudentId(match.id);
   };
 
@@ -326,6 +328,38 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
             <X size={17} />
           </button>
         </div>
+
+        {/* manual form choice — the professor can always override which
+            form's key grades this sheet; switching re-grades the same photo */}
+        {allExams && onSwitchExam && (() => {
+          const forms = allExams
+            .filter((e) => e.title === exam.title && e.answerKey.some((k) => k >= 0))
+            .sort((a, b) => (a.version || "").localeCompare(b.version || "", "ar"));
+          if (forms.length < 2) return null;
+          return (
+            <div className="-mt-1 mb-4 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-bold text-muted-foreground">{ar ? "النموذج:" : "Form:"}</span>
+              {forms.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  disabled={scanning || f.id === exam.id}
+                  onClick={() => {
+                    confirmedExamId.current = f.id;
+                    setPendingSwitch(null);
+                    onSwitchExam(f);
+                  }}
+                  className={cn(
+                    "min-w-10 rounded-lg border px-3 py-1 text-xs font-bold transition-colors",
+                    f.id === exam.id ? "border-primary bg-primary text-primary-foreground" : "border-border text-foreground hover:bg-muted",
+                  )}
+                >
+                  {f.version || "—"}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
 
         {!result && (
           <div className="space-y-4">
@@ -771,6 +805,7 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
           ar={ar}
           onClose={() => setSheetOpen(false)}
           onChange={overrideAnswer}
+          offsets={sheetOffsets}
           footer={
             <p className="text-sm font-bold">
               {ar ? "الدرجة: " : "Score: "}
