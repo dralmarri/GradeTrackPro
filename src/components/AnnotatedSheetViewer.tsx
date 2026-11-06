@@ -72,6 +72,14 @@ export default function AnnotatedSheetViewer({ imageUrl, exam, answers, ar, onCl
               const correct = key != null && key >= 0 && c === key;
               return (
                 <div key={`${q}-${c}`}>
+                  {picked < 0 && (
+                    // no clear mark read for this question — outline its
+                    // choices so it stands out on the page
+                    <span
+                      className="pointer-events-none absolute aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed border-amber-500"
+                      style={{ left: pct(p.x, PAGE_W), top: pct(p.y, PAGE_H), width: ringW }}
+                    />
+                  )}
                   {isPicked && (
                     <span
                       className={cn("pointer-events-none absolute aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px]",

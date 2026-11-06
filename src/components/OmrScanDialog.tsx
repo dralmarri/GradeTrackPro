@@ -95,6 +95,9 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
     setAnnotatedSheet(raw.sheetImageUrl || null);
     setSheetOffsets(raw.questionOffsets);
     if (match) setSelectedStudentId(match.id);
+    // open the full sheet straight away so every pick can be checked at a
+    // glance (and corrected) before the score is applied
+    setSheetOpen(!!raw.sheetImageUrl);
   };
 
   const formLabel = (e: OmrExam) => (e.version ? (ar ? `${e.title} — نموذج (${e.version})` : `${e.title} — form ${e.version}`) : e.title);
@@ -879,12 +882,42 @@ export default function OmrScanDialog({ exam, course, open, onClose, onApplyScor
           onClose={() => setSheetOpen(false)}
           onChange={overrideAnswer}
           offsets={sheetOffsets}
-          footer={
-            <p className="text-sm font-bold">
-              {ar ? "الدرجة: " : "Score: "}
-              {essayTotal > 0 ? Math.round((result.score + essayEarned) * 100) / 100 : result.score} / {exam.maxScore + essayTotal}
-            </p>
-          }
+          footer={(() => {
+            const st = course.students.find((x) => x.id === selectedStudentId);
+            const flagged = answers.filter((a) => a < 0).length;
+            return (
+              <div className="space-y-2">
+                <p className="text-sm font-bold">
+                  {ar ? "الدرجة: " : "Score: "}
+                  {essayTotal > 0 ? Math.round((result.score + essayEarned) * 100) / 100 : result.score} / {exam.maxScore + essayTotal}
+                  {st && <span className="font-normal text-white/80"> · {st.name}</span>}
+                </p>
+                {flagged > 0 && (
+                  <p className="text-[11px] text-amber-300">
+                    {ar ? `${flagged} سؤال بلا إجابة مقروءة (بإطار برتقالي) — اضغط الدائرة الصحيحة إن لزم` : `${flagged} question(s) with no clear mark (orange) — tap the right bubble if needed`}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={applying}
+                    onClick={() => (selectedStudentId ? apply() : setSheetOpen(false))}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+                  >
+                    {applying ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                    {selectedStudentId ? (ar ? "رصد الدرجة" : "Apply score") : (ar ? "اختر الطالب" : "Choose student")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSheetOpen(false)}
+                    className="rounded-xl border border-white/30 px-3 py-2.5 text-xs font-bold text-white hover:bg-white/10"
+                  >
+                    {ar ? "التفاصيل" : "Details"}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         />
       )}
 
